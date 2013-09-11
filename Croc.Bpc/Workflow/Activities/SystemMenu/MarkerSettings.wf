@@ -1,0 +1,74 @@
+<Workflow 
+  xmlns="http://schemas.croc.ru/Workflow" 
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+  <Include Ref="Activities/Common.wf" /> 
+
+
+  <CompositeActivity Name="MarkerSettingsActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.MarkerSettingsActivity, Croc.Bpc.Workflow"> 
+
+
+    <ReferenceActivity Name="ReadOn" Execute="Common.SayAndReadValue" 
+                       Parameters="Required=@@True;Silent=@@True;Value=@On" 
+                       k:No="@@Return(Yes)"/> 
+
+
+    <Activity Name="SaveOn" Execute="SaveOn"/> 
+
+
+    <ReferenceActivity Name="ReadOff" Execute="Common.SayAndReadValue" 
+                       Parameters="Required=@@True;Silent=@@True;Value=@Off" 
+                       k:No="@@Return(Yes)"/> 
+
+
+    <Activity Name="SaveOff" Execute="SaveOff"/> 
+
+
+    <ReferenceActivity Name="ReadMarkingTime" Execute="Common.SayAndReadValue" 
+                       Parameters="Required=@@True;Silent=@@True;Value=@MarkingTime" 
+                       k:No="@@Return(Yes)"/> 
+
+
+    <Activity Name="SaveMarkingTime" Execute="SaveMarkingTime"/> 
+
+
+    <ReferenceActivity Name="ReadRollbackTime" Execute="Common.SayAndReadValue" 
+                       Parameters="Required=@@True;Silent=@@True;Value=@RollbackTime" 
+                       k:No="@@Return(Yes)"/> 
+
+
+    <Activity Name="SaveRollbackTime" Execute="SaveRollbackTime"/> 
+
+
+    <ReferenceActivity Name="ReadDownTime" Execute="Common.SayAndReadValue" 
+                       Parameters="Required=@@True;Silent=@@True;Value=@DownTime" 
+                       k:No="@@Return(Yes)"/> 
+
+
+    <Activity Name="SaveDownTime" Execute="SaveDownTime"/> 
+
+
+
+
+    <Activity Name="SetNewMarkerSettings" Execute="SetNewMarkerSettings"/> 
+
+
+  </CompositeActivity> 
+  <ActivityParametersBindings CompositeActivityName="MarkerSettingsActivity"> 
+    <ActivityParametersBinding ActivityName="ReadOn"> 
+      <Parameter Name="TextFormat">Вкл = ____</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="ReadOff"> 
+      <Parameter Name="TextFormat">Выкл = ____</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="ReadMarkingTime"> 
+      <Parameter Name="TextFormat">Маркировка = ___</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="ReadRollbackTime"> 
+      <Parameter Name="TextFormat">Откат = ___</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="ReadDownTime"> 
+      <Parameter Name="TextFormat">Опускание = ___</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
+</Workflow>

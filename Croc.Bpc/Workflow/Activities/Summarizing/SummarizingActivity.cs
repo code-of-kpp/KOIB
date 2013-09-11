@@ -1,257 +1,112 @@
 using System; 
-
 using System.Collections.Generic; 
-
-using System.Linq; 
-
-using System.Text; 
-
-using Croc.Workflow.ComponentModel; 
-
-using Croc.Bpc.FileSystem; 
-
-using Croc.Bpc.Common.Diagnostics; 
-
-using System.IO; 
-
 using System.Collections.Specialized; 
-
- 
-
- 
-
+using Croc.Bpc.Diagnostics; 
+using Croc.Core.Diagnostics; 
+using Croc.Workflow.ComponentModel; 
 namespace Croc.Bpc.Workflow.Activities.Summarizing 
-
 { 
-
-    /// <summary> 
-
-    /// Подведение итогов голосования 
-
-    /// </summary> 
-
     [Serializable] 
-
     public class SummarizingActivity : ElectionEnumeratorActivity 
-
     { 
-
-        /// <summary> 
-
-        /// Имя данных "Доп. сведения введены" 
-
-        /// </summary> 
-
-        private const string ADDINFOENTERED_DATANAME = "AddInfoEntered"; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Параметры для отчета "Предварительный протокол голосования" 
-
-        /// </summary> 
-
-        public ListDictionary PreliminaryElectionProtocolParameters 
-
+        [NonSerialized] 
+        private readonly List<string> _generatedProtocolElectionIds = new List<string>(); 
+        [NonSerialized] 
+        private string _addInfoEnteredOnMasterElectionId; 
+        public object[] ElectionNumsWithoutProtocolsPhraseParameters 
         { 
-
             get 
-
             { 
-
-                var protocolParams = new ListDictionary(); 
-
-                protocolParams.Add("Election", _currentElection); 
-
-                return protocolParams; 
-
+                var paramList = new List<object>(); 
+                var elections = _electionManager.SourceData.Elections; 
+                for (var i = 0; i < elections.Length; i++) 
+                { 
+                    if (!_generatedProtocolElectionIds.Contains(elections[i].ElectionId)) 
+                        paramList.Add(i + 1); 
+                } 
+                return paramList.ToArray(); 
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Формирование предварительного протокола с результатами голосования по всем выборам 
-
-        /// </summary> 
-
-        /// <param name="context"></param> 
-
-        /// <param name="parameters"></param> 
-
-        /// <returns></returns> 
-
-        public NextActivityKey GeneratePreliminaryVotingResultProtocol( 
-
-            WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
-
+        public ListDictionary ElectionProtocolParameters 
         { 
-
-            _electionManager.GeneratePreliminaryVotingResultProtocol(); 
-
-            return context.DefaultNextActivityKey; 
-
-
+            get 
+            { 
+                var protocolParams = new ListDictionary 
+                                         { 
+                                             {"Election", _currentElection}, 
+                                             {"withResults", true} 
+                                         }; 
+                return protocolParams; 
+            } 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Извещает подчиненный сканер о завершении ввода доп. сведений и  
-
-        /// формирует протокол с результатами голосования 
-
-        /// </summary> 
-
-        /// <param name="context"></param> 
-
-        /// <param name="parameters"></param> 
-
-        /// <returns></returns> 
-
+        public NextActivityKey ResetGeneratedProtocolElectionIds( 
+            WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
+        { 
+            _generatedProtocolElectionIds.Clear(); 
+            return context.DefaultNextActivityKey; 
+        } 
+        public NextActivityKey IsProtocolsGeneratedForAllElections( 
+            WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
+        { 
+            return _electionManager.SourceData.Elections.Length == _generatedProtocolElectionIds.Count 
+                       ? BpcNextActivityKeys.Yes 
+                       : BpcNextActivityKeys.No; 
+        } 
+        public NextActivityKey IsProtocolGeneratedForCurrentElection( 
+            WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
+        { 
+            return _generatedProtocolElectionIds.Contains(_currentElection.ElectionId) 
+                       ? BpcNextActivityKeys.Yes 
+                       : BpcNextActivityKeys.No; 
+        } 
+        public NextActivityKey GenerateVotingResultProtocolOnSlave( 
+            WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
+        { 
+            var election = _electionManager.SourceData.GetElectionByNum(_addInfoEnteredOnMasterElectionId); 
+            if (election == null) 
+                _logger.LogWarning(Message.WorkflowElectionWithIdFromMasterNotFound, _addInfoEnteredOnMasterElectionId); 
+            _votingResultManager.GenerateVotingResultProtocol(election); 
+            return context.DefaultNextActivityKey; 
+        } 
+        #region Ожидание и извещение о завершении ввода доп. сведений 
+        private const string ADDINFOENTERED_DATANAME = "AddInfoEntered"; 
+        private const string ADDINFOENTERINGFINISHED_DATA = "AddInfoEnteringFinished"; 
+        public NextActivityKey NoticeSlaveAboutAddInfoEnteringFinished( 
+            WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
+        { 
+            _syncManager.RemoteScanner.PutData(ADDINFOENTERED_DATANAME, ADDINFOENTERINGFINISHED_DATA); 
+            return context.DefaultNextActivityKey; 
+        } 
         public NextActivityKey NoticeSlaveAboutAddInfoEnteredAndGenerateVotingResultProtocol( 
-
             WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
-
         { 
-
-            // извещаем подчиненный сканер, что ввод доп. сведений завершен 
-
-            _syncManager.RemoteScanner.PutData(ADDINFOENTERED_DATANAME, true); 
-
-            // формируем протокол 
-
-            _electionManager.GenerateVotingResultProtocol(_currentElection); 
-
- 
-
- 
-
+            _syncManager.RemoteScanner.PutData(ADDINFOENTERED_DATANAME, _currentElection.ElectionId); 
+            _votingResultManager.GenerateVotingResultProtocol(_currentElection); 
+            _generatedProtocolElectionIds.Add(_currentElection.ElectionId); 
             return context.DefaultNextActivityKey; 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ожидает завершения ввода доп. сведений по текущим выборам на главном сканере 
-
-        /// </summary> 
-
-        /// <param name="context"></param> 
-
-        /// <param name="parameters"></param> 
-
-        /// <returns></returns> 
-
         public NextActivityKey WaitForAddInfoEnteredOnMaster( 
-
             WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
-
         { 
-
             _scannerManager.SetIndicator(CommonActivity.SYNCHRONIZATION_INDICATOR_TEXT); 
 
- 
 
- 
-
-            // ожидаем, когда на главном сканере введут доп. сведения 
-
-            var addInfoEntered = _syncManager.GetDataTransmittedFromRemoteScanner(ADDINFOENTERED_DATANAME, context); 
-
- 
-
- 
-
-            // если получили null (приложение начало выключаться или потеряна связь со 2-м сканером) 
-
-            // замечание:  
-
-            //  при потере связи со 2-м сканером метод GetDataTransmittedFromRemoteScanner вернет null, 
-
-            //  т.к. исключение ActivityExecutionInterruptException, которое он также должен был бы сгенерировать 
-
-            //  при потере связи, не будет возбуждено, потому что данное действие WaitForAddInfoEnteredOnMaster 
-
-            //  выполняется внутри действия с более высоким приоритетом, чем действие-обработчик события о потере связи 
-
-            if (addInfoEntered == null) 
-
+            _logger.LogVerbose(Message.WorkflowWaitForAddInfoEnteredOnMaster); 
+            var addInfoEnteredRes = _syncManager.GetDataTransmittedFromRemoteScanner(ADDINFOENTERED_DATANAME, context); 
+            if (addInfoEnteredRes == null) 
             { 
-
-                _logger.LogInfo(Message.WorkflowCannotDetectAddInfoEnteredOnMaster); 
-
+                _logger.LogVerbose(Message.WorkflowCannotDetectAddInfoEnteredOnMaster); 
                 return BpcNextActivityKeys.No; 
-
             } 
-
-
-            else if (!(bool)addInfoEntered) 
-
+            _addInfoEnteredOnMasterElectionId = (string)addInfoEnteredRes; 
+            if (string.CompareOrdinal(ADDINFOENTERINGFINISHED_DATA, _addInfoEnteredOnMasterElectionId) == 0) 
             { 
-
-                _logger.LogInfo(Message.WorkflowAddInfoNotEnteredOnMaster); 
-
+                _logger.LogVerbose(Message.WorkflowAddInfoEnteringFinished); 
                 return BpcNextActivityKeys.No; 
-
             } 
-
- 
-
- 
-
-            // доп. сведения введены 
-
-            _logger.LogInfo(Message.WorkflowAddInfoEnteredOnMaster); 
-
+            _logger.LogVerbose(Message.WorkflowAddInfoEnteredForElection, _addInfoEnteredOnMasterElectionId); 
             return BpcNextActivityKeys.Yes; 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Формирование протокола с результатами голосования по текущим выборам 
-
-        /// </summary> 
-
-        /// <param name="context"></param> 
-
-        /// <param name="parameters"></param> 
-
-        /// <returns></returns> 
-
-        public NextActivityKey GenerateVotingResultProtocol( 
-
-            WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
-
-        { 
-
-            _electionManager.GenerateVotingResultProtocol(_currentElection); 
-
-            return context.DefaultNextActivityKey; 
-
-        } 
-
+        #endregion 
     } 
-
 }
-
-

@@ -1,130 +1,52 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
   xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
-
- 
-
- 
-
   <Include Ref="Activities/Common.wf" /> 
-
- 
-
- 
-
   <CompositeActivity Name="LoadConfigActivity" 
-
                      Class="Croc.Bpc.Workflow.Activities.Initialization.LoadConfigActivity, Croc.Bpc.Workflow"> 
 
- 
-
- 
-
-    <!--загрузим рабочую конфигурацию--> 
 
     <Activity Name="LoadWorkingConfig" Execute="LoadWorkingConfig" 
-
               k:Yes="LoadPartialConfig" k:No="SayLoadWorkingConfigFailedResetConfig"/> 
 
- 
-
- 
-
-    <!--говорим, что ошибка загрузки конфига и предлагаем сбросить ее в начальное состояние--> 
 
     <ReferenceActivity Name="SayLoadWorkingConfigFailedResetConfig" Execute="Common.SayAndWaitYesOrNo" 
-
                        k:Yes="ResetWorkingConfig" k:No="@@Return(No)"/> 
 
- 
-
- 
-
-    <!--сбросим рабочую конфигурацию в начальное состояние--> 
 
     <Activity Name="ResetWorkingConfig" Execute="ResetWorkingConfig" 
-
               k:Yes="LoadPartialConfig"/> 
 
- 
-
- 
-
-    <!--загрузим частную конфигурацию--> 
 
     <Activity Name="LoadPartialConfig" Execute="LoadPartialConfig" 
-
               k:Yes="ApplyConfig" k:No="SayLoadPartialConfigFailedIgnoreError"/> 
 
- 
 
- 
 
-    <!--говорим, что ошибка загрузки конфига и предлагаем проигнорировать ошибку--> 
-
-    <!--если пользователь согласится проигнорировать ошибку, то частный конфиг-файл не будет использоваться--> 
 
     <ReferenceActivity Name="SayLoadPartialConfigFailedIgnoreError" Execute="Common.SayAndWaitYesOrNo" 
-
                        k:Yes="ApplyConfig" k:No="@@Return(No)"/> 
 
- 
-
- 
-
-    <!--применяем полученную конфигурацию--> 
 
     <Activity Name="ApplyConfig" Execute="ApplyConfig" 
-
               k:Yes="@@Return(Yes)" k:No="SayApplyConfigFailed"/> 
 
- 
-
- 
-
-    <!--говорим, что не удалось применить конфигурацию--> 
 
     <ReferenceActivity Name="SayApplyConfigFailed" Execute="Common.ReportError" 
-
                        Parameters="ErrorId=ApplyConfigFailed"/> 
-
   </CompositeActivity> 
-
- 
-
- 
-
-  <ActivityParametersBinding ActivityName="LoadConfigActivity.SayLoadWorkingConfigFailedResetConfig"> 
-
-
-    <Parameter Name="TextFormat">Ошибка загрузки конфигурации. Сбросить?</Parameter> 
-
-    <Parameter Name="Sounds">load_config_failed_reset_config</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="LoadConfigActivity.SayLoadPartialConfigFailedIgnoreError"> 
-
-    <Parameter Name="TextFormat">Ошибка загрузки конфигурации с Flash. Игнорировать?</Parameter> 
-
-    <Parameter Name="Sounds">load_partial_config_failed_ignore_error</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="LoadConfigActivity.SayApplyConfigFailed"> 
-
-    <Parameter Name="TextFormat">Ошибка загрузки конфигурации</Parameter> 
-
-    <Parameter Name="Sounds">load_config_failed</Parameter> 
-
-  </ActivityParametersBinding> 
-
- 
-
- 
-
+  <ActivityParametersBindings CompositeActivityName="LoadConfigActivity"> 
+    <ActivityParametersBinding ActivityName="SayLoadWorkingConfigFailedResetConfig"> 
+      <Parameter Name="TextFormat">Ошибка загрузки конфигурации. Сбросить?</Parameter> 
+      <Parameter Name="Sounds">load_config_failed_reset_config</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayLoadPartialConfigFailedIgnoreError"> 
+      <Parameter Name="TextFormat">Ошибка загрузки конфигурации с Flash. Игнорировать?</Parameter> 
+      <Parameter Name="Sounds">load_partial_config_failed_ignore_error</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayApplyConfigFailed"> 
+      <Parameter Name="TextFormat">Ошибка загрузки конфигурации</Parameter> 
+      <Parameter Name="Sounds">load_config_failed</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
 </Workflow>
-
-

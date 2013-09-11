@@ -1,83 +1,31 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
   xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
-
- 
-
- 
-
   <Include Ref="Activities/Common.wf" /> 
 
- 
-
- 
-
-  <!--зачитывания кол-ва голосов, отданных за кандидатов определенных выборов--> 
 
   <CompositeActivity Name="ReadCandidatesVoteCountActivity" 
-
                      Class="Croc.Bpc.Workflow.Activities.Summarizing.ReadCandidatesVoteCountActivity, Croc.Bpc.Workflow" 
-
                      Tracking="false"> 
 
- 
-
- 
-
-    <!--перебираем кандидатов--> 
 
     <Activity Name="MoveNextCandidate" Execute="MoveNextCandidate" 
-
               k:Yes="IsCandidateCanceled" k:No="@@Return(Yes)"/> 
 
- 
-
- 
-
-    <!--проверим, снят ли кандидат--> 
 
     <Activity Name="IsCandidateCanceled" Execute="IsCandidateCanceled" 
-
               k:Yes="MoveNextCandidate" k:No="SayCandidateVoteCount"/> 
 
- 
-
- 
-
-    <!--говорим: номер кандидата (позиции) и кол-во отданных за него голосов--> 
 
     <ReferenceActivity Name="SayCandidateVoteCount" Execute="Common.SayPhrase" 
-
                        Parameters="Parameters=[@CurrentCandidateNumber,@CandidateVoteCount]" 
-
                        k:Yes="MoveNextCandidate"/> 
-
- 
-
- 
-
   </CompositeActivity> 
-
- 
-
- 
-
-  <ActivityParametersBinding ActivityName="ReadCandidatesVoteCountActivity.SayCandidateVoteCount"> 
-
-    <Parameter Name="TextFormat">Позиция {p0}: {p1}</Parameter> 
-
-    <Parameter Name="PhraseFormat">{s0}{p0}{s1}{p1}</Parameter> 
-
-    <Parameter Name="Sounds">[position_number,votes]</Parameter> 
-
-  </ActivityParametersBinding> 
-
- 
-
- 
-
+  <ActivityParametersBindings CompositeActivityName="ReadCandidatesVoteCountActivity"> 
+    <ActivityParametersBinding ActivityName="SayCandidateVoteCount"> 
+      <Parameter Name="TextFormat">Позиция {p0}: {p1}</Parameter> 
+      <Parameter Name="PhraseFormat">{s0}{p0}{s1}{p1}</Parameter> 
+      <Parameter Name="Sounds">[position_number,votes]</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
 </Workflow>
-
-

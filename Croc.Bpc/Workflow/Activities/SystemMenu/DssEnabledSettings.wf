@@ -1,0 +1,38 @@
+<Workflow 
+  xmlns="http://schemas.croc.ru/Workflow" 
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+  <Include Ref="Activities/Common.wf" /> 
+
+
+  <CompositeActivity Name="DssEnabledSettingsActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.DssEnabledSettingsActivity, Croc.Bpc.Workflow"> 
+
+
+    <Activity Name="IsDssEnabled" Execute="IsDssEnabled" 
+              k:Yes="SayDisableDss" k:No="SayEnableDss"/> 
+
+
+    <ReferenceActivity Name="SayDisableDss" Execute="Common.SayAndWaitYesOrNo" 
+                       Parameters="Silent=@@True" 
+                       k:Yes="SwitchDssEnabled" k:No="@@Return(Yes)"/> 
+
+
+    <ReferenceActivity Name="SayEnableDss" Execute="Common.SayAndWaitYesOrNo" 
+                       Parameters="Silent=@@True" 
+                       k:Yes="SwitchDssEnabled" k:No="@@Return(Yes)"/> 
+
+
+    <Activity Name="SwitchDssEnabled" Execute="SwitchDssEnabled" 
+              k:Yes="@@Return(Yes)"/> 
+
+
+  </CompositeActivity> 
+  <ActivityParametersBindings CompositeActivityName="DssEnabledSettingsActivity"> 
+    <ActivityParametersBinding ActivityName="SayDisableDss"> 
+      <Parameter Name="TextFormat">Отключить ДДЛ?</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayEnableDss"> 
+      <Parameter Name="TextFormat">Включить ДДЛ?</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
+</Workflow>

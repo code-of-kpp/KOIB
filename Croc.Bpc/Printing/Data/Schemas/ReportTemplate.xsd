@@ -1,815 +1,375 @@
-<?xml version="1.0" encoding="windows-1251"?> 
-
+<?xml version="1.0" encoding="utf-8"?> 
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://localhost/Schemas/SIB2003/ReportTemplate"
+argetNamespace="http://localhost/Schemas/SIB2003/ReportTemplate" elementFormDefault="qualified"> 
+    <xs:element name="ReportTemplate"> 
 
-targetNamespace="http://localhost/Schemas/SIB2003/ReportTemplate" elementFormDefault="qualified"> 
 
-	<xs:element name="ReportTemplate"> 
+        <xs:complexType> 
+            <xs:sequence> 
+                <xs:element name="Parameters" minOccurs="0"> 
 
-		<xs:annotation> 
 
-			<xs:documentation>???????? ??????? ??????</xs:documentation> 
+                    <xs:complexType> 
+                        <xs:sequence> 
+                            <xs:element name="Parameter" type="xs:string" maxOccurs="unbounded"> 
 
-		</xs:annotation> 
 
-		<xs:complexType> 
+                            </xs:element> 
+                        </xs:sequence> 
+                    </xs:complexType> 
+                </xs:element> 
+                <xs:element name="Header" type="PlainContent" minOccurs="0"> 
 
-			<xs:sequence> 
 
-				<xs:element name="Parameters" minOccurs="0"> 
+                </xs:element> 
+                <xs:element name="PageHeader" type="PlainContent" minOccurs="0"> 
 
-					<xs:annotation> 
 
-						<xs:documentation>????????? ??????</xs:documentation> 
+                </xs:element> 
+                <xs:element name="Table" minOccurs="0"> 
 
-					</xs:annotation> 
 
-					<xs:complexType> 
+                    <xs:complexType> 
+                        <xs:complexContent> 
+                            <xs:extension base="TableContent"> 
+                                <xs:attribute name="dotted" type="xs:boolean"> 
 
-						<xs:sequence> 
 
-							<xs:element name="Parameter" type="xs:string" maxOccurs="unbounded"> 
+                                </xs:attribute> 
+                            </xs:extension> 
+                        </xs:complexContent> 
+                    </xs:complexType> 
+                </xs:element> 
+                <xs:element name="PageFooter" type="PlainContent" minOccurs="0"> 
 
-								<xs:annotation> 
 
-									<xs:documentation>???????? ?????????</xs:documentation> 
+                </xs:element> 
+                <xs:element name="Footer" type="PlainContent" minOccurs="0"> 
 
-								</xs:annotation> 
 
-							</xs:element> 
+                </xs:element> 
+            </xs:sequence> 
+            <xs:attribute name="name" type="xs:string" use="required"> 
 
-						</xs:sequence> 
 
-					</xs:complexType> 
+            </xs:attribute> 
+            <xs:attribute name="restriction" type="xs:string"> 
 
-				</xs:element> 
 
-				<xs:element name="Header" type="PlainContent" minOccurs="0"> 
+            </xs:attribute> 
+            <xs:attribute name="claspFooter" type="xs:boolean" default="true"> 
 
-					<xs:annotation> 
 
-						<xs:documentation>????????? ??????</xs:documentation> 
+            </xs:attribute> 
+            <xs:attribute name="pageNumbered" type="xs:boolean" default="true"> 
 
-					</xs:annotation> 
 
-				</xs:element> 
+            </xs:attribute> 
+      <xs:attribute name="font" type="xs:string"> 
 
-				<xs:element name="PageHeader" type="PlainContent" minOccurs="0"> 
 
-					<xs:annotation> 
+      </xs:attribute> 
+      <xs:attribute name="font-size" type="xs:int" default="9"> 
 
-						<xs:documentation>???????????? ?????????</xs:documentation> 
 
-					</xs:annotation> 
+      </xs:attribute> 
+      <xs:attribute name="margin-left" type="xs:int" default="-1"> 
 
-				</xs:element> 
 
-				<xs:element name="Table" minOccurs="0"> 
+      </xs:attribute> 
+      <xs:attribute name="margin-right" type="xs:int" default="-1"> 
 
-					<xs:annotation> 
 
-						<xs:documentation>???? ??????</xs:documentation> 
+      </xs:attribute> 
+      <xs:attribute name="margin-top" type="xs:int" default="-1"> 
 
-					</xs:annotation> 
 
-					<xs:complexType> 
+      </xs:attribute> 
+      <xs:attribute name="margin-bottom" type="xs:int" default="-1"> 
 
-						<xs:complexContent> 
 
-							<xs:extension base="TableContent"> 
+      </xs:attribute> 
+    </xs:complexType> 
+    </xs:element> 
+    <xs:complexType name="IfClause"> 
+        <xs:attribute name="condition" type="xs:string" use="required"> 
 
-								<xs:attribute name="dotted" type="xs:boolean"> 
 
-									<xs:annotation> 
+        </xs:attribute> 
+        <xs:attribute name="not" type="xs:boolean"> 
 
-										<xs:documentation>??????? ?????????? ?????? ???? ? ??????? ???????</xs:documentation> 
 
-									</xs:annotation> 
+        </xs:attribute> 
+    </xs:complexType> 
+    <xs:complexType name="PlainIfClause"> 
+        <xs:complexContent> 
+            <xs:extension base="IfClause"> 
+                <xs:sequence> 
+                    <xs:element name="Then" type="PlainContent" minOccurs="0"> 
 
-								</xs:attribute> 
 
-							</xs:extension> 
+                    </xs:element> 
+                    <xs:element name="Else" type="PlainContent" minOccurs="0"> 
 
-						</xs:complexContent> 
 
-					</xs:complexType> 
+                    </xs:element> 
+                </xs:sequence> 
+            </xs:extension> 
+        </xs:complexContent> 
+    </xs:complexType> 
+    <xs:complexType name="TableIfClause"> 
+        <xs:complexContent> 
+            <xs:extension base="IfClause"> 
+                <xs:sequence> 
+                    <xs:element name="Then" type="TableBody" minOccurs="0"> 
 
-				</xs:element> 
 
-				<xs:element name="PageFooter" type="PlainContent" minOccurs="0"> 
+                    </xs:element> 
+                    <xs:element name="Else" type="TableBody" minOccurs="0"> 
 
 
-					<xs:annotation> 
+                    </xs:element> 
+                </xs:sequence> 
+            </xs:extension> 
+        </xs:complexContent> 
+    </xs:complexType> 
+    <xs:complexType name="PlainContent"> 
+        <xs:sequence minOccurs="0" maxOccurs="unbounded"> 
+            <xs:choice> 
+                <xs:element name="Line" minOccurs="0" maxOccurs="unbounded"> 
 
-						<xs:documentation>???????????? ??????</xs:documentation> 
 
-					</xs:annotation> 
+                    <xs:complexType mixed="true"> 
+                        <xs:complexContent mixed="true"> 
+                            <xs:extension base="PlainLine"/> 
+                        </xs:complexContent> 
+                    </xs:complexType> 
+                </xs:element> 
+                <xs:element name="If" type="PlainIfClause" minOccurs="0" maxOccurs="unbounded"> 
 
-				</xs:element> 
 
-				<xs:element name="Footer" type="PlainContent" minOccurs="0"> 
+                </xs:element> 
+                <xs:element name="For" type="PlainForClause" minOccurs="0" maxOccurs="unbounded"> 
 
-					<xs:annotation> 
 
-						<xs:documentation>?????? ??????</xs:documentation> 
+                </xs:element> 
+                <xs:element name="SetCurrentRow" minOccurs="0"> 
 
-					</xs:annotation> 
 
-				</xs:element> 
+                </xs:element> 
+            </xs:choice> 
+        </xs:sequence> 
+    </xs:complexType> 
+    <xs:complexType name="TableBody"> 
+        <xs:sequence minOccurs="0" maxOccurs="unbounded"> 
+            <xs:choice> 
+                <xs:element name="Line" minOccurs="0" maxOccurs="unbounded"> 
 
-			</xs:sequence> 
 
-			<xs:attribute name="name" type="xs:string" use="required"> 
+                    <xs:complexType> 
+                        <xs:complexContent> 
+                            <xs:extension base="TableLine"> 
+                                <xs:attributeGroup ref="IfCondition"/> 
+                            </xs:extension> 
+                        </xs:complexContent> 
+                    </xs:complexType> 
+                </xs:element> 
+                <xs:element name="If" type="TableIfClause" minOccurs="0" maxOccurs="unbounded"> 
 
-				<xs:annotation> 
 
-					<xs:documentation>??? ??????</xs:documentation> 
+                </xs:element> 
+                <xs:element name="For" type="TableForClause" minOccurs="0" maxOccurs="unbounded"> 
 
-				</xs:annotation> 
 
-			</xs:attribute> 
+                </xs:element> 
+                <xs:element name="SetCurrentRow" minOccurs="0"> 
 
-			<xs:attribute name="restriction" type="xs:string"> 
 
-				<xs:annotation> 
+                </xs:element> 
+            </xs:choice> 
+        </xs:sequence> 
+    </xs:complexType> 
+    <xs:complexType name="PlainForClause"> 
+        <xs:sequence> 
+            <xs:element name="Body" type="PlainContent"> 
 
-					<xs:documentation>??????????? ?? ?????????? ??????</xs:documentation> 
 
-				</xs:annotation> 
+            </xs:element> 
+        </xs:sequence> 
+        <xs:attributeGroup ref="ForCondition"/> 
+    </xs:complexType> 
+    <xs:complexType name="LinePart" mixed="true"> 
+        <xs:sequence> 
+            <xs:element name="Parts" minOccurs="0"> 
 
-			</xs:attribute> 
 
-			<xs:attribute name="claspFooter" type="xs:boolean" default="true"> 
+                <xs:complexType> 
+                    <xs:sequence> 
+                        <xs:element name="Part" type="LinePart" minOccurs="0" maxOccurs="unbounded"> 
 
-				<xs:annotation> 
 
-					<xs:documentation>??????? ???????? ??????? ? ??????</xs:documentation> 
+                        </xs:element> 
+                    </xs:sequence> 
+                </xs:complexType> 
+            </xs:element> 
+        </xs:sequence> 
+        <xs:attributeGroup ref="IfCondition"/> 
+    </xs:complexType> 
+    <xs:complexType name="TableForClause"> 
+        <xs:sequence> 
+            <xs:element name="Body" type="TableBody"> 
 
-				</xs:annotation> 
 
-			</xs:attribute> 
+            </xs:element> 
+        </xs:sequence> 
+        <xs:attributeGroup ref="ForCondition"/> 
+    </xs:complexType> 
+    <xs:attributeGroup name="ForCondition"> 
+        <xs:attribute name="each" type="xs:string" use="required"> 
 
-			<xs:attribute name="pageNumbered" type="xs:boolean" default="true"> 
 
-				<xs:annotation> 
+        </xs:attribute> 
+        <xs:attribute name="in" type="xs:string" use="required"> 
 
-					<xs:documentation>??????? ????????????? ?????? ??????? ???????</xs:documentation> 
 
-				</xs:annotation> 
+        </xs:attribute> 
+    </xs:attributeGroup> 
+    <xs:attributeGroup name="IfCondition"> 
+        <xs:attribute name="condition" type="xs:string"> 
 
-			</xs:attribute> 
 
-		</xs:complexType> 
+        </xs:attribute> 
+        <xs:attribute name="not" type="xs:boolean"> 
 
-	</xs:element> 
 
-	<xs:complexType name="IfClause"> 
+        </xs:attribute> 
+    </xs:attributeGroup> 
+    <xs:complexType name="TableContent"> 
+        <xs:sequence> 
+            <xs:element name="Header"> 
 
-		<xs:attribute name="condition" type="xs:string" use="required"> 
 
-			<xs:annotation> 
+                <xs:complexType> 
+                    <xs:sequence> 
+                        <xs:element name="Col" maxOccurs="unbounded"> 
 
-				<xs:documentation>???????</xs:documentation> 
 
-			</xs:annotation> 
+                            <xs:complexType mixed="true"> 
+                                <xs:attributeGroup ref="FontDefinition"/> 
+                                <xs:attribute name="width" type="xs:int"> 
 
-		</xs:attribute> 
 
-		<xs:attribute name="not" type="xs:boolean"> 
+                                </xs:attribute> 
+                                <xs:attribute name="count" type="xs:string"> 
 
-			<xs:annotation> 
 
-				<xs:documentation>???????? ???????</xs:documentation> 
+                                </xs:attribute> 
+                            </xs:complexType> 
+                        </xs:element> 
+                    </xs:sequence> 
+                </xs:complexType> 
+            </xs:element> 
+            <xs:element name="Body" type="TableBody"> 
 
-			</xs:annotation> 
 
-		</xs:attribute> 
+            </xs:element> 
+        </xs:sequence> 
+    </xs:complexType> 
+    <xs:attributeGroup name="FontDefinition"> 
+        <xs:attribute name="fontSize" type="xs:string"> 
 
-	</xs:complexType> 
 
-	<xs:complexType name="PlainIfClause"> 
+        </xs:attribute> 
+        <xs:attribute name="bold" type="xs:boolean"> 
 
-		<xs:complexContent> 
 
-			<xs:extension base="IfClause"> 
+        </xs:attribute> 
+        <xs:attribute name="italic" type="xs:boolean"> 
 
-				<xs:sequence> 
 
-					<xs:element name="Then" type="PlainContent" minOccurs="0"> 
+        </xs:attribute> 
+        <xs:attribute name="align" type="Croc.SibApp.Printing.LineAlign"> 
 
-						<xs:annotation> 
 
+        </xs:attribute> 
+    </xs:attributeGroup> 
+    <xs:complexType name="PlainLine" mixed="true"> 
+        <xs:complexContent mixed="true"> 
+            <xs:extension base="LinePart"> 
+                <xs:attributeGroup ref="FontDefinition"/> 
+                <xs:attribute name="split" type="xs:string"> 
 
-							<xs:documentation>??????????? ??? ?????????? ???????</xs:documentation> 
 
-						</xs:annotation> 
+                </xs:attribute> 
+                <xs:attribute name="trim" type="xs:boolean"> 
 
-					</xs:element> 
 
-					<xs:element name="Else" type="PlainContent" minOccurs="0"> 
+                </xs:attribute> 
+            </xs:extension> 
+        </xs:complexContent> 
+    </xs:complexType> 
+    <xs:complexType name="TableLine"> 
+        <xs:sequence> 
+            <xs:element name="Cols"> 
 
-						<xs:annotation> 
 
-							<xs:documentation>??????????? ??? ???????? ???????</xs:documentation> 
+                <xs:complexType> 
+                    <xs:sequence> 
+                        <xs:element name="Col" maxOccurs="unbounded"> 
 
-						</xs:annotation> 
 
-					</xs:element> 
+                            <xs:complexType mixed="true"> 
+                                <xs:complexContent mixed="true"> 
+                                    <xs:extension base="LinePart"> 
+                                        <xs:attribute name="each" type="xs:string"> 
 
-				</xs:sequence> 
 
-			</xs:extension> 
+                                        </xs:attribute> 
+                                        <xs:attribute name="in" type="xs:string"> 
 
-		</xs:complexContent> 
 
-	</xs:complexType> 
+                                        </xs:attribute> 
+                                    </xs:extension> 
+                                </xs:complexContent> 
+                            </xs:complexType> 
+                        </xs:element> 
+                    </xs:sequence> 
+                </xs:complexType> 
+            </xs:element> 
+        </xs:sequence> 
+        <xs:attributeGroup ref="ColDefinition"/> 
+        <xs:attribute name="newPage" type="xs:boolean" default="false"> 
 
-	<xs:complexType name="TableIfClause"> 
 
-		<xs:complexContent> 
+        </xs:attribute> 
+        <xs:attribute name="resetPageNumber" type="xs:boolean" default="false"> 
 
-			<xs:extension base="IfClause"> 
 
-				<xs:sequence> 
+        </xs:attribute> 
+    </xs:complexType> 
+    <xs:attributeGroup name="ColDefinition"> 
+        <xs:attributeGroup ref="FontDefinition"/> 
+        <xs:attribute name="dotted" type="xs:boolean"> 
 
-					<xs:element name="Then" type="TableBody" minOccurs="0"> 
 
-						<xs:annotation> 
+        </xs:attribute> 
+    </xs:attributeGroup> 
+    <xs:simpleType name="Croc.SibApp.Printing.LineAlign"> 
 
-							<xs:documentation>??????????? ? ?????? ?????????? ???????</xs:documentation> 
 
-						</xs:annotation> 
+        <xs:restriction base="xs:string"> 
+            <xs:enumeration value="Left"> 
 
-					</xs:element> 
 
-					<xs:element name="Else" type="TableBody" minOccurs="0"> 
+            </xs:enumeration> 
+            <xs:enumeration value="Right"> 
 
-						<xs:annotation> 
 
-							<xs:documentation>??????????? ? ?????? ???????? ???????</xs:documentation> 
+            </xs:enumeration> 
+            <xs:enumeration value="Center"> 
 
-						</xs:annotation> 
 
-					</xs:element> 
-
-				</xs:sequence> 
-
-			</xs:extension> 
-
-		</xs:complexContent> 
-
-	</xs:complexType> 
-
-	<xs:complexType name="PlainContent"> 
-
-		<xs:sequence minOccurs="0" maxOccurs="unbounded"> 
-
-			<xs:choice> 
-
-				<xs:element name="Line" minOccurs="0" maxOccurs="unbounded"> 
-
-					<xs:annotation> 
-
-						<xs:documentation>?????? ??????</xs:documentation> 
-
-					</xs:annotation> 
-
-					<xs:complexType mixed="true"> 
-
-						<xs:complexContent mixed="true"> 
-
-							<xs:extension base="PlainLine"/> 
-
-						</xs:complexContent> 
-
-					</xs:complexType> 
-
-				</xs:element> 
-
-				<xs:element name="If" type="PlainIfClause" minOccurs="0" maxOccurs="unbounded"> 
-
-					<xs:annotation> 
-
-						<xs:documentation>???????? ????????</xs:documentation> 
-
-					</xs:annotation> 
-
-				</xs:element> 
-
-				<xs:element name="For" type="PlainForClause" minOccurs="0" maxOccurs="unbounded"> 
-
-					<xs:annotation> 
-
-
-						<xs:documentation>????</xs:documentation> 
-
-					</xs:annotation> 
-
-				</xs:element> 
-
-				<xs:element name="SetCurrentRow" minOccurs="0"> 
-
-					<xs:annotation> 
-
-						<xs:documentation>????????? ?????? ??????</xs:documentation> 
-
-					</xs:annotation> 
-
-				</xs:element> 
-
-			</xs:choice> 
-
-		</xs:sequence> 
-
-	</xs:complexType> 
-
-	<xs:complexType name="TableBody"> 
-
-		<xs:sequence minOccurs="0" maxOccurs="unbounded"> 
-
-			<xs:choice> 
-
-				<xs:element name="Line" minOccurs="0" maxOccurs="unbounded"> 
-
-					<xs:annotation> 
-
-						<xs:documentation>?????? ???????</xs:documentation> 
-
-					</xs:annotation> 
-
-					<xs:complexType> 
-
-						<xs:complexContent> 
-
-							<xs:extension base="TableLine"> 
-
-								<xs:attributeGroup ref="IfCondition"/> 
-
-							</xs:extension> 
-
-						</xs:complexContent> 
-
-					</xs:complexType> 
-
-				</xs:element> 
-
-				<xs:element name="If" type="TableIfClause" minOccurs="0" maxOccurs="unbounded"> 
-
-					<xs:annotation> 
-
-						<xs:documentation>???????? ????????</xs:documentation> 
-
-					</xs:annotation> 
-
-				</xs:element> 
-
-				<xs:element name="For" type="TableForClause" minOccurs="0" maxOccurs="unbounded"> 
-
-					<xs:annotation> 
-
-						<xs:documentation>????</xs:documentation> 
-
-					</xs:annotation> 
-
-				</xs:element> 
-
-				<xs:element name="SetCurrentRow" minOccurs="0"> 
-
-					<xs:annotation> 
-
-						<xs:documentation>????????? ?????? ??????</xs:documentation> 
-
-					</xs:annotation> 
-
-				</xs:element> 
-
-			</xs:choice> 
-
-		</xs:sequence> 
-
-	</xs:complexType> 
-
-	<xs:complexType name="PlainForClause"> 
-
-		<xs:sequence> 
-
-			<xs:element name="Body" type="PlainContent"> 
-
-				<xs:annotation> 
-
-					<xs:documentation>???? ?????</xs:documentation> 
-
-				</xs:annotation> 
-
-
-			</xs:element> 
-
-		</xs:sequence> 
-
-		<xs:attributeGroup ref="ForCondition"/> 
-
-	</xs:complexType> 
-
-	<xs:complexType name="LinePart" mixed="true"> 
-
-		<xs:sequence> 
-
-			<xs:element name="Parts" minOccurs="0"> 
-
-				<xs:annotation> 
-
-					<xs:documentation>?????????</xs:documentation> 
-
-				</xs:annotation> 
-
-				<xs:complexType> 
-
-					<xs:sequence> 
-
-						<xs:element name="Part" type="LinePart" minOccurs="0" maxOccurs="unbounded"> 
-
-							<xs:annotation> 
-
-								<xs:documentation>???????? ?????????</xs:documentation> 
-
-							</xs:annotation> 
-
-						</xs:element> 
-
-					</xs:sequence> 
-
-				</xs:complexType> 
-
-			</xs:element> 
-
-		</xs:sequence> 
-
-		<xs:attributeGroup ref="IfCondition"/> 
-
-	</xs:complexType> 
-
-	<xs:complexType name="TableForClause"> 
-
-		<xs:sequence> 
-
-			<xs:element name="Body" type="TableBody"> 
-
-				<xs:annotation> 
-
-					<xs:documentation>???? ?????</xs:documentation> 
-
-				</xs:annotation> 
-
-			</xs:element> 
-
-		</xs:sequence> 
-
-		<xs:attributeGroup ref="ForCondition"/> 
-
-	</xs:complexType> 
-
-	<xs:attributeGroup name="ForCondition"> 
-
-		<xs:attribute name="each" type="xs:string" use="required"> 
-
-			<xs:annotation> 
-
-				<xs:documentation>?????????? ?????</xs:documentation> 
-
-			</xs:annotation> 
-
-		</xs:attribute> 
-
-		<xs:attribute name="in" type="xs:string" use="required"> 
-
-			<xs:annotation> 
-
-				<xs:documentation>?????????, ?? ??????? ??????????? ????</xs:documentation> 
-
-			</xs:annotation> 
-
-		</xs:attribute> 
-
-	</xs:attributeGroup> 
-
-	<xs:attributeGroup name="IfCondition"> 
-
-		<xs:attribute name="condition" type="xs:string"> 
-
-			<xs:annotation> 
-
-				<xs:documentation>???????</xs:documentation> 
-
-			</xs:annotation> 
-
-
-		</xs:attribute> 
-
-		<xs:attribute name="not" type="xs:boolean"> 
-
-			<xs:annotation> 
-
-				<xs:documentation>???????? ????????</xs:documentation> 
-
-			</xs:annotation> 
-
-		</xs:attribute> 
-
-	</xs:attributeGroup> 
-
-	<xs:complexType name="TableContent"> 
-
-		<xs:sequence> 
-
-			<xs:element name="Header"> 
-
-				<xs:annotation> 
-
-					<xs:documentation>???????? ???????? ???????</xs:documentation> 
-
-				</xs:annotation> 
-
-				<xs:complexType> 
-
-					<xs:sequence> 
-
-						<xs:element name="Col" maxOccurs="unbounded"> 
-
-							<xs:annotation> 
-
-								<xs:documentation>???????? ???????</xs:documentation> 
-
-							</xs:annotation> 
-
-							<xs:complexType mixed="true"> 
-
-								<xs:attributeGroup ref="FontDefinition"/> 
-
-								<xs:attribute name="width" type="xs:int"> 
-
-									<xs:annotation> 
-
-										<xs:documentation>?????? ??????? ? %</xs:documentation> 
-
-									</xs:annotation> 
-
-								</xs:attribute> 
-
-								<xs:attribute name="count" type="xs:string"> 
-
-									<xs:annotation> 
-
-										<xs:documentation>?????????, ?? ?????????? ????????? ??????? ????? ????????? ???????</xs:documentation> 
-
-									</xs:annotation> 
-
-								</xs:attribute> 
-
-							</xs:complexType> 
-
-						</xs:element> 
-
-					</xs:sequence> 
-
-				</xs:complexType> 
-
-			</xs:element> 
-
-			<xs:element name="Body" type="TableBody"> 
-
-				<xs:annotation> 
-
-					<xs:documentation>???? ???????</xs:documentation> 
-
-				</xs:annotation> 
-
-			</xs:element> 
-
-		</xs:sequence> 
-
-	</xs:complexType> 
-
-	<xs:attributeGroup name="FontDefinition"> 
-
-		<xs:attribute name="fontSize" type="xs:string"> 
-
-			<xs:annotation> 
-
-				<xs:documentation>?????? ??????</xs:documentation> 
-
-			</xs:annotation> 
-
-		</xs:attribute> 
-
-		<xs:attribute name="bold" type="xs:boolean"> 
-
-
-			<xs:annotation> 
-
-				<xs:documentation>??????? ??????? ??????</xs:documentation> 
-
-			</xs:annotation> 
-
-		</xs:attribute> 
-
-		<xs:attribute name="italic" type="xs:boolean"> 
-
-			<xs:annotation> 
-
-				<xs:documentation>??????? ?????????? ??????</xs:documentation> 
-
-			</xs:annotation> 
-
-		</xs:attribute> 
-
-		<xs:attribute name="align" type="Croc.SibApp.Printing.LineAlign"> 
-
-			<xs:annotation> 
-
-				<xs:documentation>????????????</xs:documentation> 
-
-			</xs:annotation> 
-
-		</xs:attribute> 
-
-	</xs:attributeGroup> 
-
-	<xs:complexType name="PlainLine" mixed="true"> 
-
-		<xs:complexContent mixed="true"> 
-
-			<xs:extension base="LinePart"> 
-
-				<xs:attributeGroup ref="FontDefinition"/> 
-
-				<xs:attribute name="split" type="xs:string"> 
-
-					<xs:annotation> 
-
-						<xs:documentation>??????(?) ?? ??????? ?????? ??????????? ?? ?????????</xs:documentation> 
-
-					</xs:annotation> 
-
-				</xs:attribute> 
-
-				<xs:attribute name="trim" type="xs:boolean"> 
-
-					<xs:annotation> 
-
-						<xs:documentation>??????? ???????? ???????? ? ????? ?????? ??????</xs:documentation> 
-
-					</xs:annotation> 
-
-				</xs:attribute> 
-
-			</xs:extension> 
-
-		</xs:complexContent> 
-
-	</xs:complexType> 
-
-	<xs:complexType name="TableLine"> 
-
-		<xs:sequence> 
-
-			<xs:element name="Cols"> 
-
-				<xs:annotation> 
-
-					<xs:documentation>??????? ??????</xs:documentation> 
-
-				</xs:annotation> 
-
-				<xs:complexType> 
-
-					<xs:sequence> 
-
-						<xs:element name="Col" maxOccurs="unbounded"> 
-
-							<xs:annotation> 
-
-								<xs:documentation>???????</xs:documentation> 
-
-							</xs:annotation> 
-
-							<xs:complexType mixed="true"> 
-
-								<xs:complexContent mixed="true"> 
-
-									<xs:extension base="LinePart"> 
-
-										<xs:attribute name="each" type="xs:string"> 
-
-											<xs:annotation> 
-
-												<xs:documentation>?????????? ?????</xs:documentation> 
-
-
-											</xs:annotation> 
-
-										</xs:attribute> 
-
-										<xs:attribute name="in" type="xs:string"> 
-
-											<xs:annotation> 
-
-												<xs:documentation>?????????, ?? ??????? ???????? ???????</xs:documentation> 
-
-											</xs:annotation> 
-
-										</xs:attribute> 
-
-									</xs:extension> 
-
-								</xs:complexContent> 
-
-							</xs:complexType> 
-
-						</xs:element> 
-
-					</xs:sequence> 
-
-				</xs:complexType> 
-
-			</xs:element> 
-
-		</xs:sequence> 
-
-		<xs:attributeGroup ref="ColDefinition"/> 
-
-		<xs:attribute name="newPage" type="xs:boolean" default="false"> 
-
-			<xs:annotation> 
-
-				<xs:documentation>??????? ???????? ?? ????????? ????????</xs:documentation> 
-
-			</xs:annotation> 
-
-		</xs:attribute> 
-
-	</xs:complexType> 
-
-	<xs:attributeGroup name="ColDefinition"> 
-
-		<xs:attributeGroup ref="FontDefinition"/> 
-
-		<xs:attribute name="dotted" type="xs:boolean"> 
-
-			<xs:annotation> 
-
-				<xs:documentation>??????? ?????????? ?????? ???????</xs:documentation> 
-
-			</xs:annotation> 
-
-		</xs:attribute> 
-
-	</xs:attributeGroup> 
-
-	<xs:simpleType name="Croc.SibApp.Printing.LineAlign"> 
-
-		<xs:annotation> 
-
-			<xs:documentation>Croc.SibApp.Printing.LineAlign</xs:documentation> 
-
-		</xs:annotation> 
-
-		<xs:restriction base="xs:string"> 
-
-			<xs:enumeration value="Left"> 
-
-				<xs:annotation> 
-
-					<xs:documentation>???????????? ?? ?????? ????</xs:documentation> 
-
-				</xs:annotation> 
-
-			</xs:enumeration> 
-
-			<xs:enumeration value="Right"> 
-
-				<xs:annotation> 
-
-					<xs:documentation>???????????? ?? ??????? ????</xs:documentation> 
-
-				</xs:annotation> 
-
-			</xs:enumeration> 
-
-			<xs:enumeration value="Center"> 
-
-				<xs:annotation> 
-
-					<xs:documentation>???????????? ?? ??????</xs:documentation> 
-
-				</xs:annotation> 
-
-			</xs:enumeration> 
-
-
-		</xs:restriction> 
-
-	</xs:simpleType> 
-
+            </xs:enumeration> 
+        </xs:restriction> 
+    </xs:simpleType> 
 </xs:schema>
-
-

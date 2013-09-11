@@ -1,0 +1,27 @@
+<Workflow 
+  xmlns="http://schemas.croc.ru/Workflow" 
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+  <Include Ref="Activities/Common.wf" /> 
+
+
+  <CompositeActivity Name="ResetConfigActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.ResetConfigActivity, Croc.Bpc.Workflow"> 
+
+
+
+
+    <ReferenceActivity Name="AskWantToResetConfig" Execute="Common.SayAndWaitYesOrNo" 
+                       Parameters="Silent=@@True" 
+                       k:Yes="ResetConfig" k:No="@@Return(Yes)"/> 
+
+
+    <Activity Name="ResetConfig" Execute="ResetConfig"/> 
+
+
+  </CompositeActivity> 
+  <ActivityParametersBindings CompositeActivityName="ResetConfigActivity"> 
+    <ActivityParametersBinding ActivityName="AskWantToResetConfig"> 
+      <Parameter Name="TextFormat">Сбросить конфигурацию?</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
+</Workflow>

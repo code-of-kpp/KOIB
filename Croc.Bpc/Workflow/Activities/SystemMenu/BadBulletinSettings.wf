@@ -1,51 +1,54 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
   xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
-
- 
-
- 
-
   <Include Ref="Activities/Common.wf" /> 
 
- 
-
- 
-
-  <!--Системное меню--> 
 
   <CompositeActivity Name="BadBulletinSettingsActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.BadBulletinSettingsActivity, Croc.Bpc.Workflow"> 
 
-                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.BadBulletinSettingsActivity, Croc.Bpc.Workflow" 
 
-                     Tracking="false"> 
+    <ReferenceActivity Name="ReadBadMarking" Execute="Common.SayAndReadValue" 
+                       Parameters="Required=@@True;Silent=@@True;Value=@BadBulletinMarking" 
+                       k:No="@@Return(Yes)"/> 
 
- 
 
- 
+    <Activity Name="SaveBadMarking" Execute="SaveBadMarking" 
+              k:Yes="ReadBadStampMarking" k:No="SayBadMarkingValueWrong"/> 
 
-    <!--индикатор--> 
 
-    <ReferenceActivity Name="Start" Execute="Common.SayAndWaitTimeout" 
+    <ReferenceActivity Name="SayBadMarkingValueWrong" Execute="Common.SayAndWaitTimeout" 
+                       Parameters="Parameters=@MaxMarkingValue;Timeout=3000;Silent=@@True" 
+                       k:Yes="ReadBadMarking"/> 
 
-                       Parameters="Timeout=5000;Silent=@@True" 
 
-                       k:Yes="@@Return(Yes)"/> 
+    <ReferenceActivity Name="ReadBadStampMarking" Execute="Common.SayAndReadValue" 
+                       Parameters="Required=@@True;Silent=@@True;Value=@BadStampBulletinMarking" 
+                       k:No="@@Return(Yes)"/> 
+
+
+    <Activity Name="SaveBadStampMarkingApplyNewConfig" Execute="SaveBadStampMarkingApplyNewConfig" 
+              k:Yes="@@Return(Yes)" k:No="SayBadStampMarkingValueWrong"/> 
+
+
+    <ReferenceActivity Name="SayBadStampMarkingValueWrong" Execute="Common.SayAndWaitTimeout" 
+                       Parameters="Parameters=@MaxMarkingValue;Timeout=3000;Silent=@@True" 
+                       k:Yes="ReadBadStampMarking"/> 
+
 
   </CompositeActivity> 
-
- 
-
- 
-
-  <ActivityParametersBinding ActivityName="BadBulletinSettingsActivity.Start"> 
-
-    <Parameter Name="TextFormat">Меню еще не реализовано</Parameter> 
-
-  </ActivityParametersBinding> 
-
+  <ActivityParametersBindings CompositeActivityName="BadBulletinSettingsActivity"> 
+    <ActivityParametersBinding ActivityName="ReadBadMarking"> 
+      <Parameter Name="TextFormat">НУФ = _</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="ReadBadStampMarking"> 
+      <Parameter Name="TextFormat">НУФ (печать) = _</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayBadMarkingValueWrong"> 
+      <Parameter Name="TextFormat">Некорректное значение! Введите число от 0 до {p0}</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayBadStampMarkingValueWrong"> 
+      <Parameter Name="TextFormat">Некорректное значение! Введите число от 0 до {p0}</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
 </Workflow>
-
-

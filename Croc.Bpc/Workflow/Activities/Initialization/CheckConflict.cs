@@ -1,402 +1,193 @@
 using System; 
-
-using System.Collections.Generic; 
-
-using System.Linq; 
-
-using System.Text; 
-
-using Croc.Workflow.ComponentModel; 
-
-using Croc.Core.Diagnostics; 
-
-using Croc.Bpc.Election; 
-
-using Croc.Bpc.Election.Voting; 
-
-using Croc.Bpc.Common.Diagnostics; 
-
+using Croc.Bpc.Diagnostics; 
 using Croc.Bpc.Synchronization; 
-
- 
-
- 
-
+using Croc.Bpc.Voting; 
+using Croc.Workflow.ComponentModel; 
 namespace Croc.Bpc.Workflow.Activities.Initialization 
-
 { 
-
     [Serializable] 
-
     public class CheckConflictActivity : BpcCompositeActivity 
-
     { 
-
-        /// <summary> 
-
-        /// Имя данных "Обнаружен ли конфликт" 
-
-        /// </summary> 
-
-        private const string HASCONFLICT_DATANAME = "HasConflict"; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Номер УИК, полученный из имени файла с ИД 
-
-        /// </summary> 
-
         [NonSerialized] 
-
-        private int _uikFromFile; 
-
-        public int UikFromFile 
-
+        private SourceDataFileDescriptor _sourceDataFileDescriptor; 
+        public SourceDataFileDescriptor SourceDataFileDescriptor 
         { 
-
             get 
-
             { 
-
-                return _uikFromFile; 
-
+                return _sourceDataFileDescriptor; 
             } 
-
             set 
-
             { 
-
-                _uikFromFile = value; 
-
+                _sourceDataFileDescriptor = value; 
             } 
-
         } 
-
-        /// <summary> 
-
-        /// ИД, загруженные из файла 
-
-        /// </summary> 
-
         [NonSerialized] 
-
         private SourceData _sourceDataFromFile; 
-
         public SourceData SourceDataFromFile 
-
         { 
-
             get 
-
             { 
-
                 return _sourceDataFromFile; 
-
             } 
-
-
             set 
-
             { 
-
                 _sourceDataFromFile = value; 
-
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ждет решение главного сканера о наличии конфликта 
-
-        /// </summary> 
-
+        #region Ожидание и принятие решения о наличии конфликта 
+        private const string HASCONFLICT_DATANAME = "HasConflict"; 
         public NextActivityKey WaitForMasterDecision( 
-
             WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
-
         { 
-
-            // включаем синхронизацию на время ожидания 
-
-            _scannerManager.SetIndicator(CommonActivity.SYNCHRONIZATION_INDICATOR_TEXT); 
-
-            _syncManager.SynchronizationEnabled = true; 
-
- 
-
- 
-
             NextActivityKey result; 
-
+            _scannerManager.SetIndicator(CommonActivity.SYNCHRONIZATION_INDICATOR_TEXT); 
+            _logger.LogInfo(Message.WorkflowWaitForMasterDecision); 
             var hasConflict = _syncManager.GetDataTransmittedFromRemoteScanner(HASCONFLICT_DATANAME, context); 
-
- 
-
- 
-
-            // если получили null (приложение начало выключаться или потеряна связь со 2-м сканером) 
-
             if (hasConflict == null) 
-
             { 
-
                 _logger.LogInfo(Message.WorkflowCannotDetectConflict); 
-
                 result = BpcNextActivityKeys.No; 
-
             } 
-
-            else if ((bool)hasConflict) 
-
+            else if ((bool) hasConflict) 
             { 
-
-                // есть конфликт 
-
                 _logger.LogInfo(Message.WorkflowMasterDetectConflict); 
-
                 result = BpcNextActivityKeys.No; 
-
             } 
-
             else 
-
             { 
-
-                // нет конфликта 
-
                 _logger.LogInfo(Message.WorkflowMasterDetectNoConflict); 
-
                 result = BpcNextActivityKeys.Yes; 
-
             } 
-
- 
-
- 
-
-            // выключаем синхронизацию 
-
-            _syncManager.SynchronizationEnabled = false; 
-
- 
-
- 
-
             return result; 
-
         } 
-
- 
-
- 
-
-
-        /// <summary> 
-
-        /// Передает решение о наличии конфликта на подчиненный сканер 
-
-        /// </summary> 
-
         public NextActivityKey TransmitDecisionToSlaveScanner( 
-
             WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
-
         { 
-
-            // если это главный сканер и удаленный сканер подключен 
-
+            var hasConflict = parameters.GetParamValue<bool>("HasConflict"); 
+            if (hasConflict) 
+                _logger.LogInfo(Message.WorkflowHasConflict); 
             if (_syncManager.ScannerRole == ScannerRole.Master && _syncManager.IsRemoteScannerConnected) 
-
             { 
-
-                var hasConflict = parameters.GetParamValue<bool>("HasConflict"); 
-
                 _syncManager.RemoteScanner.PutData(HASCONFLICT_DATANAME, hasConflict); 
-
             } 
-
- 
-
- 
-
             return context.DefaultNextActivityKey; 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ИД_с совпадают с ИД_ф? 
-
-        /// </summary> 
-
-        public NextActivityKey IsStateSDEqualsFileSD( 
-
+        public NextActivityKey ReplaseStateSdToFileSd( 
             WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
-
         { 
-
-            return  
-
-                _sourceDataFromFile != null &&  
-
+            if (IsStateSdEqualsFileSd()) 
+                return BpcNextActivityKeys.Yes; 
+            return _electionManager.SetSourceData(_sourceDataFromFile, _sourceDataFileDescriptor) 
+                       ? BpcNextActivityKeys.Yes 
+                       : BpcNextActivityKeys.No; 
+        } 
+        #endregion 
+        #region Различные проверки 
+        public NextActivityKey IsStateRestored( 
+            WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
+        { 
+            return 
+                !_syncManager.IsStateInitial && 
+                _electionManager.SourceData != null 
+                    ? BpcNextActivityKeys.Yes 
+                    : BpcNextActivityKeys.No; 
+        } 
+        public NextActivityKey IsStateSdEqualsFileSd( 
+            WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
+        { 
+            return IsStateSdEqualsFileSd() 
+                       ? BpcNextActivityKeys.Yes 
+                       : BpcNextActivityKeys.No; 
+        } 
+        private bool IsStateSdEqualsFileSd() 
+        { 
+            return 
+                _sourceDataFromFile != null && 
                 _electionManager.SourceData != null && 
-
-                _sourceDataFromFile.Equals(_electionManager.SourceData) 
-
-                ? BpcNextActivityKeys.Yes : BpcNextActivityKeys.No; 
-
+                _sourceDataFromFile.Equals(_electionManager.SourceData); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// На Главном и Подчиненном сканерах НЕ совпадают ИД_с? 
-
-        /// </summary> 
-
-        public NextActivityKey StateSDNotEqualsOnMasterAndSlaveScanners( 
-
+        public NextActivityKey IsSlaveStateSdEqualsFileSd( 
             WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
-
         { 
-
-            return  
-
-                // условие - что ИД совпадают 
-
-                _electionManager.SourceData != null && 
-
-                _electionManager.SourceData.Id.Equals(_syncManager.RemoteScanner.SourceDataId) 
-
-                ? BpcNextActivityKeys.No : BpcNextActivityKeys.Yes; 
-
+            return 
+                _sourceDataFromFile != null && 
+                string.CompareOrdinal( 
+                    _sourceDataFromFile.HashCode, 
+                    _syncManager.RemoteScanner.SourceDataHashCode) == 0 
+                    ? BpcNextActivityKeys.Yes 
+                    : BpcNextActivityKeys.No; 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// в ИД_с сейчас день выборов? 
-
-        /// </summary> 
-
-        public NextActivityKey IsElectionDayNowInStateSD( 
-
-
+        public NextActivityKey IsElectionDayNowInStateSd( 
             WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
-
         { 
-
-            return _syncManager.IsElectionDayNow ? BpcNextActivityKeys.Yes : BpcNextActivityKeys.No; 
-
+            return IsIsElectionDayOrExtra(_electionManager.IsElectionDay()) 
+                       ? BpcNextActivityKeys.Yes 
+                       : BpcNextActivityKeys.No; 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// в ИД_с на подчиненном сканере сейчас день выборов? 
-
-        /// </summary> 
-
-        public NextActivityKey IsElectionDayNowInStateSDOnSlaveScanner( 
-
+        public NextActivityKey IsElectionDayNowInFileSd( 
             WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
-
         { 
-
-            return _syncManager.RemoteScanner.IsElectionDayNow ? BpcNextActivityKeys.Yes : BpcNextActivityKeys.No; 
-
+            return IsIsElectionDayOrExtra(_electionManager.IsElectionDay(_sourceDataFromFile)) 
+                       ? BpcNextActivityKeys.Yes 
+                       : BpcNextActivityKeys.No; 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// заменяем ИД_с на ИД_ф 
-
-        /// </summary> 
-
-        public NextActivityKey ReplaseStateSDToFileSD( 
-
+        public NextActivityKey IsElectionDayNowInStateSdOnSlaveScanner( 
             WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
-
         { 
-
-            _electionManager.SetSourceData(_sourceDataFromFile, _uikFromFile); 
-
-            return context.DefaultNextActivityKey; 
-
+            return IsIsElectionDayOrExtra(_syncManager.RemoteScanner.IsElectionDay) 
+                       ? BpcNextActivityKeys.Yes 
+                       : BpcNextActivityKeys.No; 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// подчиненный сканер есть и у него состояние восстановлено? 
-
-        /// </summary> 
-
         public NextActivityKey SlaveScannerExistsAndHasRestoredState( 
-
             WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
-
         { 
-
-            return _syncManager.IsRemoteScannerConnected && !_syncManager.RemoteScanner.IsStateInitial 
-
-                ? BpcNextActivityKeys.Yes : BpcNextActivityKeys.No; 
-
+            return 
+                _syncManager.IsRemoteScannerConnected && 
+                !_syncManager.RemoteScanner.IsStateInitial && 
+                !string.IsNullOrEmpty(_syncManager.RemoteScanner.SourceDataHashCode) 
+                    ? BpcNextActivityKeys.Yes 
+                    : BpcNextActivityKeys.No; 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// сбрасываем состояние в начальное на подчиненном сканере 
-
-        /// </summary> 
-
-        public NextActivityKey ResetStateOnSlaveScanner( 
-
+        #endregion 
+        #region Сброс ПО 
+        [NonSerialized] 
+        private bool _needResetSoftOnMaster; 
+        [NonSerialized] 
+        private bool _needResetSoftOnSlave; 
+        public NextActivityKey RememberToResetSoftOnMaster( 
             WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
-
         { 
-
-            _syncManager.RemoteScanner.ResetState(); 
-
+            _needResetSoftOnMaster = true; 
             return context.DefaultNextActivityKey; 
-
         } 
-
+        public NextActivityKey RememberToResetSoftOnSlave( 
+            WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
+        { 
+            _needResetSoftOnSlave = true; 
+            return context.DefaultNextActivityKey; 
+        } 
+        public NextActivityKey NeedToResetSoft( 
+            WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
+        { 
+            return _needResetSoftOnMaster || _needResetSoftOnSlave 
+                       ? BpcNextActivityKeys.Yes 
+                       : BpcNextActivityKeys.No; 
+        } 
+        public NextActivityKey ResetSoft( 
+            WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
+        { 
+            if (_needResetSoftOnSlave) 
+            { 
+                _logger.LogInfo(Message.WorkflowResetSoftOnSlaveBecauseConflictDetected); 
+                _syncManager.RemoteScanner.ResetSoft(ResetSoftReason.ConflictDetected, true, false); 
+            } 
+            if (_needResetSoftOnMaster) 
+            { 
+                _logger.LogInfo(Message.WorkflowResetSoftOnMasterBecauseConflictDetected); 
+                _syncManager.ResetSoft(ResetSoftReason.ConflictDetected, false, false); 
+            } 
+            return context.DefaultNextActivityKey; 
+        } 
+        #endregion 
     } 
-
 }
-
-

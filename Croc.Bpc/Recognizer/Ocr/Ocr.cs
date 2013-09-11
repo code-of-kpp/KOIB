@@ -1,5494 +1,1439 @@
 using System; 
-
 using System.Collections.Generic; 
-
 using System.Text; 
-
 using System.Runtime.InteropServices; 
-
 using System.IO; 
-
+using Croc.Bpc.Utils; 
 using Croc.Core.Extensions; 
-
-using Croc.Bpc.Common; 
-
- 
-
- 
-
 namespace Croc.Bpc.Recognizer.Ocr 
-
 { 
-
-    /// <summary> 
-
-    /// Драйвер распознавалки (OCR - Optical Character Recognizer) 
-
-    /// </summary> 
-
     public class Ocr : IOcr 
-
     { 
-
-        /// <summary> 
-
-        /// Количество цифр в номере печати 
-
-        /// </summary> 
-
         public const int STAMP_DIGIT_COUNT = 4; 
-
-        /// <summary> 
-
-        /// количество запусков функции RunRecognize. 
-
-        /// </summary> 
-
-        private static int		g_lRunRecCount; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Размер области печати по вертикали 
-
-        /// </summary> 
-
-        private	int		m_nStampVSize; 
-
-        /// <summary> 
-
-        /// Признак необходимости поиска нижней линии 
-
-        /// </summary> 
-
-        private	bool	m_bSeekBottom; 
-
-        /// <summary> 
-
-        /// Буфера для хранения изображений 
-
-        /// </summary> 
-
-        private			BufferHeader  m_bhSide0, m_bhSide1; 
-
-        /// <summary> 
-
-        /// Флаг того, что распознавание начато 
-
-        /// </summary> 
-
-        private	bool	m_bStarted; 
-
-        /// <summary> 
-
-        /// Разрешения сканера по X и Y по обеим сторонам 
-
-        /// </summary> 
-
-        private float	m_dpiX0, m_dpiX1, m_dpiY0, m_dpiY1; 
-
-        /// <summary> 
-
-        /// Обработчик событий (запросов) распознавалки 
-
-        /// </summary> 
-
-        private IOcrEventHandler	m_pEvents; 
-
-
-        /// <summary> 
-
-        /// Путь к каталогу распознавалки 
-
-        /// </summary> 
-
-        private string		m_bstrPath2RecognitionData; 
-
-        /// <summary> 
-
-        /// Размер массива для хранения номеров комиссий 
-
-        /// </summary> 
-
-        private const int     m_StampSize = 10; 
-
-        /// <summary> 
-
-        /// Массив номеров комиссий для проверки печати 
-
-        /// </summary> 
-
-        private int[]			m_alStamp = new int[m_StampSize]; 
-
-        /// <summary> 
-
-        /// Режим проверки печати 
-
-        /// </summary> 
-
-        private StampTestLevel	m_sStampTestLevel; 
-
-        /// <summary> 
-
-        /// Результаты распознавания 
-
-        /// </summary> 
-
-        private List<PollResult> m_pollResults; 
-
-        /// <summary> 
-
-        /// Номер бюллетеня 
-
-        /// </summary> 
-
-        private int			m_nBulletinNumber = -1; // по умолчанию не определен 
-
-        /// <summary> 
-
-        /// Признак использования механизма отсева одной слабой лишней метки 
-
-        /// </summary> 
-
-        private bool			m_bIgnoreOneExtraCheck; 
-
-        /// <summary> 
-
-        /// искать ли единственный недостающий квадрат 
-
-        /// </summary> 
-
-        private bool			m_bLookForLostSquare;  
-
-        /// <summary> 
-
-        /// Размеры в линиях последних полученных порций изображения 
-
-        /// </summary> 
-
-        private int[]			m_iLastLines = new int[2]; 
-
-        /// <summary> 
-
-        /// Максимальная ширина линии печати 
-
-        /// </summary> 
-
-        private int			m_lStampMaxLineWidth; 
-
-        /// <summary> 
-
-        /// Минимальная ширина линии печати 
-
-        /// </summary> 
-
-        private int			m_lStampMinLineWidth; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конструктор 
-
-        /// </summary> 
-
+        private static int s_runRecCount; 
+        private int _stampVSize; 
+        private bool _seekBottom; 
+        private BufferHeader _side0, _side1; 
+        private bool _isRunningNow; 
+        private static readonly object s_runSync = new object(); 
+        private int _endRecognitionLastResult = -1; 
+        private float _dpiX0, _dpiX1, _dpiY0, _dpiY1; 
+        private IOcrEventHandler _events; 
+        private string _bstrPath2RecognitionData; 
+        private const int STAMP_SIZE = 10; 
+        private int[] _alStamp = new int[STAMP_SIZE]; 
+        private StampTestLevel _stampTestLevel; 
+        private List<PollResult> _pollResults; 
+        private int _bulletinNumber = -1; // по умолчанию не определен 
+        private bool _ignoreOneExtraCheck; 
+        private bool _lookForLostSquare; 
+        private int[] _lastLines = new int[2]; 
+        private int _stampMaxLineWidth; 
+        private int _stampMinLineWidth; 
         public Ocr() 
-
-
         { 
-
-            // Для совместимости с старым COM-объектом 
-
-            // так как распознавалка у нас лежит на уровень выше 
-
             string sCurrentDir = Directory.GetCurrentDirectory(); 
-
             Directory.SetCurrentDirectory(".."); 
-
-            m_pEvents = null; 
-
+            _events = null; 
             LookForLostSquare = false; 
 
- 
 
- 
+            s_runRecCount = 0;    // инициализирую количество вызовов функции RunRecognize 
 
-            g_lRunRecCount = 0;	// инициализирую количество вызовов функции RunRecognize 
-
- 
-
- 
 
             Initialize(); 
-
             Directory.SetCurrentDirectory(sCurrentDir); 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Инициализация компоненты 
-
-        /// </summary> 
-
-        /// <returns>всегда true</returns> 
-
         bool Initialize() 
-
         { 
-
-            m_pollResults = new List<PollResult>(); 
-
-            m_bStarted = false; 
-
-            m_bIgnoreOneExtraCheck = false; 
-
-            m_iLastLines[0] = m_iLastLines[1] = 0; 
-
-            m_bSeekBottom = false; 
-
-            m_nStampVSize = 380; 
-
+            _pollResults = new List<PollResult>(); 
+            _isRunningNow = false; 
+            _endRecognitionLastResult = -1; 
+            _ignoreOneExtraCheck = false; 
+            _lastLines[0] = _lastLines[1] = 0; 
+            _seekBottom = false; 
+            _stampVSize = 380; 
             return true; 
-
         } 
-
- 
-
- 
-
-        // Implement IDisposable. 
-
-        // Do not make this method virtual. 
-
-        // A derived class should not be able to override this method. 
-
         public void Dispose() 
-
         { 
-
             Dispose(true); 
-
-            // This object will be cleaned up by the Dispose method. 
-
-            // Therefore, you should call GC.SupressFinalize to 
-
-            // take this object off the finalization queue  
-
-            // and prevent finalization code for this object 
-
-            // from executing a second time. 
-
             GC.SuppressFinalize(this); 
-
         } 
-
- 
-
- 
-
-        // Track whether Dispose has been called. 
-
-        private bool disposed = false; 
-
-
- 
- 
-
-        // Dispose(bool disposing) executes in two distinct scenarios. 
-
-        // If disposing equals true, the method has been called directly 
-
-        // or indirectly by a user's code. Managed and unmanaged resources 
-
-        // can be disposed. 
-
-        // If disposing equals false, the method has been called by the  
-
-        // runtime from inside the finalizer and you should not reference  
-
-        // other objects. Only unmanaged resources can be disposed. 
-
+        private bool _disposed; 
         private void Dispose(bool disposing) 
-
         { 
-
-            // Check to see if Dispose has already been called. 
-
-            if(!this.disposed) 
-
+            if(!_disposed) 
             { 
-
-                // If disposing equals true, dispose all managed  
-
-                // and unmanaged resources. 
-
                 if(disposing) 
-
                 { 
-
-                    // Dispose managed resources. 
-
                 } 
-
- 
-
- 
-
-                // Call the appropriate methods to clean up  
-
-                // unmanaged resources here. 
-
-                // If disposing is false,  
-
-                // only the following code is executed. 
-
-				try  
-
-				{ 
-
-					// убираем обрабочика сообщений, чтобы не падала распознавалка 
-
-					Ocr.OCR_Initialize(null); 
-
-					m_pEvents = null; 
-
-					Ocr.CloseRecognition(); 
-
-				} 
-
-				catch  
-
-				{ 
-
-					// на случай падения распознавалки 
-
-				} 
-
+                try  
+                { 
+                    Ocr.OCR_Initialize(null); 
+                    _events = null; 
+                    Ocr.CloseRecognition(); 
+                } 
+                catch  
+                { 
+                } 
             } 
-
-            disposed = true;          
-
+            _disposed = true;          
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Деструктор 
-
-        /// </summary> 
-
         ~Ocr() 
-
         { 
-
-            // Do not re-create Dispose clean-up code here. 
-
-            // Calling Dispose(false) is optimal in terms of 
-
-            // readability and maintainability. 
-
-
             Dispose(false); 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Получить номер комиссии 
-
-        /// </summary> 
-
-        /// <param name="nIndex">Номер номера в массиве номеров</param> 
-
-        /// <returns>Номер комиссии, -1 в случае ошибки</returns> 
-
-        int	GetStamp(int nIndex) 
-
+        int    GetStamp(int index) 
         {  
-
-            if(0 > nIndex || m_StampSize <= nIndex)  
-
+            if(0 > index || STAMP_SIZE <= index)  
             { 
-
                 SetError(ErrorCode.IllegalUse, "GetStamp: выход за пределы массива"); 
-
                 return -1; 
-
             } 
-
-            return m_alStamp[nIndex];  
-
+            return _alStamp[index];  
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Вернуть количество номеров комиссии 
-
-        /// </summary> 
-
-        /// <returns>количество номеров</returns> 
-
-        int	GetStampCount()	 
-
+        int    GetStampCount()     
         {  
-
             int i; 
-
-            for(i = 0; i < m_StampSize; i++)  
-
+            for(i = 0; i < STAMP_SIZE; i++)  
             { 
-
-                if(!(0 < m_alStamp[i])) 
-
+                if(!(0 < _alStamp[i])) 
                 { 
-
                     break; 
-
                 } 
-
             } 
-
- 
-
- 
-
             return i; 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Callback объявлен здесь, чтобы предотвратить его убивание сборщиком мусора 
-
-        /// </summary> 
-
-        OcrCallBack myCallBack = null; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Инициализация компоненты. Необходимо вызывать сразу после создания 
-
-        /// </summary> 
-
+        private OcrCallBack _myCallBack; 
         public void Init() 
-
-
         { 
-
-            myCallBack = new OcrCallBack(OcrCallBackHandler); 
-
-            Ocr.OCR_Initialize(myCallBack); 
-
+            _myCallBack = new OcrCallBack(OcrCallBackHandler); 
+            OCR_Initialize(_myCallBack); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// установить внешний event-интерфейс 
-
-        /// </summary> 
-
-        /// <param name="pEvent">Обработчик</param> 
-
-        public void SetEventsHandler(IOcrEventHandler pEvent) 
-
+        public void SetEventsHandler(IOcrEventHandler eventHandler) 
         { 
-
-            m_pEvents = pEvent; 
-
+            _events = eventHandler; 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Уровень проверки печати 
-
-        /// </summary> 
-
         public StampTestLevel StampTestLevel  
-
         { 
-
             get 
-
             { 
-
-                return m_sStampTestLevel; 
-
+                return _stampTestLevel; 
             } 
-
             set 
-
             { 
-
-                m_sStampTestLevel = value; 
-
+                _stampTestLevel = value; 
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Уровень проверки небюллетеня 
-
-        /// </summary> 
-
-        public InlineLevel InlineRecognitionLevel  
-
+        public OnlineLevel OnlineRecognitionLevel  
         { 
-
             get 
-
             { 
-
-                return (InlineLevel)Ocr.GetFeatureOnlineTest(); 
-
+                return (OnlineLevel)GetFeatureOnlineTest(); 
             } 
-
             set  
-
             { 
-
-                Ocr.SetFeatureOnlineTest((int)value); 
-
+                SetFeatureOnlineTest((int)value); 
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимально допустимое значение перекоса 
-
-
-        /// </summary> 
-
         public int MaxOnlineSkew  
-
         { 
-
             get  
-
             { 
-
-                return Ocr.GetMaxOnlineSkew(); 
-
+                return GetMaxOnlineSkew(); 
             } 
-
             set 
-
             { 
-
-                Ocr.SetMaxOnlineSkew(value); 
-
+                SetMaxOnlineSkew(value); 
             }  
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Разрешение сканера по X 
-
-        /// </summary> 
-
         public float DpiX0  
-
         { 
-
             get  
-
             { 
-
-                return m_dpiX0; 
-
+                return _dpiX0; 
             } 
-
             set 
-
             { 
-
-                m_dpiX0 = value; 
-
+                _dpiX0 = value; 
             }  
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Разрешение сканера по X 
-
-        /// </summary> 
-
         public float DpiX1  
-
         { 
-
             get  
-
             { 
-
-                return m_dpiX1; 
-
+                return _dpiX1; 
             } 
-
             set 
-
             { 
-
-                m_dpiX1 = value; 
-
+                _dpiX1 = value; 
             }  
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Разрешение сканера по Y 
-
-        /// </summary> 
-
         public float DpiY0  
-
-
         { 
-
             get  
-
             { 
-
-                return m_dpiY0; 
-
+                return _dpiY0; 
             } 
-
             set 
-
             { 
-
-                m_dpiY0 = value; 
-
+                _dpiY0 = value; 
             }  
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Разрешение сканера по Y 
-
-        /// </summary> 
-
         public float DpiY1  
-
         { 
-
             get  
-
             { 
-
-                return m_dpiY1; 
-
+                return _dpiY1; 
             } 
-
             set 
-
             { 
-
-                m_dpiY1 = value; 
-
+                _dpiY1 = value; 
             }  
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Установить разрешение сканера 
-
-        /// </summary> 
-
-        /// <param name="x0">значение по оси Х для стороны 0</param> 
-
-        /// <param name="y0">значение по оси Y для стороны 0</param> 
-
-        /// <param name="x1">значение по оси Х для стороны 1</param> 
-
-        /// <param name="y1">значение по оси Y для стороны 1</param> 
-
         public void SetDpi(float x0, float y0, float x1, float y1) 
-
         { 
-
-            m_dpiX0 = x0; 
-
-            m_dpiY0 = y0; 
-
-            m_dpiX1 = x1; 
-
-            m_dpiY1 = y1; 
-
+            _dpiX0 = x0; 
+            _dpiY0 = y0; 
+            _dpiX1 = x1; 
+            _dpiY1 = y1; 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Номер бюллетеня (от 0), полученный по результату распознавания маркера 
-
-        /// </summary> 
-
         public int BulletinNumber  
-
         { 
-
             get  
-
-
             { 
-
-                return this.m_nBulletinNumber; 
-
+                return _bulletinNumber; 
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Результат распознавания печати 
-
-        /// </summary> 
-
         public StampResult StampResult  
-
         { 
-
             get  
-
             { 
-
-                return (StampResult)Ocr.IsStampOK(); 
-
+                return (StampResult)IsStampOK(); 
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Результаты распознавания 
-
-        /// </summary> 
-
         public List<PollResult> Results  
-
         { 
-
             get  
-
             { 
-
-                return m_pollResults; 
-
+                return _pollResults; 
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [DEPRECATED] Cнимает квадрат с гoлoсoвания 
-
-        /// </summary> 
-
-        /// <param name="bulletin">номер бюллетеня</param> 
-
-        /// <param name="election">номер выборов</param> 
-
-        /// <param name="square">номер квадрата в модели</param> 
-
         public void OCR_ExcludeSquare(int bulletin, int election, int square) 
-
         { 
-
             try  
-
             { 
-
-                if (Ocr.ExcludeSquare(bulletin, election, square) < 0)  
-
+                if (ExcludeSquare(bulletin, election, square) < 0)  
                 { 
-
-                    SetError(ErrorCode.IllegalUse, "OCR_ExcludeSquare: Неверные параметры для Ocr.ExcludeSquare: " + bulletin + ", " + election + ", " + square); 
-
-                    throw new OcrException("OCR_ExcludeSquare: Неверные параметры для Ocr.ExcludeSquare: " + bulletin + ", " + election + ", " + square); 
-
+                    SetError(ErrorCode.IllegalUse, "OCR_ExcludeSquare: Неверные параметры для Ocr.ExcludeSquare: " 
+                        + bulletin + ", " + election + ", " + square); 
+                    throw new OcrException("OCR_ExcludeSquare: Неверные параметры для Ocr.ExcludeSquare: " 
+                        + bulletin + ", " + election + ", " + square); 
                 } 
-
-                if (Ocr.LinkChangedModel() < 0)  
-
+                if (LinkChangedModel() < 0)  
                 { 
-
-                    SetError(ErrorCode.LinkModelError, "OCR_ExcludeSquare: Не удалось перекомпилировать модель функцией Ocr.LinkChangedModel"); 
-
+                    SetError(ErrorCode.LinkModelError, 
+                        "OCR_ExcludeSquare: Не удалось перекомпилировать модель функцией Ocr.LinkChangedModel"); 
                     throw new OcrException("OCR_ExcludeSquare: Не удалось перекомпилировать модель функцией Ocr.LinkChangedModel"); 
-
                 } 
-
-
             } 
-
             catch (Exception ex) 
-
             {  
-
-                SetError(ErrorCode.UnexpectedError, "OCR_ExcludeSquare: " + ex.ToString()); 
-
+                SetError(ErrorCode.UnexpectedError, "OCR_ExcludeSquare: " + ex); 
                 throw; 
-
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [DEPRECATED] Восстанавливает учатие квадрата в выборах 
-
-        /// </summary> 
-
-        /// <param name="bulletin">номер бюллетеня</param> 
-
-        /// <param name="election">номер выборов</param> 
-
-        /// <param name="square">номер квадрата в модели</param> 
-
         public void OCR_RestoreSquare(int bulletin, int election, int square) 
-
         { 
-
             try  
-
             { 
-
-                if (Ocr.EnableSquare(bulletin, election, square) < 0)  
-
+                if (EnableSquare(bulletin, election, square) < 0)  
                 { 
-
-                    SetError(ErrorCode.IllegalUse, "OCR_RestoreSquare: Неверные параметры для Ocr.EnableSquare: " + bulletin + ", " + election + ", " + square); 
-
-                    throw new OcrException("OCR_RestoreSquare: Неверные параметры для Ocr.EnableSquare: " + bulletin + ", " + election + ", " + square); 
-
+                    SetError(ErrorCode.IllegalUse, "OCR_RestoreSquare: Неверные параметры для Ocr.EnableSquare: " 
+                        + bulletin + ", " + election + ", " + square); 
+                    throw new OcrException("OCR_RestoreSquare: Неверные параметры для Ocr.EnableSquare: " 
+                        + bulletin + ", " + election + ", " + square); 
                 } 
-
-                if (Ocr.LinkChangedModel() < 0)  
-
+                if (LinkChangedModel() < 0)  
                 { 
-
                     SetError(ErrorCode.LinkModelError, "OCR_RestoreSquare: Не удалось перекомпилировать модель функцией Ocr.LinkChangedModel"); 
-
                     throw new OcrException("OCR_RestoreSquare: Не удалось перекомпилировать модель функцией Ocr.LinkChangedModel"); 
-
                 } 
-
             } 
-
             catch (Exception ex) 
-
             {  
-
-                SetError(ErrorCode.UnexpectedError, "OCR_RestoreSquare: " + ex.ToString()); 
-
+                SetError(ErrorCode.UnexpectedError, "OCR_RestoreSquare: " + ex); 
                 throw; 
-
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [DEPRECATED] возвращает состояние флага участия квадрата в выборах 
-
-        /// </summary> 
-
-        /// <param name="bulletin">номер бюллетеня</param> 
-
-        /// <param name="election">номер выборов</param> 
-
-        /// <param name="square">номер квадрата в модели</param> 
-
-        /// <param name="retVal">признак участия в выборах</param> 
-
-        /// <returns>код выполнения операции (меньше 0 сигнализирует от ошибке)</returns> 
-
         public int OCR_IsSquareValid(int bulletin, int election, int square, out int retVal) 
-
         { 
-
-            int ret = 0; 
-
- 
-
-
- 
+            int ret; 
             try  
-
             { 
-
-                ret = Ocr.IsSquareValid(bulletin, election, square); 
-
+                ret = IsSquareValid(bulletin, election, square); 
                 if (ret == -1)  
-
                 { 
-
-                    SetError(ErrorCode.IllegalUse, "OCR_IsSquareValid: Неверные параметры для Ocr.IsSquareValid: " + bulletin + ", " + election + ", " + square); 
-
-                    throw new OcrException("OCR_IsSquareValid: Неверные параметры для Ocr.IsSquareValid: " + bulletin + ", " + election + ", " + square); 
-
+                    SetError(ErrorCode.IllegalUse, "OCR_IsSquareValid: Неверные параметры для Ocr.IsSquareValid: " 
+                        + bulletin + ", " + election + ", " + square); 
+                    throw new OcrException("OCR_IsSquareValid: Неверные параметры для Ocr.IsSquareValid: " 
+                        + bulletin + ", " + election + ", " + square); 
                 } 
-
- 
-
- 
-
                 retVal = ret; 
-
             } 
-
             catch (Exception ex) 
-
             {  
-
-                SetError(ErrorCode.UnexpectedError, "OCR_IsSquareValid: " + ex.ToString()); 
-
+                SetError(ErrorCode.UnexpectedError, "OCR_IsSquareValid: " + ex); 
                 retVal = 0; 
-
                 return 0; 
-
             } 
-
- 
-
- 
-
             return ret; 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Инициализация процесса распознавания бюллетеня 
-
-        /// </summary> 
-
-        /// <param name="pdImage0">изображение для анализа 1я сторона</param> 
-
-        /// <param name="pdImage1">изображение для анализа 2я сторона</param> 
-
-        /// <param name="nLineWidth0">длина строки стороны 1</param> 
-
-        /// <param name="nLineWidth1">длина строки стороны 2</param> 
-
-        /// <param name="nNumOfLines0">количество строк первой стороны</param> 
-
-        /// <param name="nNumOfLines1">количество строк второй стороны</param> 
-
         public void RunRecognize(MemoryBlock pdImage0, MemoryBlock pdImage1, int nLineWidth0, int nLineWidth1, int nNumOfLines0, int nNumOfLines1) 
-
         { 
-
-            g_lRunRecCount++;		// увеличиваю количество вызовов функции 
-
- 
-
- 
-
-            if (pdImage0 == null || pdImage1 == null)  
-
+            lock (s_runSync) 
             { 
-
-                SetError(ErrorCode.IllegalUse, "RunRecognize: переданы нулевые указатели на изображения"); 
-
-                throw new OcrException("RunRecognize: переданы нулевые указатели на изображения"); 
-
-            } 
-
- 
-
- 
-
-            IntPtr buffer0 = pdImage0.ToPointer(); 
-
-            IntPtr buffer1 = pdImage1.ToPointer(); 
-
- 
-
- 
-
-
-            if (buffer0 == IntPtr.Zero || buffer1 == IntPtr.Zero)  
-
-            { 
-
-                SetError(ErrorCode.UnexpectedError, "RunRecognize: получены нулевые указатели на изображения"); 
-
-                throw new OcrException("RunRecognize: получены нулевые указатели на изображения"); 
-
-            } 
-
- 
-
- 
-
-            m_bhSide0.all_bin_buf = IntPtr.Zero; 
-
-            m_bhSide0.bin_buf = buffer0; 
-
-            m_bhSide0.bin_size = (uint)(nNumOfLines0 * nLineWidth0); 
-
-            m_bhSide0.ByteImageWidth = nLineWidth0; 
-
-            m_bhSide0.ImageWidth = nLineWidth0*8; 
-
-            m_bhSide0.ActualScanNumber = nNumOfLines0; 
-
- 
-
- 
-
-            m_bhSide0.tone_buf = IntPtr.Zero; 
-
-            m_bhSide0.bin_width = 0; 
-
-            m_bhSide0.size = 0; 
-
-            m_bhSide0.tone_size = 0; 
-
-            m_bhSide0.g_p0.len = 0; 
-
-            m_bhSide0.g_p0.start = 0; 
-
-            m_bhSide0.g_p1.len = 0; 
-
-            m_bhSide0.g_p1.start = 0; 
-
-            m_bhSide0.g_p2.len = 0; 
-
-            m_bhSide0.g_p2.start = 0; 
-
-            m_bhSide0.flag = 0; 
-
-            m_bhSide0.ScanCounter = 0; 
-
-            m_bhSide0.OutFlag = 0; 
-
-            m_bhSide0.LineCount = 0; 
-
-            m_bhSide0.xl = 0; 
-
-            m_bhSide0.yl = 0; 
-
-            m_bhSide0.xr = 0; 
-
-            m_bhSide0.yr = 0; 
-
- 
-
- 
-
-            m_bhSide1.bin_size = (uint)(nNumOfLines1 * nLineWidth1); 
-
-            m_bhSide1.bin_buf = buffer1; 
-
-            m_bhSide1.ImageWidth = nLineWidth1*8; 
-
-            m_bhSide1.ByteImageWidth = nLineWidth1; 
-
-            m_bhSide1.ActualScanNumber = nNumOfLines1; 
-
- 
-
- 
-
-            m_bhSide1.tone_buf = IntPtr.Zero; 
-
-            m_bhSide1.bin_width = 0; 
-
-            m_bhSide1.size = 0; 
-
-            m_bhSide1.tone_size = 0; 
-
-            m_bhSide1.g_p0.len = 0; 
-
-            m_bhSide1.g_p0.start = 0; 
-
-            m_bhSide1.g_p1.len = 0; 
-
-            m_bhSide1.g_p1.start = 0; 
-
-
-            m_bhSide1.g_p2.len = 0; 
-
-            m_bhSide1.g_p2.start = 0; 
-
-            m_bhSide1.flag = 0; 
-
-            m_bhSide1.ScanCounter = 0; 
-
-            m_bhSide1.OutFlag = 0; 
-
-            m_bhSide1.LineCount = 0; 
-
-            m_bhSide1.xl = 0; 
-
-            m_bhSide1.yl = 0; 
-
-            m_bhSide1.xr = 0; 
-
-            m_bhSide1.yr = 0; 
-
- 
-
- 
-
-            // Чистим результаты предыдущего распознавания 
-
-            m_pollResults.Clear(); 
-
- 
-
- 
-
-            // Подготавливаем распознование 
-
-            try  
-
-            { 
-
-                if (m_bStarted)  
-
+                s_runRecCount++; // увеличиваю количество вызовов функции 
+                if (pdImage0 == null || pdImage1 == null) 
                 { 
-
-                    Ocr.EndRecognition(0,0,0); 
-
+                    SetError(ErrorCode.IllegalUse, "RunRecognize: переданы нулевые указатели на изображения"); 
+                    throw new OcrException("RunRecognize: переданы нулевые указатели на изображения"); 
                 } 
-
-                else  
-
+                IntPtr buffer0 = pdImage0.ToPointer(); 
+                IntPtr buffer1 = pdImage1.ToPointer(); 
+                if (buffer0 == IntPtr.Zero || buffer1 == IntPtr.Zero) 
                 { 
-
-                    m_bStarted = true; 
-
+                    SetError(ErrorCode.UnexpectedError, "RunRecognize: получены нулевые указатели на изображения"); 
+                    throw new OcrException("RunRecognize: получены нулевые указатели на изображения"); 
                 } 
-
- 
-
- 
-
-                // сбрасываем номер бюллетеня 
-
-                m_nBulletinNumber = -1; 
-
- 
-
- 
-
-                // запускаем распознавание 
-
-                int	res = Ocr.StartRecognition(ref m_bhSide0, ref m_bhSide1); 
-
-                if (res < 0) 
-
+                _side0.all_bin_buf = IntPtr.Zero; 
+                _side0.bin_buf = buffer0; 
+                _side0.bin_size = (uint) (nNumOfLines0*nLineWidth0); 
+                _side0.ByteImageWidth = nLineWidth0; 
+                _side0.ImageWidth = nLineWidth0*8; 
+                _side0.ActualScanNumber = nNumOfLines0; 
+                _side0.tone_buf = IntPtr.Zero; 
+                _side0.bin_width = 0; 
+                _side0.size = 0; 
+                _side0.tone_size = 0; 
+                _side0.g_p0.len = 0; 
+                _side0.g_p0.start = 0; 
+                _side0.g_p1.len = 0; 
+                _side0.g_p1.start = 0; 
+                _side0.g_p2.len = 0; 
+                _side0.g_p2.start = 0; 
+                _side0.flag = 0; 
+                _side0.ScanCounter = 0; 
+                _side0.OutFlag = 0; 
+                _side0.LineCount = 0; 
+                _side0.xl = 0; 
+                _side0.yl = 0; 
+                _side0.xr = 0; 
+                _side0.yr = 0; 
+                _side1.bin_size = (uint) (nNumOfLines1*nLineWidth1); 
+                _side1.bin_buf = buffer1; 
+                _side1.ImageWidth = nLineWidth1*8; 
+                _side1.ByteImageWidth = nLineWidth1; 
+                _side1.ActualScanNumber = nNumOfLines1; 
+                _side1.tone_buf = IntPtr.Zero; 
+                _side1.bin_width = 0; 
+                _side1.size = 0; 
+                _side1.tone_size = 0; 
+                _side1.g_p0.len = 0; 
+                _side1.g_p0.start = 0; 
+                _side1.g_p1.len = 0; 
+                _side1.g_p1.start = 0; 
+                _side1.g_p2.len = 0; 
+                _side1.g_p2.start = 0; 
+                _side1.flag = 0; 
+                _side1.ScanCounter = 0; 
+                _side1.OutFlag = 0; 
+                _side1.LineCount = 0; 
+                _side1.xl = 0; 
+                _side1.yl = 0; 
+                _side1.xr = 0; 
+                _side1.yr = 0; 
+                _pollResults.Clear(); 
+                try 
                 { 
-
-                    SetError(ErrorCode.StartRecognitionFailed, "Не удалось начать распознавание: " + res); 
-
-                    throw new OcrException("Не удалось начать распознавание: " + res); 
-
-                } 
-
- 
-
- 
-
-                Ocr.StartOnLineTesting(ref m_bhSide0, ref m_bhSide1, Ocr.GetFrameDist_mm()); 
-
-            } 
-
-            catch (Exception ex) 
-
-            { 
-
-                SetError(ErrorCode.UnexpectedError, "RunRecognize: " + ex.ToString()); 
-
-                throw; 
-
-            } 
-
-        } 
-
-
- 
- 
-
-        /// <summary> 
-
-        /// Завершение процесса распознавания 
-
-        /// </summary> 
-
-        /// <param name="mtMarkerType">Тип маркера</param> 
-
-        /// <returns>Результат распознавания</returns> 
-
-        public int EndRecognize(MarkerType mtMarkerType) 
-
-        { 
-
-            try  
-
-            { 
-
-                m_bStarted = false; 
-
-                return Ocr.EndRecognition(mtMarkerType, m_iLastLines[0], m_iLastLines[1]); 
-
-            } 
-
-            catch (Exception ex) 
-
-            {  
-
-                SetError(ErrorCode.UnexpectedError, "EndRecognize: " + ex.ToString()); 
-
-                throw; 
-
-            } 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Завершение процесса распознавания: проверка геометрии бюллетеня 
-
-        /// </summary> 
-
-        /// <returns>Результат распознавания</returns> 
-
-        public int TestBallot(ref GeoData GeoData) 
-
-        { 
-
-            try  
-
-            { 
-
-                m_bStarted = false; 
-
-                return Ocr.TestBallot(m_iLastLines[0], m_iLastLines[1], ref GeoData); 
-
-            } 
-
-            catch (Exception ex) 
-
-            {  
-
-                SetError(ErrorCode.UnexpectedError, "TestBallot: " + ex.ToString()); 
-
-                throw; 
-
-            } 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// компилирует модель 
-
-        /// </summary> 
-
-        public void LinkModel() 
-
-        { 
-
-            try  
-
-            { 
-
-                if (Ocr.DefaultModelSave() < 0) 
-
-                { 
-
-
-                    SetError(ErrorCode.LinkModelError, "LinkModel: не удалось скомпилировать модель"); 
-
-                    throw new OcrException("LinkModel: не удалось скомпилировать модель"); 
-
-                } 
-
-            } 
-
-            catch (Exception ex) 
-
-            {  
-
-                SetError(ErrorCode.UnexpectedError, "LinkModel: " + ex.ToString()); 
-
-                throw; 
-
-            } 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Получить порцию изображения 
-
-        /// </summary> 
-
-        /// <param name="count">Количество строк</param> 
-
-        /// <returns> 
-
-        /// -1  - это не бюллетень  
-
-        ///  0  - решение пока не принято  
-
-        ///  1  - признан бюллетенем 
-
-        /// </returns> 
-
-        public int NextBuffer(int count) 
-
-        { 
-
-            try  
-
-            { 
-
-                int res = Ocr.NextBufferInternal(count); 
-
-                m_iLastLines[0] = count; 
-
-                m_iLastLines[1] = count; 
-
- 
-
- 
-
-                if (res < 0) 
-
-                { 
-
-                    // do nothing 
-
-                } 
-
- 
-
- 
-
-                return res; 
-
-            } 
-
-            catch (Exception ex) 
-
-            {  
-
-                SetError(ErrorCode.UnexpectedError, "NextBuffer: " + ex.ToString()); 
-
-                throw; 
-
-            } 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Определить в online номер маркера 
-
-        /// </summary> 
-
-        /// <param name="mtMarkerType">Тип маркера</param> 
-
-
-        /// <returns>номер маркера</returns> 
-
-        public int GetOnlineMarker(MarkerType mtMarkerType) 
-
-        { 
-
-            try  
-
-            { 
-
-                int res = 0; 
-
- 
-
- 
-
-                switch( mtMarkerType )  
-
-                { 
-
-                    case MarkerType.Standard: 
-
-                        // штрих-маркер 
-
-                        res = Ocr.OnlineDefStandartMarker(); 
-
-                        break; 
-
-                    case MarkerType.Digital: 
-
-                        // цифровой маркер 
-
-                        res = Ocr.OnlineDefCharMarker(); 
-
-                        break; 
-
-                    default: 
-
-                        SetError(ErrorCode.IllegalUse, "GetOnlineMarker: неверный тип маркера: " + mtMarkerType); 
-
-                        // неверные параметры функции 
-
-                        res = -1; 
-
-                        break; 
-
-                } 
-
- 
-
- 
-
-                return res; 
-
-            } 
-
-            catch (Exception ex) 
-
-            {  
-
-                SetError(ErrorCode.UnexpectedError, "GetOnlineMarker: " + ex.ToString()); 
-
-                throw; 
-
-            } 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Инициализация модуля разпознавания. Вызывается при вхoде в режим выбoрoв 
-
-        /// </summary> 
-
-        public void InitRecognize() 
-
-        { 
-
-            try  
-
-            { 
-
-                Ocr.CloseRecognition(); 
-
- 
-
- 
-
-                int	res = Ocr.InitRecognition(); 
-
- 
-
- 
-
-                if (res < 0) 
-
-
-                { 
-
-                    SetError(ErrorCode.StartRecognitionFailed, "InitRecognize: Ошибка при инициализации распознавания: " + res); 
-
-                    throw new OcrException("Ошибка при инициализации распознавания: " + res); 
-
-                } 
-
-            } 
-
-            catch (Exception ex) 
-
-            {  
-
-                SetError(ErrorCode.UnexpectedError, "InitRecognize: " + ex.ToString()); 
-
-                throw; 
-
-            } 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Добавляет номер комиссии в массив 
-
-        /// </summary> 
-
-        /// <param name="nStamp">Номер комиссии</param> 
-
-        public void AddStamp(int nStamp) 
-
-        { 
-
-            int nIndex = GetStampCount(); 
-
- 
-
- 
-
-            if(m_StampSize > nIndex)  
-
-            { 
-
-                m_alStamp[nIndex] = nStamp; 
-
-            } 
-
-            else 
-
-            { 
-
-                SetError(ErrorCode.IllegalUse, "AddStamp: Превышен лимит. Не больше " + m_StampSize + " номеров"); 
-
-                throw new OcrException("AddStamp: Превышен лимит. Не больше " + m_StampSize + " номеров"); 
-
-            } 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Очистка массива номеров комиссий 
-
-        /// </summary> 
-
-        public void ClearStamps() 
-
-        { 
-
-            // очищу массив номеров 
-
-            for(int i = 0; i < m_StampSize; i++)  
-
-            { 
-
-                m_alStamp[i] = 0; 
-
-            } 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Путь к файлу с моделью 
-
-        /// </summary> 
-
-
-        public string ModelFilePath  
-
-        { 
-
-            get; 
-
-            set; 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Полный путь к данным и модулю распознавания цифр. Должен заканчиваться на слэш 
-
-        /// </summary> 
-
-        public string Path2RecognitionData  
-
-        { 
-
-            get  
-
-            { 
-
-                return m_bstrPath2RecognitionData; 
-
-            } 
-
-            set 
-
-            { 
-
-                m_bstrPath2RecognitionData = value; 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная ширина маркера в пикселях 
-
-        /// </summary> 
-
-        public int MinMarkerWid  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetMinMarkerWid(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetMinMarkerWid(value); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимальная ширина маркера в пикселях 
-
-        /// </summary> 
-
-        public int MaxMarkerWid  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetMaxMarkerWid(); 
-
-            } 
-
-            set 
-
-            { 
-
-
-                Ocr.SetMaxMarkerWid(value); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная высота маркера в пикселях 
-
-        /// </summary> 
-
-        public int MinMarkerHgh  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetMinMarkerHgh(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetMinMarkerHgh(value); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимальная высота маркера в пикселях 
-
-        /// </summary> 
-
-        public int MaxMarkerHgh  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetMaxMarkerHgh(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetMaxMarkerHgh(value); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальное отношение высота/ширина для маркера 
-
-        /// </summary> 
-
-        public double MinMarkerRio  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetMaxMarkerRio(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetMaxMarkerRio(value); 
-
-            }  
-
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимальное отношение высота/ширина для маркера 
-
-        /// </summary> 
-
-        public double MaxMarkerRio  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetMaxMarkerRio(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetMaxMarkerRio(value); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Начало зоны контроля пустого листа (не бюллетеня) в пикселях 
-
-        /// </summary> 
-
-        public int BlankTestStart  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetBlankTestStart(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetBlankTestStart(value); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец зоны контроля пустого листа (не бюллетеня) в пикселях 
-
-        /// </summary> 
-
-        public int BlankTestStop  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetBlankTestStop(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetBlankTestStop(value); 
-
-            }  
-
-        } 
-
- 
-
-
- 
-        /// <summary> 
-
-        /// Конец зоны контроля пустого листа (не бюллетеня) в пикселях 
-
-        /// </summary> 
-
-        public int MinCheckArea  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetMinCheckArea(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetMinCheckArea(value); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная площадь засчитываемой печати в пикселях 
-
-        /// </summary> 
-
-        public int StampLowThr  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetStampOK_Low_Threshold_Area(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetStampOK_Low_Threshold_Area(value); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        // Экспортируемые функции для изменения параметров печати. 
-
-        // Могут быть вызваны после InitRecognition в любой момент перед 
-
-        // распознаванием печати. 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Средний горизонтальный размер цифры номера печати в пикселях 
-
-        /// </summary> 
-
-        public int StampDigitXsize  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetStampDigitXsize(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetStampDigitXsize(value); 
-
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Средний вертикальный размер цифры номера печати в пикселях 
-
-        /// </summary> 
-
-        public int StampDigitYsize  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetStampDigitYsize(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetStampDigitYsize(value); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная ширина линии цифры номера печати в пикселях 
-
-        /// </summary> 
-
-        public int StampDigitMinLineWidth  
-
-        { 
-
-            get  
-
-            { 
-
-                return m_lStampMinLineWidth; 
-
-            } 
-
-            set 
-
-            { 
-
-                m_lStampMinLineWidth = value; 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максмальная ширина линии цифры номера печати в пикселях 
-
-        /// </summary> 
-
-        public int StampDigitMaxLineWidth  
-
-        { 
-
-            get  
-
-            { 
-
-                return m_lStampMaxLineWidth; 
-
-            } 
-
-            set 
-
-            { 
-
-                m_lStampMaxLineWidth = value; 
-
-            }  
-
-        } 
-
-
- 
- 
-
-        /// <summary> 
-
-        /// Средний размер белого промежутка между цифрами номера печати в пикселях 
-
-        /// </summary> 
-
-        public int StampDigitGap  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetStampDigitGap(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetStampDigitGap(value); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Среднее расстояние в пикселях от центра цифр печати до нижней линии рамки печати 
-
-        /// </summary> 
-
-        public int StampDigitDistBotLine  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetStampDigitDistBotLine(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetStampDigitDistBotLine(value); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Среднее расстояние в пикселях от центра левой цифры печати до средины левой линии рамки 
-
-        /// </summary> 
-
-        public int StampDigitDistLftLine  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetStampDigitDistLftLine(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetStampDigitDistLftLine(value); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-
-        /// <summary> 
-
-        /// Среднее расстояние в пикселях от центра правой цифры печати до средины правой линии рамки 
-
-        /// </summary> 
-
-        public int StampDigitDistRghLine  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetStampDigitDistRghLine(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetStampDigitDistRghLine(value); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Среднее расстояние в пикселях от центра левой линии рамки печати до центра правой 
-
-        /// </summary> 
-
-        public int StampFrameWidth  
-
-        { 
-
-            get  
-
-            { 
-
-                return Ocr.GetStampFrameWidth(); 
-
-            } 
-
-            set 
-
-            { 
-
-                Ocr.SetStampFrameWidth(value); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Включение/отключение механизма отсева одной слабой лишней метки 
-
-        /// </summary> 
-
-        public bool CutWeakCheck  
-
-        { 
-
-            get  
-
-            { 
-
-                return m_bIgnoreOneExtraCheck; 
-
-            } 
-
-            set 
-
-            { 
-
-                m_bIgnoreOneExtraCheck = value; 
-
-                Ocr.SetIgnoreOneExtraCheck(m_bIgnoreOneExtraCheck.ToInt()); 
-
-            }  
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-
-        /// проверка наличия нижней линии каждой правой секции бюллетня 
-
-        /// </summary> 
-
-        public bool SeekBottomRightLine  
-
-        { 
-
-            get  
-
-            { 
-
-                return m_bSeekBottom; 
-
-            } 
-
-            set 
-
-            { 
-
-                if( value != m_bSeekBottom)	 
-
-                { 
-
-                    m_bSeekBottom = value; 
-
-                    if(m_bSeekBottom)  
-
+                    if (_isRunningNow) 
                     { 
-
-                        Ocr.EnableSectBotLineTest(1); 
-
-                    }  
-
+                        EndRecognition(0, 0, 0); 
+                    } 
                     else 
-
                     { 
-
-                        Ocr.EnableSectBotLineTest(0); 
-
+                        _isRunningNow = true; 
                     } 
-
+                    _bulletinNumber = -1; 
+                    int res = StartRecognition(ref _side0, ref _side1); 
+                    if (res < 0) 
+                    { 
+                        SetError(ErrorCode.StartRecognitionFailed, "Не удалось начать распознавание: " + res); 
+                        throw new OcrException("Не удалось начать распознавание: " + res); 
+                    } 
+                    StartOnLineTesting(ref _side0, ref _side1, GetFrameDist_mm()); 
                 } 
-
-            }  
-
+                catch (Exception ex) 
+                { 
+                    SetError(ErrorCode.UnexpectedError, "RunRecognize: " + ex); 
+                    throw; 
+                } 
+            } 
         } 
+        public int EndRecognize(MarkerType mtMarkerType) 
+        { 
+            lock (s_runSync) 
+            { 
+                try 
+                { 
+                    if (!_isRunningNow) 
+                        return _endRecognitionLastResult; 
+                    _isRunningNow = false; 
+                    _endRecognitionLastResult = -1; 
+                    _endRecognitionLastResult = EndRecognition(mtMarkerType, _lastLines[0], _lastLines[1]); 
+                    return _endRecognitionLastResult; 
+                } 
+                catch (Exception ex) 
+                { 
+                    SetError(ErrorCode.UnexpectedError, "EndRecognize: " + ex); 
+                    throw; 
+                } 
+            } 
+        } 
+        public int TestBallot(ref GeoData geoData) 
+        { 
+            try  
+            { 
+                _isRunningNow = false; 
+                return TestBallot(_lastLines[0], _lastLines[1], ref geoData); 
+            } 
+            catch (Exception ex) 
+            {  
+                SetError(ErrorCode.UnexpectedError, string.Format("TestBallot: {0}", ex)); 
+                throw; 
+            } 
+        } 
+        public void LinkModel() 
+        { 
+            try  
+            { 
+                if (DefaultModelSave() < 0) 
+                { 
+                    SetError(ErrorCode.LinkModelError, "LinkModel: не удалось скомпилировать модель"); 
+                    throw new OcrException("LinkModel: не удалось скомпилировать модель"); 
+                } 
+            } 
+            catch (Exception ex) 
+            {  
+                SetError(ErrorCode.UnexpectedError, "LinkModel: " + ex); 
+                throw; 
+            } 
+        } 
+        public int NextBuffer(int count) 
+        { 
+            try  
+            { 
+                int res = NextBufferInternal(count); 
+                _lastLines[0] = count; 
+                _lastLines[1] = count; 
 
- 
 
- 
-
-        /// <summary> 
-
-        /// вертикальный размер анализируемой зоны печати 
-
-        /// </summary> 
-
+                if (res < 0) 
+                { 
+                } 
+                return res; 
+            } 
+            catch (Exception ex) 
+            {  
+                SetError(ErrorCode.UnexpectedError, "NextBuffer: " + ex); 
+                throw; 
+            } 
+        } 
+        public int GetOnlineMarker(MarkerType mtMarkerType) 
+        { 
+            try  
+            { 
+                int res; 
+                switch( mtMarkerType )  
+                { 
+                    case MarkerType.Standard: 
+                        res = OnlineDefStandartMarker(); 
+                        break; 
+                    case MarkerType.Digital: 
+                        res = OnlineDefCharMarker(); 
+                        break; 
+                    default: 
+                        SetError(ErrorCode.IllegalUse, "GetOnlineMarker: неверный тип маркера: " + mtMarkerType); 
+                        res = -1; 
+                        break; 
+                } 
+                return res; 
+            } 
+            catch (Exception ex) 
+            {  
+                SetError(ErrorCode.UnexpectedError, "GetOnlineMarker: " + ex); 
+                throw; 
+            } 
+        } 
+        public void InitRecognize() 
+        { 
+            try  
+            { 
+                CloseRecognition(); 
+                int    res = InitRecognition(); 
+                if (res < 0) 
+                { 
+                    SetError(ErrorCode.StartRecognitionFailed, 
+                        "InitRecognize: Ошибка при инициализации распознавания: " + res); 
+                    throw new OcrException("Ошибка при инициализации распознавания: " + res); 
+                } 
+            } 
+            catch (Exception ex) 
+            {  
+                SetError(ErrorCode.UnexpectedError, "InitRecognize: " + ex); 
+                throw; 
+            } 
+        } 
+        public void AddStamp(int stamp) 
+        { 
+            int index = GetStampCount(); 
+            if(STAMP_SIZE > index)  
+            { 
+                _alStamp[index] = stamp; 
+            } 
+            else 
+            { 
+                SetError(ErrorCode.IllegalUse, "AddStamp: Превышен лимит. Не больше " + STAMP_SIZE + " номеров"); 
+                throw new OcrException("AddStamp: Превышен лимит. Не больше " + STAMP_SIZE + " номеров"); 
+            } 
+        } 
+        public void ClearStamps() 
+        { 
+            for(int i = 0; i < STAMP_SIZE; i++)  
+            { 
+                _alStamp[i] = 0; 
+            } 
+        } 
+        public string ModelFilePath  
+        { 
+            get; 
+            set; 
+        } 
+        public string Path2RecognitionData  
+        { 
+            get  
+            { 
+                return _bstrPath2RecognitionData; 
+            } 
+            set 
+            { 
+                _bstrPath2RecognitionData = value; 
+            }  
+        } 
+        public int MinMarkerWid  
+        { 
+            get  
+            { 
+                return GetMinMarkerWid(); 
+            } 
+            set 
+            { 
+                SetMinMarkerWid(value); 
+            }  
+        } 
+        public int MaxMarkerWid  
+        { 
+            get  
+            { 
+                return GetMaxMarkerWid(); 
+            } 
+            set 
+            { 
+                SetMaxMarkerWid(value); 
+            }  
+        } 
+        public int MinMarkerHgh  
+        { 
+            get  
+            { 
+                return GetMinMarkerHgh(); 
+            } 
+            set 
+            { 
+                SetMinMarkerHgh(value); 
+            }  
+        } 
+        public int MaxMarkerHgh  
+        { 
+            get  
+            { 
+                return GetMaxMarkerHgh(); 
+            } 
+            set 
+            { 
+                SetMaxMarkerHgh(value); 
+            }  
+        } 
+        public double MinMarkerRio  
+        { 
+            get  
+            { 
+                return GetMinMarkerRio(); 
+            } 
+            set 
+            { 
+                SetMinMarkerRio(value); 
+            }  
+        } 
+        public double MaxMarkerRio  
+        { 
+            get  
+            { 
+                return GetMaxMarkerRio(); 
+            } 
+            set 
+            { 
+                SetMaxMarkerRio(value); 
+            }  
+        } 
+        public int BlankTestStart  
+        { 
+            get  
+            { 
+                return GetBlankTestStart(); 
+            } 
+            set 
+            { 
+                SetBlankTestStart(value); 
+            }  
+        } 
+        public int BlankTestStop  
+        { 
+            get  
+            { 
+                return GetBlankTestStop(); 
+            } 
+            set 
+            { 
+                SetBlankTestStop(value); 
+            }  
+        } 
+        public int MinCheckArea  
+        { 
+            get  
+            { 
+                return GetMinCheckArea(); 
+            } 
+            set 
+            { 
+                SetMinCheckArea(value); 
+            }  
+        } 
+        public int StampLowThr  
+        { 
+            get  
+            { 
+                return GetStampOK_Low_Threshold_Area(); 
+            } 
+            set 
+            { 
+                SetStampOK_Low_Threshold_Area(value); 
+            }  
+        } 
+        public int StampDigitXsize  
+        { 
+            get  
+            { 
+                return GetStampDigitXsize(); 
+            } 
+            set 
+            { 
+                SetStampDigitXsize(value); 
+            }  
+        } 
+        public int StampDigitYsize  
+        { 
+            get  
+            { 
+                return GetStampDigitYsize(); 
+            } 
+            set 
+            { 
+                SetStampDigitYsize(value); 
+            }  
+        } 
+        public int StampDigitMinLineWidth  
+        { 
+            get  
+            { 
+                return _stampMinLineWidth; 
+            } 
+            set 
+            { 
+                _stampMinLineWidth = value; 
+            }  
+        } 
+        public int StampDigitMaxLineWidth  
+        { 
+            get  
+            { 
+                return _stampMaxLineWidth; 
+            } 
+            set 
+            { 
+                _stampMaxLineWidth = value; 
+            }  
+        } 
+        public int StampDigitGap  
+        { 
+            get  
+            { 
+                return GetStampDigitGap(); 
+            } 
+            set 
+            { 
+                SetStampDigitGap(value); 
+            }  
+        } 
+        public int StampDigitDistBotLine  
+        { 
+            get  
+            { 
+                return GetStampDigitDistBotLine(); 
+            } 
+            set 
+            { 
+                SetStampDigitDistBotLine(value); 
+            }  
+        } 
+        public int StampDigitDistLftLine  
+        { 
+            get  
+            { 
+                return GetStampDigitDistLftLine(); 
+            } 
+            set 
+            { 
+                SetStampDigitDistLftLine(value); 
+            }  
+        } 
+        public int StampDigitDistRghLine  
+        { 
+            get  
+            { 
+                return GetStampDigitDistRghLine(); 
+            } 
+            set 
+            { 
+                SetStampDigitDistRghLine(value); 
+            }  
+        } 
+        public int StampFrameWidth  
+        { 
+            get  
+            { 
+                return GetStampFrameWidth(); 
+            } 
+            set 
+            { 
+                SetStampFrameWidth(value); 
+            }  
+        } 
+        public bool CutWeakCheck  
+        { 
+            get  
+            { 
+                return _ignoreOneExtraCheck; 
+            } 
+            set 
+            { 
+                _ignoreOneExtraCheck = value; 
+                SetIgnoreOneExtraCheck(_ignoreOneExtraCheck.ToInt()); 
+            }  
+        } 
+        public bool SeekBottomRightLine  
+        { 
+            get  
+            { 
+                return _seekBottom; 
+            } 
+            set 
+            { 
+                if( value != _seekBottom) 
+                { 
+                    _seekBottom = value; 
+                    EnableSectBotLineTest(_seekBottom ? 1 : 0); 
+                } 
+            }  
+        } 
         public int StampVSize  
-
         { 
-
             get  
-
             { 
-
-                return m_nStampVSize; 
-
+                return _stampVSize; 
             } 
-
             set 
-
             { 
-
-                m_nStampVSize = value; 
-
-                Ocr.SetStampZoneVertSize(value); 
-
+                _stampVSize = value; 
+                SetStampZoneVertSize(value); 
             }  
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Искать ли потерянный квадрат 
-
-        /// </summary> 
-
         public bool LookForLostSquare  
-
         { 
-
             get  
-
             { 
-
-
-                return m_bLookForLostSquare; 
-
+                return _lookForLostSquare; 
             } 
-
             set 
-
             { 
-
-                m_bLookForLostSquare = value; 
-
- 
-
- 
-
-                if (m_bLookForLostSquare)  
-
-                { 
-
-                    Ocr.SetLook4LostSquare(1); 
-
-                } 
-
-                else  
-
-                { 
-
-                    Ocr.SetLook4LostSquare(0); 
-
-                } 
-
-            }  
-
+                _lookForLostSquare = value; 
+                SetLook4LostSquare(_lookForLostSquare ? 1 : 0); 
+            } 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Количество запусков распознавания 
-
-        /// </summary> 
-
         public int RunRecCount  
-
         { 
-
             get  
-
             { 
-
-                return g_lRunRecCount; 
-
+                return s_runRecCount; 
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Включает логгирование распознавания в указанный файл 
-
-        /// </summary> 
-
-        /// <param name="sLogFileName">Имя файла</param> 
-
         public void EnableLogging(string sLogFileName) 
-
         { 
-
-            // Включаю логгирование распознавания 
-
-            Ocr.EnableLoggingInternal(sLogFileName); 
-
+            EnableLoggingInternal(sLogFileName); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная ширина маркера в пикселях 
-
-        /// </summary> 
-
         public int MinStandartMarkerWid  
-
         { 
-
             get  
-
             { 
-
-                return Ocr.GetMinStandartMarkerWid(); 
-
-
+                return GetMinStandartMarkerWid(); 
             } 
-
             set 
-
             { 
-
-                Ocr.SetMinStandartMarkerWid(value); 
-
+                SetMinStandartMarkerWid(value); 
             }  
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимальная ширина маркера в пикселях 
-
-        /// </summary> 
-
         public int MaxStandartMarkerWid  
-
         { 
-
             get  
-
             { 
-
-                return Ocr.GetMaxStandartMarkerWid(); 
-
+                return GetMaxStandartMarkerWid(); 
             } 
-
             set 
-
             { 
-
-                Ocr.SetMaxStandartMarkerWid(value); 
-
+                SetMaxStandartMarkerWid(value); 
             }  
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная высота маркера в пикселях 
-
-        /// </summary> 
-
         public int MinStandartMarkerHgh  
-
         { 
-
             get  
-
             { 
-
-                return Ocr.GetMinStandartMarkerHgh(); 
-
+                return GetMinStandartMarkerHgh(); 
             } 
-
             set 
-
             { 
-
-                Ocr.SetMinStandartMarkerHgh(value); 
-
+                SetMinStandartMarkerHgh(value); 
             }  
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимальная высота маркера в пикселях 
-
-        /// </summary> 
-
         public int MaxStandartMarkerHgh  
-
         { 
-
             get  
-
             { 
-
-                return Ocr.GetMaxStandartMarkerHgh(); 
-
+                return GetMaxStandartMarkerHgh(); 
             } 
-
             set 
-
-
             { 
-
-                Ocr.SetMaxStandartMarkerHgh(value); 
-
+                SetMaxStandartMarkerHgh(value); 
             }  
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Зона поиска маркера в пикселях 
-
-        /// </summary> 
-
         public int StandartMarkerZone  
-
         { 
-
             get  
-
             { 
-
-                return Ocr.GetStandartMarkerZone(); 
-
+                return GetStandartMarkerZone(); 
             } 
-
             set 
-
             { 
-
-                Ocr.SetStandartMarkerZone(value); 
-
+                SetStandartMarkerZone(value); 
             }  
-
         } 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// Смещение в буфере для первой линейки 
-
-		/// </summary> 
-
-		public int OffsetFirstRule 
-
-		{ 
-
-			get  
-
-			{ 
-
-				return Ocr.GetOffsetFirstRule(); 
-
-			} 
-
-			set 
-
-			{ 
-
-				Ocr.SetOffsetFirstRule(value); 
-
-			}  
-
-		} 
-
- 
-
- 
-
-		/// <summary> 
-
-        /// Обработчик обратных вызовов из распознавалки 
-
-        /// </summary> 
-
-        /// <param name="code">Код запроса</param> 
-
-        /// <param name="data">Данные</param> 
-
-        /// <param name="size">Размер данных</param> 
-
-        /// <returns>Результат выполнения</returns> 
-
+        public int OffsetFirstRule 
+        { 
+            get  
+            { 
+                return GetOffsetFirstRule(); 
+            } 
+            set 
+            { 
+                SetOffsetFirstRule(value); 
+            }  
+        } 
         int OcrCallBackHandler(OcrCallBackType cbType, IntPtr data, int size) 
-
         { 
-
-			try 
-
-			{ 
-
-				DebugOut("CALLBACK: " + cbType + " [" + data.ToInt32().ToString("X") + ", " + size + "]"); 
-
-
-				switch (cbType) 
-
-				{ 
-
+            try 
+            { 
+                DebugOut("CALLBACK: " + cbType + " [" + data.ToInt32().ToString("X") + ", " + size + "]"); 
+                switch (cbType) 
+                { 
                     case OcrCallBackType.ModelSave: 
-
-						{ 
-
-							// data - бинарное представление модели 
-
-							// size - размер данных 
-
-							if (size > 0 && data != IntPtr.Zero) 
-
-							{ 
-
-								try  
-
-								{ 
-
-									if( File.Exists(ModelFilePath) ) 
-
-                                        File.Delete(ModelFilePath); 
-
- 
-
- 
-
-									byte[] modelData = new byte[size + 1]; 
-
-									Marshal.Copy(data, modelData, 0, size); 
-
-                                    FileStream fs = File.Create(ModelFilePath); 
-
-									fs.Write(modelData, 0, size); 
-
-									fs.Flush(); 
-
-									fs.Close(); 
-
-									// Успешное выполнение 
-
-									return 1; 
-
-								}  
-
-								catch (Exception ex) 
-
-								{ 
-
-									SetError(ErrorCode.UnexpectedError, "CALLBACK: " + cbType + ": " + ex.ToString()); 
-
-									// непредвиденная ошибка 
-
-									return -2; 
-
-								} 
-
-							} 
-
-							else 
-
-							{ 
-
-								SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + ": неверные или неожиданные параметры [" + data.ToInt32().ToString("X") + ", " + size + "]"); 
-
-								// неверные параметры 
-
-								return -3; 
-
-							} 
-
-						} 
-
-					case OcrCallBackType.GetModelFileSize: 
-
-						{ 
-
-							try  
-
-							{ 
-
-								FileInfo fi = new FileInfo(ModelFilePath); 
-
-								return (int)fi.Length; 
-
-							}  
-
-							catch (Exception ex) 
-
-							{ 
-
-								SetError(ErrorCode.UnexpectedError, "CALLBACK: " + cbType + ": " + ex.ToString()); 
-
-								// непредвиденная ошибка 
-
-								return -2; 
-
-							} 
-
-
-						} 
-
- 
-
- 
-
-					case OcrCallBackType.ModelRestore: 
-
-						{ 
-
-							// data - буфер для модели 
-
-							// size - размер бинарного представления 
-
- 
-
- 
-
-							// признак успешного завершения 
-
-							int    retval = 1; 
-
- 
-
- 
-
-                            FileInfo fi = new FileInfo(ModelFilePath); 
-
-							if (fi.Length == size) 
-
-							{ 
-
-								byte[] modelData = new byte[size + 1]; 
-
-                                FileStream fs = File.OpenRead(ModelFilePath); 
-
-								fs.Read(modelData, 0, size); 
-
-								fs.Close(); 
-
- 
-
- 
-
-								Marshal.Copy(modelData, 0, data, size); 
-
-							} 
-
-							else 
-
-							{ 
-
-								SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + ": длина файла не соответствует ожидаемой"); 
-
-								// ошибка в параметрах 
-
-								retval = -1; 
-
-							} 
-
- 
-
- 
-
-							return retval; 
-
-						} 
-
- 
-
- 
-
-					case OcrCallBackType.DataSave: 
-
-						break; 
-
-					case OcrCallBackType.DataRestore: 
-
-						break; 
-
- 
-
- 
-
-					case OcrCallBackType.GetStamp: 
-
-						// size - номер номера комиссии в массиве 
-
-						return GetStamp(size); 
-
-					case OcrCallBackType.GetStampCount: 
-
-						// получение количества печатей 
-
-						return GetStampCount(); 
-
- 
-
- 
-
-
-					case OcrCallBackType.GetStampMinLineWidth:			 
-
-						// Получение данных о минимальной ширине линий печати  
-
-						return GetStampMinLineWidth(); 
-
-					case OcrCallBackType.GetStampMaxLineWidth:			 
-
-						// Получение данных о максимальной ширине  
-
-						return GetStampMaxLineWidth(); 
-
- 
-
- 
-
-					case OcrCallBackType.GetStampTestLevel: 
-
-						// Получение уровня контроля печаит 
-
-						return GetStampTestLevel(); 
-
- 
-
- 
-
-					case OcrCallBackType.GetSideResolution: 
-
-						{ 
-
-							// data - структура-описатель разрешения 
-
-							// size - размер структуры 
-
-							if (data == IntPtr.Zero)  
-
-							{ 
-
-								SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + ": неверные или неожиданные параметры [" + data.ToInt32().ToString("X") + ", " + size + "]"); 
-
-								// ошибка в параметрах 
-
-								return -1; 
-
-							} 
-
- 
-
- 
-
-							Resolution s = (Resolution)Marshal.PtrToStructure(data, typeof(Resolution)); 
-
- 
-
- 
-
-							if (s.side == 0) 
-
-							{ 
-
-								s.x = m_dpiX0; 
-
-								s.y = m_dpiY0; 
-
-								Marshal.StructureToPtr(s, data, true); 
-
-							} 
-
-							else if (s.side == 1) 
-
-							{ 
-
-								s.x = m_dpiX1; 
-
-								s.y = m_dpiY1; 
-
-								Marshal.StructureToPtr(s, data, true); 
-
-							} 
-
-							else  
-
-							{ 
-
-								SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + ": неверные или неожиданные параметры [" + data.ToInt32().ToString("X") + ", " + size + "]"); 
-
-								// ошибка в параметрах (неверно задана сторона) 
-
-								return -1; 
-
-							} 
-
-						} 
-
- 
-
- 
-
-						break; 
-
-
- 
- 
-
-					case OcrCallBackType.PutBulletinNumber: 
-
-						// size - номер бюллетеня 
-
-						PutBulletinNumber(size); 
-
-						break; 
-
- 
-
- 
-
-					case OcrCallBackType.PutResults: 
-
-						{ 
-
-							// data - структура-описатель результатов распознавания 
-
-							// size - размер структуры 
-
-                            OcrResult s = (OcrResult)Marshal.PtrToStructure(data, typeof(OcrResult)); 
-
- 
-
- 
-
-							DebugOut("s.IsValid = " + s.IsValid + ", s.numChecked = " + s.numChecked + ", s.PollNum = " + s.PollNum); 
-
-							if (! PutResult(s))  
-
-							{ 
-
-								SetError(ErrorCode.UnexpectedError, "CALLBACK: " + cbType + ": не удалось сохранить результат распознавания"); 
-
-								// ошибка при сохранении результатов 
-
-								return -1; 
-
-							} 
-
-						} 
-
-						break; 
-
- 
-
- 
-
-					case OcrCallBackType.GetPath2Data:  
-
-						{ 
-
-							// data - буфер под имя каталога 
-
-							if(m_bstrPath2RecognitionData == null || m_bstrPath2RecognitionData.Length == 0) 
-
-							{ 
-
-								data = IntPtr.Zero; 
-
-							} 
-
-							else  
-
-							{ 
-
-								Marshal.Copy(m_bstrPath2RecognitionData.ToCharArray(), 0, data, m_bstrPath2RecognitionData.Length); 
-
-							} 
-
-						} 
-
-						break; 
-
- 
-
- 
-
-					case OcrCallBackType.GetDigitSquares: 
-
-						// не поддерживаем 
-
-						return 0; 
-
- 
-
- 
-
-					case OcrCallBackType.UnloadDigitOcrResult: 
-
-						// не поддерживаем 
-
-						return -1; 
-
- 
-
-
- 
-					case OcrCallBackType.GetGrayRectBuffSize:		 
-
-						//data - ALRECT 
-
-						//size - сторона бюллетеня 
-
-						if (data != IntPtr.Zero && (size == 0 || size == 1)) 
-
-						{ 
-
-                            AlRect r = (AlRect)Marshal.PtrToStructure(data, typeof(AlRect)); 
-
-							int	nSize = 0; 
-
-							if (r.y < 0 || r.h < 0 || r.x < 0 || r.w < 0) 
-
-							{ 
-
-								SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + ": Запрошен недопустимый размер буфера полутона: x=" + r.x + ", y=" + r.y + ", w=" + r.w + ", h=" + r.h); 
-
-								// ошибка в параметрах 
-
-								return -1; 
-
-							} 
-
-							// Расчитываем величину буфера 
-
-							nSize = r.h*r.w;	// количество пиксел 
-
- 
-
- 
-
-							DebugOut("Вычислен размер полутонового буфера: size=" + nSize); 
-
- 
-
- 
-
-							return nSize; 
-
-						} 
-
-						else 
-
-						{ 
-
-							SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + ": неверные или неожиданные параметры [" + data.ToInt32().ToString("X") + ", " + size + "]"); 
-
-							// ошибка в параметрах 
-
-							return -1; 
-
-						} 
-
- 
-
- 
-
-					case OcrCallBackType.GetGrayRectImage:	 
-
-						//data - ALSUBF (описатель полутона) 
-
-						//size - сторона бюллетеня 
-
-						if (data != IntPtr.Zero && (size == 0 || size == 1)) 
-
-						{ 
-
-                            AlSubf s = (AlSubf)Marshal.PtrToStructure(data, typeof(AlSubf)); 
-
- 
-
- 
-
-							if (m_pEvents != null) 
-
-							{ 
-
-                                MemoryBlock piMem = new MemoryBlock(s.@base); 
-
-								try  
-
-								{ 
-
-									long nSize = m_pEvents.GetHalfToneBuffer(this, (short)size, s.x, s.y, s.ys, s.xs, piMem); 
-
-									if (nSize == -1)  
-
-									{ 
-
-										DebugOut("GetGrayRectImage: Unable to get image"); 
-
-										// ошибка в параметрах 
-
-										return -1; 
-
-
-									} 
-
-								}  
-
-								catch (Exception ex) 
-
-								{ 
-
-									SetError(ErrorCode.UnexpectedError, "CALLBACK: " + cbType + ": " + ex); 
-
-									// неожиданная ошибка 
-
-									return -1; 
-
-								} 
-
-							}  
-
-							else 
-
-							{ 
-
-								SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + ": не установлен обработчик события GetHalfToneBuffer"); 
-
-								// отсутствует обработчик 
-
-								return -1; 
-
-							} 
-
-							s.width = s.xs; 
-
-							// успешно выполнено 
-
-							return 1; 
-
-						} 
-
-						else  
-
-						{ 
-
-							// неверные параметры 
-
-							return -1; 
-
-						} 
-
- 
-
- 
-
-					case OcrCallBackType.GetBinThreshold:		 
-
-						// size - сторона бюллетеня 
-
-						if (size == 0 || size == 1) 
-
-						{ 
-
-							try  
-
-							{ 
-
-								if (m_pEvents != null) 
-
-								{ 
-
-									int nThr = m_pEvents.GetBinaryThreshold(this, (short)size); 
-
-									return nThr; 
-
-								}  
-
-								else 
-
-								{ 
-
-									SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + ": не установлен обработчик события GetBinaryThreshold"); 
-
-									// отсутствует обработчик 
-
-									return -1; 
-
-								} 
-
-							}  
-
-							catch (Exception ex) 
-
-							{ 
-
-								SetError(ErrorCode.UnexpectedError, "CALLBACK: " + cbType + ": " + ex.ToString()); 
-
-								// неожиданная ошибка 
-
-								return -1; 
-
-							} 
-
-
-						} 
-
-						else  
-
-						{ 
-
-							SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + ": неверные или неожиданные параметры [" + data.ToInt32().ToString("X") + ", " + size + "]"); 
-
-							// неверные параметры 
-
-							return -1; 
-
-						} 
-
- 
-
- 
-
-					case OcrCallBackType.ReportProgress: 
-
-						// отладочное сообщение 
-
-						// size - стадия распознавания  
-
-						DebugOut("Progress: " + size); 
-
-						break; 
-
-					default: 
-
-						SetError(ErrorCode.IllegalUse, "CALLBACK: не распознанный код " + cbType); 
-
-						break; 
-
-				} 
-
-			} 
-
-			catch(Exception ex) 
-
-			{ 
-
-				try 
-
-				{ 
-
-					SetError(ErrorCode.UnexpectedError, "CALLBACK: ERROR [" + cbType + ", " + data.ToInt32().ToString("X") + ", " + size + "] => " + ex); 
-
-				} 
-
-				catch(Exception exOnSetError) 
-
-				{ 
-
-					SetError(ErrorCode.UnexpectedError, "CALLBACK: ERROR [" + cbType + "] => " + ex); 
-
-					SetError(ErrorCode.UnexpectedError, "CALLBACK: SETERROR => " + exOnSetError); 
-
-				} 
-
-			} 
-
- 
-
- 
-
-            // возвратим код успешного выполнения 
-
+                        { 
+                            if (size <= 0 || data == IntPtr.Zero) 
+                            { 
+                                SetError(ErrorCode.IllegalUse, 
+                                         "CALLBACK: " + cbType + 
+                                         ": неверные или неожиданные параметры [" 
+                                         + data.ToInt32().ToString("X") + ", " + 
+                                         size + "]"); 
+                                return -3; 
+                            } 
+                            try 
+                            { 
+                                if (File.Exists(ModelFilePath)) 
+                                    File.Delete(ModelFilePath); 
+                                var modelData = new byte[size + 1]; 
+                                Marshal.Copy(data, modelData, 0, size); 
+                                using (FileStream fs = File.Create(ModelFilePath)) 
+                                { 
+                                    fs.Write(modelData, 0, size); 
+                                    fs.Flush(); 
+                                } 
+                                return 1; 
+                            } 
+                            catch (Exception ex) 
+                            { 
+                                SetError(ErrorCode.UnexpectedError, "CALLBACK: " + cbType + ": " + ex); 
+                                return -2; 
+                            } 
+                        } 
+                    case OcrCallBackType.GetModelFileSize: 
+                        { 
+                            try  
+                            { 
+                                var fi = new FileInfo(ModelFilePath); 
+                                return (int)fi.Length; 
+                            }  
+                            catch (Exception ex) 
+                            { 
+                                SetError(ErrorCode.UnexpectedError, "CALLBACK: " + cbType + ": " + ex); 
+                                return -2; 
+                            } 
+                        } 
+                    case OcrCallBackType.ModelRestore: 
+                        { 
+                            int    retval = 1; 
+                            var fi = new FileInfo(ModelFilePath); 
+                            if (fi.Length == size) 
+                            { 
+                                var modelData = new byte[size + 1]; 
+                                using (FileStream fs = File.OpenRead(ModelFilePath)) 
+                                { 
+                                    fs.Read(modelData, 0, size); 
+                                } 
+                                Marshal.Copy(modelData, 0, data, size); 
+                            } 
+                            else 
+                            { 
+                                SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + ": длина файла не соответствует ожидаемой"); 
+                                retval = -1; 
+                            } 
+                            return retval; 
+                        } 
+                    case OcrCallBackType.DataSave: 
+                        break; 
+                    case OcrCallBackType.DataRestore: 
+                        break; 
+                    case OcrCallBackType.GetStamp: 
+                        return GetStamp(size); 
+                    case OcrCallBackType.GetStampCount: 
+                        return GetStampCount(); 
+                    case OcrCallBackType.GetStampMinLineWidth:             
+                        return GetStampMinLineWidth(); 
+                    case OcrCallBackType.GetStampMaxLineWidth:             
+                        return GetStampMaxLineWidth(); 
+
+
+                    case OcrCallBackType.GetStampTestLevel: 
+                        return GetStampTestLevel(); 
+                    case OcrCallBackType.GetSideResolution: 
+                        { 
+                            if (data == IntPtr.Zero)  
+                            { 
+                                SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType +  
+                                    ": неверные или неожиданные параметры ["  
+                                    + data.ToInt32().ToString("X") + ", " + size + "]"); 
+                                return -1; 
+                            } 
+                            var s = (Resolution)Marshal.PtrToStructure(data, typeof(Resolution)); 
+                            if (s.side == 0) 
+                            { 
+                                s.x = _dpiX0; 
+                                s.y = _dpiY0; 
+                                Marshal.StructureToPtr(s, data, true); 
+                            } 
+                            else if (s.side == 1) 
+                            { 
+                                s.x = _dpiX1; 
+                                s.y = _dpiY1; 
+                                Marshal.StructureToPtr(s, data, true); 
+                            } 
+                            else  
+                            { 
+                                SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType +  
+                                    ": неверные или неожиданные параметры ["  
+                                    + data.ToInt32().ToString("X") + ", " + size + "]"); 
+                                return -1; 
+                            } 
+                        } 
+                        break; 
+                    case OcrCallBackType.PutBulletinNumber: 
+                        PutBulletinNumber(size); 
+                        break; 
+                    case OcrCallBackType.PutResults: 
+                        { 
+                            var s = (OcrResult)Marshal.PtrToStructure(data, typeof(OcrResult)); 
+                            DebugOut("s.IsValid = " + s.IsValid + ", s.numChecked = " 
+                                + s.numChecked + ", s.PollNum = " + s.PollNum); 
+                            if (! PutResult(s))  
+                            { 
+                                SetError(ErrorCode.UnexpectedError, "CALLBACK: " 
+                                    + cbType + ": не удалось сохранить результат распознавания"); 
+                                return -1; 
+                            } 
+                        } 
+                        break; 
+                    case OcrCallBackType.GetPath2Data:  
+                        { 
+                            if(string.IsNullOrEmpty(_bstrPath2RecognitionData)) 
+                            { 
+                                data = IntPtr.Zero; 
+                            } 
+                            else  
+                            { 
+                                Marshal.Copy(_bstrPath2RecognitionData.ToCharArray(), 0, data, _bstrPath2RecognitionData.Length); 
+                            } 
+                        } 
+                        break; 
+                    case OcrCallBackType.GetDigitSquares: 
+                        return 0; 
+                    case OcrCallBackType.UnloadDigitOcrResult: 
+                        return -1; 
+                    case OcrCallBackType.GetGrayRectBuffSize:         
+                        if(data == IntPtr.Zero || (size != 0 && size != 1)) 
+                        { 
+                            SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + 
+                                ": неверные или неожиданные параметры [" 
+                                + data.ToInt32().ToString("X") + ", " + size + "]"); 
+                            return -1; 
+                        } 
+                        var r = (AlRect) Marshal.PtrToStructure(data, typeof (AlRect)); 
+                        if (r.y < 0 || r.h < 0 || r.x < 0 || r.w < 0) 
+                        { 
+                            SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + 
+                                                           ": Запрошен недопустимый размер буфера полутона: x=" + 
+                                                           r.x + ", y=" + r.y + ", w=" + r.w + ", h=" + r.h); 
+                            return -1; 
+                        } 
+                        var bufSize = r.h * r.w; // количество пиксел 
+                        DebugOut("Вычислен размер полутонового буфера: size=" + bufSize); 
+                        return bufSize; 
+                    case OcrCallBackType.GetGrayRectImage:     
+                        if (data == IntPtr.Zero || (size != 0 && size != 1)) 
+                        { 
+                            return -1; 
+                        } 
+                        var alSubf = (AlSubf) Marshal.PtrToStructure(data, typeof (AlSubf)); 
+                        if (_events != null) 
+                        { 
+                            var piMem = new MemoryBlock(alSubf.@base); 
+                            try 
+                            { 
+                                long nSize = _events.GetHalfToneBuffer(this, (short) size, alSubf.x, 
+                                                                       alSubf.y, alSubf.ys, alSubf.xs, piMem); 
+                                if (nSize == -1) 
+                                { 
+                                    DebugOut("GetGrayRectImage: Unable to get image"); 
+                                    return -1; 
+                                } 
+                            } 
+                            catch (Exception ex) 
+                            { 
+                                SetError(ErrorCode.UnexpectedError, "CALLBACK: " + cbType + ": " + ex); 
+                                return -1; 
+                            } 
+                        } 
+                        else 
+                        { 
+                            SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + 
+                                ": не установлен обработчик события GetHalfToneBuffer"); 
+                            return -1; 
+                        } 
+                        alSubf.width = alSubf.xs; 
+                        return 1; 
+                    case OcrCallBackType.GetBinThreshold:         
+                        if (size == 0 || size == 1) 
+                        { 
+                            try  
+                            { 
+                                if (_events != null) 
+                                { 
+                                    int nThr = _events.GetBinaryThreshold(this, (short)size); 
+                                    return nThr; 
+                                } 
+                                SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + 
+                                                               ": не установлен обработчик события GetBinaryThreshold"); 
+                                return -1; 
+                            }  
+                            catch (Exception ex) 
+                            { 
+                                SetError(ErrorCode.UnexpectedError, "CALLBACK: " + cbType + ": " + ex); 
+                                return -1; 
+                            } 
+                        } 
+                        SetError(ErrorCode.IllegalUse, "CALLBACK: " + cbType + 
+                                                       ": неверные или неожиданные параметры [" + 
+                                                       data.ToInt32().ToString("X") + ", " + size + "]"); 
+                        return -1; 
+                    case OcrCallBackType.ReportProgress: 
+                        DebugOut("Progress: " + size); 
+                        break; 
+                    default: 
+                        SetError(ErrorCode.IllegalUse, "CALLBACK: не распознанный код " + cbType); 
+                        break; 
+                } 
+            } 
+            catch(Exception ex) 
+            { 
+                try 
+                { 
+                    SetError(ErrorCode.UnexpectedError, "CALLBACK: ERROR [" + cbType + ", " + data.ToInt32().ToString("X") + ", " + size + "] => " + ex); 
+                } 
+                catch(Exception exOnSetError) 
+                { 
+                    SetError(ErrorCode.UnexpectedError, "CALLBACK: ERROR [" + cbType + "] => " + ex); 
+                    SetError(ErrorCode.UnexpectedError, "CALLBACK: SETERROR => " + exOnSetError); 
+                } 
+            } 
             return 1; 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимальная ширина линии печати 
-
-        /// </summary> 
-
-        /// <returns></returns> 
-
         int GetStampMaxLineWidth() 
-
         { 
-
-            return m_lStampMaxLineWidth; 
-
+            return _stampMaxLineWidth; 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная ширина линии печати 
-
-
-        /// </summary> 
-
-        /// <returns></returns> 
-
         int GetStampMinLineWidth() 
-
         { 
-
-            return m_lStampMinLineWidth; 
-
+            return _stampMinLineWidth; 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Уровень анализа печати 
-
-        /// </summary> 
-
-        /// <returns>Уровень анализа печати</returns> 
-
-        int	GetStampTestLevel() 
-
+        int    GetStampTestLevel() 
         { 
-
-            return (int)m_sStampTestLevel; 
-
+            return (int)_stampTestLevel; 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Установка номера бюллетеня (внутренняя функция) 
-
-        /// </summary> 
-
-        /// <param name="nBN">номер бюллетеня</param> 
-
-        void PutBulletinNumber(int nBN) 
-
+        void PutBulletinNumber(int bulletinNumber) 
         { 
-
-            // Чистим результаты предыдущего распознавания 
-
-            m_pollResults.Clear(); 
-
- 
-
- 
-
-            m_nBulletinNumber = nBN; 
-
+            _pollResults.Clear(); 
+            _bulletinNumber = bulletinNumber; 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Запись результатов распознавания бюллетеня во внутреннее состояние класса 
-
-        /// </summary> 
-
-        /// <param name="results">Результаты от распознавлки</param> 
-
-        /// <returns>Признак успешного анализа результатов</returns> 
-
         private bool PutResult(OcrResult results) 
-
         { 
-
-            PollResult pr = new PollResult(); 
-
-            pr.PollNumber = results.PollNum; 
-
-            pr.IsValid = (results.IsValid > 0); 
-
- 
-
- 
-
-            int[] sqData= new int[results.numChecked]; 
-
-            Marshal.Copy(results.sqData, sqData, 0, results.numChecked); 
-
-            for (int i=0; i < results.numChecked; i++) 
-
+            try 
             { 
-
-                pr.Add(sqData[i]); 
-
+                var pr = new PollResult 
+                             { 
+                                 PollNumber = results.PollNum, 
+                                 IsValid = (results.IsValid > 0) 
+                             }; 
+                var sqData = new int[results.numChecked]; 
+                Marshal.Copy(results.sqData, sqData, 0, results.numChecked); 
+                for (int i = 0; i < results.numChecked; i++) 
+                { 
+                    pr.Add(sqData[i]); 
+                } 
+                _pollResults.Add(pr); 
+                return true; 
             } 
-
-
- 
- 
-
-            m_pollResults.Add(pr); 
-
- 
-
- 
-
-            return true; 
-
+            catch 
+            { 
+                return false; 
+            } 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Установить ошибку распознавания 
-
-        /// </summary> 
-
-        /// <param name="code">Код ошибки</param> 
-
-        /// <param name="message">Описание</param> 
-
         void SetError(ErrorCode code, string message) 
-
         { 
-
-            if (m_pEvents != null) 
-
+            if (_events != null) 
             { 
-
-                m_pEvents.Error(this, (int)code, message); 
-
+                _events.Error(this, (int)code, message); 
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Отладочное сообщение от распознавалки 
-
-        /// </summary> 
-
-        /// <param name="message">Сообщение</param> 
-
         void DebugOut(string message) 
-
         { 
-
-            if (m_pEvents != null) 
-
+            if (_events != null) 
             { 
-
-                m_pEvents.AppendToLog(this, message); 
-
+                _events.AppendToLog(this, message); 
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Возвращает текстовое описание результата проверки геометрии 
-
-        /// </summary> 
-
-        /// <param name="geoData">Результат проверки</param> 
-
-        /// <param name="nSquareCount">Колво квадратов</param> 
-
-        /// <returns>Описание</returns> 
-
-        public static string GetGeoResultMessage(GeoData geoData, long nSquareCount) 
-
+        public static string GetGeoResultMessage(GeoData geoData, long squareCount) 
         { 
-
-            // если возвращено, что все хорошо, то нужен доп анализ 
-
             if ((GeoResult)geoData.result == GeoResult.OK) 
-
             { 
-
-                // общее максимальное отклонение 
-
-                long nMaxSquareSkew = 0; 
-
-                // максимальное и минимальное отклонение квадратов по горизонтали 
-
-
-                long nMaxSquareSkewH = 0, nMinSquareSkewH = Int32.MaxValue; 
-
-                // максимальное и минимальное отклонение квадратов по размерам 
-
-                long nMaxSquareSizeSkew = 0, nMinSquareSizeSkew = Int32.MaxValue; 
-
-                // макс и мин значения интенсивности цвета 
-
-                int nMinColor = Int32.MaxValue, nMaxColor = 0; 
-
- 
-
- 
-
-                nMinColor = nMaxColor = geoData.topMarkerColor; 
-
-                nMinColor = Math.Min(nMinColor, geoData.bottomMarkerColor); 
-
-                nMaxColor = Math.Max(nMaxColor, geoData.bottomMarkerColor); 
-
- 
-
- 
-
-                nMinColor = Math.Min(nMinColor, geoData.baseLineColor); 
-
-                nMaxColor = Math.Max(nMaxColor, geoData.baseLineColor); 
-
- 
-
- 
-
-                // по всем найденным квадратам 
-
-                for (int i = 0; i < nSquareCount; i++) 
-
+                long maxSquareSkew = 0; 
+                long maxSquareSkewH = 0, minSquareSkewH = Int32.MaxValue; 
+                long maxSquareSizeSkew = 0, minSquareSizeSkew = Int32.MaxValue; 
+                int minColor, maxColor; 
+                minColor = maxColor = geoData.topMarkerColor; 
+                minColor = Math.Min(minColor, geoData.bottomMarkerColor); 
+                maxColor = Math.Max(maxColor, geoData.bottomMarkerColor); 
+                minColor = Math.Min(minColor, geoData.baseLineColor); 
+                maxColor = Math.Max(maxColor, geoData.baseLineColor); 
+                for (int i = 0; i < squareCount; i++) 
                 { 
-
                     if (geoData.squares[i] == 1) 
-
                     { 
-
-                        nMaxSquareSkew = Math.Max(nMaxSquareSkew, geoData.squaresSkewV[i]); 
-
-                        nMaxSquareSkew = Math.Max(nMaxSquareSkew, geoData.squaresSkewV[i]); 
-
-                        nMaxSquareSkewH = Math.Max(nMaxSquareSkewH, geoData.squaresSkewH[i]); 
-
-                        nMinSquareSkewH = Math.Min(nMinSquareSkewH, geoData.squaresSkewH[i]); 
-
-                        nMaxSquareSizeSkew = Math.Max(nMaxSquareSizeSkew, geoData.squaresSize[i]); 
-
-                        nMinSquareSizeSkew = Math.Min(nMinSquareSizeSkew, geoData.squaresSize[i]); 
-
-                        nMinColor = Math.Min(nMinColor, geoData.squaresColor[i]); 
-
-                        nMaxColor = Math.Max(nMaxColor, geoData.squaresColor[i]); 
-
+                        maxSquareSkew = Math.Max(maxSquareSkew, geoData.squaresSkewV[i]); 
+                        maxSquareSkew = Math.Max(maxSquareSkew, geoData.squaresSkewV[i]); 
+                        maxSquareSkewH = Math.Max(maxSquareSkewH, geoData.squaresSkewH[i]); 
+                        minSquareSkewH = Math.Min(minSquareSkewH, geoData.squaresSkewH[i]); 
+                        maxSquareSizeSkew = Math.Max(maxSquareSizeSkew, geoData.squaresSize[i]); 
+                        minSquareSizeSkew = Math.Min(minSquareSizeSkew, geoData.squaresSize[i]); 
+                        minColor = Math.Min(minColor, geoData.squaresColor[i]); 
+                        maxColor = Math.Max(maxColor, geoData.squaresColor[i]); 
                     } 
-
                 } 
-
- 
-
- 
-
-                if (nMinSquareSizeSkew == Int32.MaxValue) 
-
+                if (minSquareSizeSkew == Int32.MaxValue) 
                 { 
-
-                    // коррекция на случай, если не искали квадраты 
-
-                    nMinSquareSizeSkew = nMaxSquareSizeSkew; 
-
+                    minSquareSizeSkew = maxSquareSizeSkew; 
                 } 
-
- 
-
- 
-
-                // допускается общее отклонение квадратов не более трех мм 
-
-                if (nMaxSquareSkew > 3 || 
-
-                    // не допускается разброс в отклонении квадратов по горизонтали больше 2х мм 
-
-                    nMaxSquareSkewH != nMinSquareSkewH && nMaxSquareSkewH > 2 || 
-
-                    // нет отклонений по размерам квадратов 
-
-                    nMaxSquareSizeSkew != 0) 
-
+                if (maxSquareSkew > 3 || 
+                    maxSquareSkewH != minSquareSkewH && maxSquareSkewH > 2 || 
+                    maxSquareSizeSkew != 0) 
                 { 
-
                     return "Некорректное расположение квадратов"; 
-
                 } 
-
- 
-
-
- 
-                if (nMaxColor - nMinColor > 20 && nMaxColor > nMinColor * 2) 
-
+                if (maxColor - minColor > 20 && maxColor > minColor * 2) 
                 { 
-
                     return "Нарушена равномерность черного цвета"; 
-
                 } 
-
- 
-
- 
-
-                if (nMaxColor > 64) 
-
+                if (maxColor > 64) 
                 { 
-
                     return "Недостаточная интенсивность черного цвета"; 
-
                 } 
-
             } 
-
- 
-
- 
-
             switch ((GeoResult)geoData.result) 
-
             { 
-
                 case GeoResult.OK: 
-
                     return "бюллетень соответствует модели"; 
-
                 case GeoResult.TopMarker: 
-
                     return "не найдены маркеры"; 
-
                 case GeoResult.BottomMarker: 
-
                     return "не найден или не определен нижний маркер"; 
-
                 case GeoResult.Markers: 
-
                     return "несовпадение маркеров"; 
-
                 case GeoResult.BadMarkerNum: 
-
                     return "недопустимый код маркера"; 
-
                 case GeoResult.LeftSide: 
-
                     return "не найдена левая граница бюллетеня"; 
-
                 case GeoResult.BaseLine: 
-
                     return "не найдена базовая линия"; 
-
                 case GeoResult.BadBaseLine: 
-
                     return "неверное положение базовой линии"; 
-
                 case GeoResult.Squares: 
-
                     return "не найдены квадраты"; 
-
                 default: 
-
                     return "неожиданный код возврата"; 
-
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Бросает exception с кодом последней ошибки 
-
-        /// </summary> 
-
         public static void ThrowLastError() 
-
         { 
-
-            // Максимальная длина буфера с ошибкой 
-
             const int MAX_ERROR_MESSAGE_LENGTH = 1000; 
-
- 
-
- 
-
-            // Описание ошибки 
-
-
-            StringBuilder sDescr = new StringBuilder(MAX_ERROR_MESSAGE_LENGTH); 
-
- 
-
- 
-
-            // Код возврата GetErrorDesc 
-
-            int nRes = Ocr.GetErrorDesc(sDescr); 
-
+            var sDescr = new StringBuilder(MAX_ERROR_MESSAGE_LENGTH); 
+            int nRes = GetErrorDesc(sDescr); 
             if (0 != nRes) 
-
                 throw new Exception(String.Format("Ошибка Ocr. Описание получить не удалось: {0}", nRes)); 
 
-            else 
 
-                // Передаю ошибку наверх 
-
-                throw new Exception(sDescr.ToString()); 
-
+            throw new Exception(sDescr.ToString()); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Полутоновая проверка печати 
-
-        /// </summary> 
-
-        /// <param name="sStampNumber">Наиболее вероятный номер</param> 
-
-        /// <param name="sAlternatives">Альтернативы цифр по позициям</param> 
-
-        /// <returns>Результат распознавания</returns> 
-
-        public static StampResult IsStampOKGray(ref string sStampNumber, ref string[] sAlternatives) 
-
+        public static StampResult IsStampOKGray(ref string stampNumber, ref string[] alternatives) 
         { 
-
-            // буфера под хранение альтернатив для 4х позиций номера печати 
-
-            // распознавалка возвращает гарантированно не более трех альтернатив 
-
-            byte[][] digits = new byte[Ocr.STAMP_DIGIT_COUNT][]; 
-
-            for (int i = 0; i < Ocr.STAMP_DIGIT_COUNT; i++) 
-
+            byte[][] digits = new byte[STAMP_DIGIT_COUNT][]; 
+            for (int i = 0; i < STAMP_DIGIT_COUNT; i++) 
             { 
-
                 digits[i] = new byte[10]; 
-
             } 
-
- 
-
- 
-
-            // полутоновое распознавание 
-
-            var stampResult = (StampResult)Ocr.IsStampOKGray(digits[0], digits[1], digits[2], digits[3]); 
-
-            // формируем альтернативы 
-
-            for (int i = 0; i < Ocr.STAMP_DIGIT_COUNT; i++) 
-
+            var stampResult = (StampResult)IsStampOKGray(digits[0], digits[1], digits[2], digits[3]); 
+            for (int i = 0; i < STAMP_DIGIT_COUNT; i++) 
             { 
-
-                sAlternatives[i] = ""; 
-
+                alternatives[i] = ""; 
                 for (int j = 0; digits[i][j] != 0; j++) 
-
                 { 
-
-                    sAlternatives[i] += (char)digits[i][j]; 
-
+                    alternatives[i] += (char)digits[i][j]; 
                 } 
-
-                if (sAlternatives[i].Length == 0) 
-
+                if (alternatives[i].Length == 0) 
                 { 
-
-                    sAlternatives[i] += "X"; 
-
+                    alternatives[i] += "X"; 
                 } 
-
-                // наиболее вероятный номер печати 
-
-                sStampNumber += sAlternatives[i][0]; 
-
+                stampNumber += alternatives[i][0]; 
             } 
-
- 
-
- 
-
             return stampResult; 
-
-
         } 
-
- 
-
- 
-
         #region DllImport-ы из Ocr.dll 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Функция инициализации модели бюллетеня 
-
-        /// </summary> 
-
-        /// <param name="iBulCount">Количество бюллетеней</param> 
-
-        /// <param name="iBulCodeType"> 
-
-        /// Тип цифрового маркера: 
-
-        /// 0 - не цифровой 
-
-        /// 1 - одна цифра 
-
-        /// 2 - две цифры 
-
-        /// </param> 
-
-        /// <returns></returns> 
-
-        /// <remarks> 
-
-        /// Соотв НЕ МОЖЕМ одновременно распознавать: 
-
-        /// а) цифровой и штрих маркер 
-
-        /// б) одноцифровой и двухцифровой маркеры 
-
-        /// </remarks> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int InitModel(int iBulCount, int iBulCodeType); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Функция создания модели бюллетеня 
-
-        /// </summary> 
-
-        /// <param name="sData">Текстовое описание модели</param> 
-
-        /// <param name="iNum">Номер бюллетеня по порядку</param> 
-
-        /// <param name="iCode">Номер маркера</param> 
-
-        /// <returns>1 - в случае успешной компиляции модели</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int createBallotModel(byte[] sData, int iNum, int iCode); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Функция установки данных голосования 
-
-        /// </summary> 
-
-        /// <param name="iBallot">Номер маркера</param> 
-
-        /// <param name="iPoll">Номер секции</param> 
-
-        /// <param name="pData">Данные о голосах</param> 
-
-        /// <returns>1 - в случае успеха</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetPollData(int iBallot, int iPoll, ref PollData pData); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Обнуление параметров проверки печати 
-
-
-        /// </summary> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetDefaultStampGeometry(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Получить описание последней ошибки 
-
-        /// </summary> 
-
-        /// <param name="sError">Описание ошибки</param> 
-
-        /// <returns>1 - в случае успеха</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetErrorDesc(StringBuilder sError); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Сбрасывает ошибку 
-
-        /// </summary> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int ClearError(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Сохраняет модель в виде текста 
-
-        /// </summary> 
-
-        /// <param name="sText">Буфер под текст модели</param> 
-
-        /// <param name="nSize">Размер буфера в байтах</param> 
-
-        /// <returns>1 - в случае успеха</returns> 
-
         [DllImport("Xib.dll", CharSet = CharSet.Ansi)] 
-
-        internal extern static int SaveAsText(StringBuilder sText, int nSize); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Уровень online-распознавания бюллетеня 
-
-        /// </summary> 
-
-        /// <returns>Уровень</returns> 
-
+        internal extern static IntPtr SaveAsText(StringBuilder sText, int nSize); 
         [DllImport("Xib.dll")] 
-
         internal extern static int GetFeatureOnlineTest(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Установить уровень onlline-распознавания бюллетеня 
-
-        /// </summary> 
-
-        /// <param name="val">Уровень</param> 
-
-        /// <returns>1 - в случае успеха</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetFeatureOnlineTest(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Инициализация распознавалки 
-
-
-        /// </summary> 
-
-        /// <param name="cbFunc">Функция обратного вызова для взаимодействия с распознавалкой</param> 
-
-        /// <returns>предыдущая функция обратного вызова</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static OcrCallBack OCR_Initialize(OcrCallBack callback); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Включает отладочный протокол распознавалки 
-
-        /// </summary> 
-
-        /// <param name="FileName">Файл, в который записывается протокол</param> 
-
         [DllImport("Xib.dll", EntryPoint = "EnableLogging")] 
-
-        internal extern static void EnableLoggingInternal(string FileName); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Завершение процесса распознавания 
-
-        /// </summary> 
-
-        /// <param name="DoIt">Тип маркера</param> 
-
-        /// <param name="y0">Кол во строк по первой стороне</param> 
-
-        /// <param name="y1">Кол во строк по второй стороне</param> 
-
-        /// <returns>результат распознавания</returns> 
-
+        internal extern static void EnableLoggingInternal(string fileName); 
         [DllImport("Xib.dll")] 
-
         internal extern static int EndRecognition(MarkerType DoIt, int y0, int y1); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Функция проверки геометрии бюллетеня 
-
-        /// </summary> 
-
-        /// <param name="y0">Кол во строк по первой стороне</param> 
-
-        /// <param name="y1">Кол во строк по второй стороне</param> 
-
-        /// <param name="pData">Структура с результатами проверки</param> 
-
-        /// <returns>результат проверки геометрии</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int TestBallot(int y0, int y1, ref GeoData pData); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Установить начало зоны контроля пустого листа (не бюллетеня) в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Начало зоны контроля пустого листа (не бюллетеня) в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetBlankTestStart(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Начало зоны контроля пустого листа (не бюллетеня) в пикселях 
-
-        /// </summary> 
-
-        /// <returns>Начало зоны контроля пустого листа (не бюллетеня) в пикселях</returns> 
-
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetBlankTestStart(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Установить конец зоны контроля пустого листа (не бюллетеня) в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Конец зоны контроля пустого листа (не бюллетеня) в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetBlankTestStop(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец зоны контроля пустого листа (не бюллетеня) в пикселях 
-
-        /// </summary> 
-
-        /// <returns>Конец зоны контроля пустого листа (не бюллетеня) в пикселях</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetBlankTestStop(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Включение/отключение механизма отсева одной слабой лишней метки 
-
-        /// </summary> 
-
-        /// <param name="val">1 - вкл/ 0 -выкл</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetIgnoreOneExtraCheck(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Искать ли потерянный квадрат 
-
-        /// </summary> 
-
-        /// <param name="val">1 - вкл/ 0 -выкл</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetLook4LostSquare(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Установить макс высоту маркера в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Максимальная высота маркера в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetMaxMarkerHgh(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимальная высота маркера в пикселях 
-
-
-        /// </summary> 
-
-        /// <returns>Максимальная высота маркера в пикселях</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetMaxMarkerHgh(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальное отношение высота/ширина для маркера 
-
-        /// </summary> 
-
-        /// <param name="val">Минимальное отношение высота/ширина для маркера</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static double SetMaxMarkerRio(double val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальное отношение высота/ширина для маркера 
-
-        /// </summary> 
-
-        /// <returns>Минимальное отношение высота/ширина для маркера</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static double GetMaxMarkerRio(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимальная ширина маркера в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Максимальная ширина маркера в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetMaxMarkerWid(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимальная ширина маркера в пикселях 
-
-        /// </summary> 
-
-        /// <returns>Максимальная ширина маркера в пикселях</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetMaxMarkerWid(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимально допустимое значение перекоса 
-
-        /// </summary> 
-
-        /// <param name="val">Максимально допустимое значение перекоса</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetMaxOnlineSkew(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-
-        /// Максимально допустимое значение перекоса 
-
-        /// </summary> 
-
-        /// <returns>Максимально допустимое значение перекоса</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetMaxOnlineSkew(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимальная высота маркера в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Максимальная высота маркера в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetMaxStandartMarkerHgh(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимальная высота маркера в пикселях 
-
-        /// </summary> 
-
-        /// <returns>Максимальная высота маркера в пикселях</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetMaxStandartMarkerHgh(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимальная ширина маркера в пикселя 
-
-        /// </summary> 
-
-        /// <param name="val">Максимальная ширина маркера в пикселя</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetMaxStandartMarkerWid(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Максимальная ширина маркера в пикселя 
-
-        /// </summary> 
-
-        /// <returns>Максимальная ширина маркера в пикселя</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetMaxStandartMarkerWid(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец зоны контроля пустого листа (не бюллетеня) в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Конец зоны контроля пустого листа (не бюллетеня) в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetMinCheckArea(int val); 
-
- 
-
- 
-
-
-        /// <summary> 
-
-        /// Конец зоны контроля пустого листа (не бюллетеня) в пикселях 
-
-        /// </summary> 
-
-        /// <returns>Конец зоны контроля пустого листа (не бюллетеня) в пикселях</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetMinCheckArea(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная высота маркера в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Минимальная высота маркера в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetMinMarkerHgh(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная высота маркера в пикселях 
-
-        /// </summary> 
-
-        /// <returns>Минимальная высота маркера в пикселях</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetMinMarkerHgh(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальное отношение высота/ширина для маркера 
-
-        /// </summary> 
-
-        /// <param name="val">Минимальное отношение высота/ширина для маркера</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static double SetMinMarkerRio(double val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальное отношение высота/ширина для маркера 
-
-        /// </summary> 
-
-        /// <returns>Минимальное отношение высота/ширина для маркера</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static double GetMinMarkerRio(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная ширина маркера в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Минимальная ширина маркера в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetMinMarkerWid(int val); 
-
- 
-
-
- 
-        /// <summary> 
-
-        /// Минимальная ширина маркера в пикселях 
-
-        /// </summary> 
-
-        /// <returns>Минимальная ширина маркера в пикселях</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetMinMarkerWid(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная высота маркера в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Минимальная высота маркера в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetMinStandartMarkerHgh(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная высота маркера в пикселях 
-
-        /// </summary> 
-
-        /// <returns>Минимальная высота маркера в пикселях</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetMinStandartMarkerHgh(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная ширина маркера в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Минимальная ширина маркера в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetMinStandartMarkerWid(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная ширина маркера в пикселях 
-
-        /// </summary> 
-
-        /// <returns>Минимальная ширина маркера в пикселях</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetMinStandartMarkerWid(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// проверка наличия нижней линии каждой правой секции бюллетня 
-
-        /// </summary> 
-
-        /// <param name="val">проверка наличия нижней линии каждой правой секции бюллетня</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int EnableSectBotLineTest(int val); 
-
-
- 
- 
-
-        /// <summary> 
-
-        /// Смещение в буфере для первой линейки 
-
-        /// </summary> 
-
-        /// <returns>Смещение в буфере для первой линейки</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetOffsetFirstRule(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Смещение в буфере для первой линейки 
-
-        /// </summary> 
-
-        /// <param name="val">Смещение в буфере для первой линейки</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetOffsetFirstRule(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Среднее расстояние в пикселях от центра цифр печати до нижней линии рамки печати 
-
-        /// </summary> 
-
-        /// <param name="val">Среднее расстояние в пикселях от центра цифр печати до нижней линии рамки печати</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetStampDigitDistBotLine(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Среднее расстояние в пикселях от центра цифр печати до нижней линии рамки печати 
-
-        /// </summary> 
-
-        /// <returns>Среднее расстояние в пикселях от центра цифр печати до нижней линии рамки печати</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetStampDigitDistBotLine(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Среднее расстояние в пикселях от центра левой цифры печати до средины левой линии рамки 
-
-        /// </summary> 
-
-        /// <param name="val">Среднее расстояние в пикселях от центра левой цифры печати до средины левой линии рамки</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetStampDigitDistLftLine(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Среднее расстояние в пикселях от центра левой цифры печати до средины левой линии рамки 
-
-        /// </summary> 
-
-        /// <returns>Среднее расстояние в пикселях от центра левой цифры печати до средины левой линии рамки</returns> 
-
         [DllImport("Xib.dll")] 
-
-
         internal extern static int GetStampDigitDistLftLine(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Среднее расстояние в пикселях от центра правой цифры печати до средины правой линии рамки 
-
-        /// </summary> 
-
-        /// <param name="val">Среднее расстояние в пикселях от центра правой цифры печати до средины правой линии рамки</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetStampDigitDistRghLine(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Среднее расстояние в пикселях от центра правой цифры печати до средины правой линии рамки 
-
-        /// </summary> 
-
-        /// <returns>Среднее расстояние в пикселях от центра правой цифры печати до средины правой линии рамки</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetStampDigitDistRghLine(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Средний размер белого промежутка между цифрами номера печати в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Средний размер белого промежутка между цифрами номера печати в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetStampDigitGap(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Средний размер белого промежутка между цифрами номера печати в пикселях 
-
-        /// </summary> 
-
-        /// <returns>Средний размер белого промежутка между цифрами номера печати в пикселях</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetStampDigitGap(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Средний горизонтальный размер цифры номера печати в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Средний горизонтальный размер цифры номера печати в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetStampDigitXsize(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Средний горизонтальный размер цифры номера печати в пикселях 
-
-        /// </summary> 
-
-        /// <returns>Средний горизонтальный размер цифры номера печати в пикселях</returns> 
-
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetStampDigitXsize(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Средний вертикальный размер цифры номера печати в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Средний вертикальный размер цифры номера печати в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetStampDigitYsize(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Средний вертикальный размер цифры номера печати в пикселях 
-
-        /// </summary> 
-
-        /// <returns>Средний вертикальный размер цифры номера печати в пикселях</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetStampDigitYsize(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Среднее расстояние в пикселях от центра левой линии рамки печати до центра правой 
-
-        /// </summary> 
-
-        /// <param name="val">Среднее расстояние в пикселях от центра левой линии рамки печати до центра правой</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetStampFrameWidth(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Среднее расстояние в пикселях от центра левой линии рамки печати до центра правой 
-
-        /// </summary> 
-
-        /// <returns>Среднее расстояние в пикселях от центра левой линии рамки печати до центра правой</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetStampFrameWidth(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная площадь засчитываемой печати в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Минимальная площадь засчитываемой печати в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetStampOK_Low_Threshold_Area(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Минимальная площадь засчитываемой печати в пикселях 
-
-        /// </summary> 
-
-
-        /// <returns>Минимальная площадь засчитываемой печати в пикселях</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetStampOK_Low_Threshold_Area(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Бинарное распознавние печати 
-
-        /// </summary> 
-
-        /// <returns>результат распознавания</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int IsStampOK(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Полутоновое распознавние печати 
-
-        /// </summary> 
-
-        /// <param name="digit1">альтернативы 1й позиции</param> 
-
-        /// <param name="digit2">альтернативы 2й позиции</param> 
-
-        /// <param name="digit3">альтернативы 3й позиции</param> 
-
-        /// <param name="digit4">альтернативы 4й позиции</param> 
-
-        /// <returns>результат распознавания</returns> 
-
         [DllImport("Xib.dll", CharSet = CharSet.Ansi)] 
-
         internal extern static int IsStampOKGray(byte[] digit1, byte[] digit2, byte[] digit3, byte[] digit4); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// вертикальный размер анализируемой зоны печати 
-
-        /// </summary> 
-
-        /// <param name="val">вертикальный размер анализируемой зоны печати</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetStampZoneVertSize(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Зона поиска маркера в пикселях 
-
-        /// </summary> 
-
-        /// <param name="val">Зона поиска маркера в пикселях</param> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int SetStandartMarkerZone(int val); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Зона поиска маркера в пикселях 
-
-        /// </summary> 
-
-        /// <returns>Зона поиска маркера в пикселях</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetStandartMarkerZone(); 
-
- 
-
-
- 
-        /// <summary> 
-
-        /// [DEPRECATED] Снять квадрат с выборов 
-
-        /// </summary> 
-
-        /// <param name="ballot">Номер бюллетеня</param> 
-
-        /// <param name="poll">Номер секции</param> 
-
-        /// <param name="n">Номер квадрата</param> 
-
-        /// <returns>1 - ок</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int ExcludeSquare(int ballot, int poll, int n); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [DEPRECATED] Восстановить квадрат 
-
-        /// </summary> 
-
-        /// <param name="ballot">Номер бюллетеня</param> 
-
-        /// <param name="poll">Номер секции</param> 
-
-        /// <param name="n">Номер квадрата</param> 
-
-        /// <returns>1 - ок</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int EnableSquare(int ballot, int poll, int n); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [DEPRECATED] Проверить, не снят ли квадрат 
-
-        /// </summary> 
-
-        /// <param name="ballot">Номер бюллетеня</param> 
-
-        /// <param name="poll">Номер секции</param> 
-
-        /// <param name="n">Номер квадрата</param> 
-
-        /// <returns>1 - ок, 0 - снят</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int IsSquareValid(int ballot, int poll, int n); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Скомпилировать текстовую модель бюллетеня 
-
-        /// </summary> 
-
-        /// <returns>1 - ок</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int LinkChangedModel(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Начать распознавание 
-
-        /// </summary> 
-
-        /// <param name="pSide0">Параметры первой стороны</param> 
-
-        /// <param name="pSide1">Параметры второй стороны</param> 
-
-        /// <returns>меньше нуля - ошибка</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int StartRecognition(ref BufferHeader pSide0, ref BufferHeader pSide1); 
-
-
- 
- 
-
-        /// <summary> 
-
-        /// Начать online распознавание 
-
-        /// </summary> 
-
-        /// <param name="pSide0">Параметры первой стороны</param> 
-
-        /// <param name="pSide1">Параметры второй стороны</param> 
-
-        /// <param name="FrameLineDist_mm">Какой-то внутренний параметр распознавалки</param> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static void StartOnLineTesting(ref BufferHeader pSide0, ref BufferHeader pSide1, int FrameLineDist_mm); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Получить параметр для функции StartOnLineTesting 
-
-        /// </summary> 
-
-        /// <returns>Значение параметра</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int GetFrameDist_mm(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Сохранить модель 
-
-        /// </summary> 
-
-        /// <returns></returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int DefaultModelSave(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Обработать следующий буфер 
-
-        /// </summary> 
-
-        /// <param name="count">Количество строк</param> 
-
-        /// <returns> 
-
-        /// -1  - это не бюллетень  
-
-        ///  0  - решение пока не принято  
-
-        ///  1  - признан бюллетенем 
-
-        /// </returns> 
-
         [DllImport("Xib.dll", EntryPoint = "NextBuffer")] 
-
         internal extern static int NextBufferInternal(int count); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Определить номер цифрового маркера 
-
-        /// </summary> 
-
-        /// <returns>Номер маркера</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int OnlineDefStandartMarker(); 
-
- 
-
- 
-
-        /// <summary> 
-
-
-        /// Определить номер шрих-маркера 
-
-        /// </summary> 
-
-        /// <returns>Номер маркера</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int OnlineDefCharMarker(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Завершение работы распознавалки - освобождение ресурсов 
-
-        /// </summary> 
-
-        /// <returns>отрицательное число - код ошибки</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int CloseRecognition(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Инициализация распознавалки 
-
-        /// </summary> 
-
-        /// <returns>отрицательное число - код ошибки</returns> 
-
         [DllImport("Xib.dll")] 
-
         internal extern static int InitRecognition(); 
-
- 
-
- 
-
         #endregion 
-
     } 
-
 }
-
-

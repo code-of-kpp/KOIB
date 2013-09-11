@@ -1,39 +1,16 @@
 namespace Croc.Bpc.GsScannerDriver 
-
 { 
-
-    /// <summary> 
-
-    /// Интерфейс к мануфактурным параметрам 
-
-    /// </summary> 
-
-    public interface IManufProps 
-
+    internal interface IManufProps 
     { 
-
-        /// <summary> 
-
-        /// Серийный номер сканера, считанный из параметров 
-
-        /// </summary> 
-
+        byte[] ToByteArray(); 
         int SerialNumber { get; } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Расстояние между линейками 
-
-        /// </summary> 
-
         short ShiftLines { get; } 
-
+        #region Параметры маркера 
+        short On { get; set; } 
+        short Off { get; set; } 
+        short MarkingTime { get; set; } 
+        short RollbackTime { get; set; } 
+        short DownTime { get; set; } 
+        #endregion 
     } 
-
 }
-
-

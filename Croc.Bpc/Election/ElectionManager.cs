@@ -1,2875 +1,641 @@
 using System; 
-
 using System.Collections.Generic; 
-
 using System.IO; 
-
-using System.Text.RegularExpressions; 
-
+using System.Linq; 
+using System.Security.Cryptography; 
+using System.Text; 
 using System.Threading; 
-
 using System.Xml; 
-
-using Croc.Bpc.Common.Diagnostics; 
-
-using Croc.Bpc.Common.Interfaces; 
-
+using System.Xml.Serialization; 
+using Croc.Bpc.Diagnostics; 
 using Croc.Bpc.Election.Config; 
-
-using Croc.Bpc.Election.Voting; 
-
 using Croc.Bpc.FileSystem; 
-
+using Croc.Bpc.Recognizer; 
+using Croc.Bpc.RegExpressions; 
+using Croc.Bpc.Synchronization; 
+using Croc.Bpc.Utils; 
+using Croc.Bpc.Voting; 
 using Croc.Core; 
-
 using Croc.Core.Configuration; 
-
- 
-
- 
-
+using Croc.Core.Extensions; 
 namespace Croc.Bpc.Election 
-
 { 
-
-    /// <summary> 
-
-    /// ???????? ??????? 
-
-    /// </summary> 
-
     [SubsystemConfigurationElementTypeAttribute(typeof(ElectionManagerConfig))] 
-
-    public sealed class ElectionManager : StateSubsystem, IElectionManager 
-
+    public class ElectionManager : StateSubsystem, IElectionManager 
     { 
-
-        /// <summary> 
-
-        /// ???????????? ????????? ??????? 
-
-        /// </summary> 
-
         private ElectionManagerConfig _config; 
-
-        /// <summary> 
-
-        /// ???????? ???????? ??????? 
-
-        /// </summary> 
-
+        private IVotingResultManager _votingResultManager; 
+        private IRecognitionManager _recognitionManager; 
         private IFileSystemManager _fileSystemManager; 
-
-        /// <summary> 
-
-        /// ????????? ??? ????????? ?????????? ? ???????? 
-
-        /// </summary> 
-
-        private IScannersInfo _scannersInfo; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??????????? 
-
-        /// </summary> 
-
-        public ElectionManager() 
-
-        { 
-
-            ResetState(false); 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????????????? 
-
-        /// </summary> 
-
-        /// <param name="config"></param> 
-
-
+        private ISynchronizationManager _syncManager; 
+        #region Инициализация 
         public override void Init(SubsystemConfig config) 
-
         { 
-
             _config = (ElectionManagerConfig)config; 
-
- 
-
- 
-
-            // ??????? ?????? ?? ?????? ?????????? 
-
+            _votingResultManager = Application.GetSubsystemOrThrow<IVotingResultManager>(); 
+            _recognitionManager = Application.GetSubsystemOrThrow<IRecognitionManager>(); 
             _fileSystemManager = Application.GetSubsystemOrThrow<IFileSystemManager>(); 
-
-            _scannersInfo = Application.FindSubsystemImplementsInterfaceOrThrow<IScannersInfo>(); 
-
+            _syncManager = Application.GetSubsystemOrThrow<ISynchronizationManager>(); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????????? ?????? ??????? 
-
-        /// </summary> 
-
-        /// <param name="newConfig"></param> 
-
         public override void ApplyNewConfig(SubsystemConfig newConfig) 
-
         { 
-
-            Init(newConfig); 
-
+            _config = (ElectionManagerConfig)newConfig; 
         } 
-
- 
-
- 
-
+        #endregion 
+        #region IQuietMode 
+        public bool QuietMode { get; set; } 
+        #endregion 
         #region IElectionManager members 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ???? ? ???????? ??????????, ? ??????? ????????? ??? ??? ?????? ???? ? ?? 
-
-        /// </summary> 
-
-        private string _rootDataDirPath; 
-
- 
-
- 
-
+        #region Общие св-ва 
+        public virtual DateTime LocalTimeNow 
+        { 
+            get 
+            { 
+                return DateTime.Now; 
+            } 
+        } 
         private VotingMode _currentVotingMode; 
-
-        /// <summary> 
-
-        /// ??????? ????? ??????????? 
-
-        /// </summary> 
-
         public VotingMode CurrentVotingMode 
-
         { 
-
             get 
-
             { 
-
                 return _currentVotingMode; 
-
             } 
-
             set 
-
             { 
-
                 if (_currentVotingMode == value) 
-
                     return; 
-
- 
-
- 
-
                 SetCurrentVotingMode(value); 
-
                 RaiseStateChanged(); 
-
             } 
-
         } 
-
-
- 
- 
-
-        /// <summary> 
-
-        /// ????????????? ????? ??????? ????? ??????????? 
-
-        /// </summary> 
-
-        /// <param name="newVotingMode"></param> 
-
         private void SetCurrentVotingMode(VotingMode newVotingMode) 
-
         { 
-
-            _currentVotingMode = newVotingMode; 
-
- 
-
- 
-
-            if (newVotingMode > VotingMode.Test) 
-
-                VotingResults.ClearTestData(); 
-
-        } 
-
- 
-
- 
-
-        #region ???????? ?????? 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????? ??? 
-
-        /// </summary> 
-
-        public int UIK 
-
-        { 
-
-            get; 
-
-            private set; 
-
-        } 
-
- 
-
- 
-
-        private SourceData _sourceData; 
-
-        /// <summary> 
-
-        /// ???????? ??????, ?? ??????? ?????????? ?????? 
-
-        /// </summary> 
-
-        public SourceData SourceData 
-
-        { 
-
-            get 
-
-            { 
-
-                return _sourceData; 
-
-            } 
-
-            private set 
-
-            { 
-
-                // ???????????? ?? ????????? ????? ????????? ?????? ?? 
-
-                UnsubscribeFromProtocolLinesChanges(); 
-
-                // ??????? ?? 
-
-                _sourceData = value; 
-
-                // ?????????? ?? ????????? ????? ????????? ????? ?? 
-
-                SubscribeToProtocolLinesChanges(); 
-
-            } 
-
-        } 
-
- 
-
-
- 
-		/// <summary> 
-
-		/// ???????? ????????? ?? ???????? ?????? 
-
-		/// </summary> 
-
-		/// <returns>true - ????????? / false - ???</returns> 
-
-		public bool HasSourceData() 
-
-		{ 
-
-			return SourceData != null; 
-
-		} 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ???????? ????? ?????? ?????? ??????????? ?? ????????? 
-
-        /// </summary> 
-
-        /// <param name="mode">?????</param> 
-
-        /// <returns>????? ??? TimeSpan.Zero, ???? ??? ?????????? ?????? ?? ?????? ????? ?? ?????????</returns> 
-
-        public TimeSpan GetDefaultVotingModeTime(VotingMode mode) 
-
-        { 
-
-            var modeTimeConfig = _config.DefaultVotingModeTimes[mode]; 
-
-            if (modeTimeConfig == null) 
-
-                return TimeSpan.Zero; 
-
- 
-
- 
-
-            return modeTimeConfig.Time; 
-
-        } 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// ????? ?? ????????? ?? 
-
-		/// </summary> 
-
-		/// <returns></returns> 
-
-		public bool NeedExecuteCheckExpressions 
-
-		{ 
-
-			get  
-
-			{ 
-
-				return _config.NeedExecuteCheckExpressions.Value;  
-
-			} 
-
-		} 
-
- 
-
- 
-
-        #region ????????? ????????? ????? ????????? 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????????????? ?? ????????? ????? ????????? ?? 
-
-        /// </summary> 
-
-        private void SubscribeToProtocolLinesChanges() 
-
-        { 
-
-            if (_sourceData == null) 
-
-                return; 
-
-
- 
- 
-
-            foreach (var election in _sourceData.Elections) 
-
-                foreach (var line in election.Protocol.Lines) 
-
-                    line.ValueChangedHandler = ProtocolLine_ValueChanged; 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ???????????? ?? ????????? ????? ????????? ?? 
-
-        /// </summary> 
-
-        private void UnsubscribeFromProtocolLinesChanges() 
-
-        { 
-
-            if (_sourceData == null) 
-
-                return; 
-
- 
-
- 
-
-            foreach (var election in _sourceData.Elections) 
-
-                foreach (var line in election.Protocol.Lines) 
-
-                    line.ValueChangedHandler = null; 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????????? ????????? ?????? ????????? 
-
-        /// </summary> 
-
-        /// <param name="sender"></param> 
-
-        /// <param name="e"></param> 
-
-        private void ProtocolLine_ValueChanged(object sender, EventArgs e) 
-
-        { 
-
-            // ???????, ??? ????????? ?????????? 
-
-            RaiseStateChanged(); 
-
-        } 
-
- 
-
- 
-
-        #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????? ???? ???????? 
-
-        /// </summary> 
-
-        /// <param name="restored">???????, ??? ?????? ?? ???? ?????????????</param> 
-
-        /// <returns> 
-
-        /// true ? ???? Now ??????????? ????????? [???????????, ??????????? + (?? ????????????? ? 1 : 0) ],  
-
-        ///       ??? Now ? ??????? ???? ?? ???????; 
-
-        /// false ? ? ????????? ??????. 
-
-        /// ?.?. ????? ? ???, ????? ??? ??????????????? ?? ???? ??????? ???????????? ?? 1 ???? ?????. 
-
-        /// </returns> 
-
-        public bool IsElectionDayNow(bool restored) 
-
-        { 
-
-
-            if (_sourceData == null) 
-
-                return false; 
-
- 
-
- 
-
-            var electionDay = _sourceData.ElectionDate.Date; 
-
-            var currentDay = _sourceData.LocalTimeNow.Date; 
-
- 
-
- 
-
-            // ???? ?? ?? ???? ????????????? 
-
-            if (!restored) 
-
-                return currentDay == electionDay; 
-
- 
-
- 
-
-            // ?????, ???? ?? ???? ????????????? 
-
-            var electionDayNext = electionDay.AddDays(1).Date; 
-
- 
-
- 
-
-            return currentDay == electionDay || currentDay == electionDayNext; 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????????? ????? ????? ? ?? 
-
-        /// </summary> 
-
-        /// <remarks> 
-
-        /// ????? ????? ??????????? ? ???????????, ???????? ? ??????? 
-
-        /// </remarks> 
-
-        /// <param name="sourceDataFilePath">???? ? ????? ? ??</param> 
-
-        /// <param name="uik">????? ???, ?????????? ?? ????? ?????</param> 
-
-        /// <returns>true - ???? ? ?? ??????, false - ?? ??????</returns> 
-
-        public bool FindSourceDataFile(out string sourceDataFilePath, out int uik) 
-
-        { 
-
-            // ????? ??? ?????? ????? ? ?? 
-
-            const string SOURCE_DATA_FILE_NAME_MASK = "*-?*.bin"; 
-
-            // ??? ?????? ??????? ????? ????? ? ??, ??????? ???????? ????? ??? 
-
-            const string UIK_GROUP_SD_FILE_NAME_PATTERN = "uik"; 
-
-            // ?????? ????? ????? ? ?? 
-
-            const string SOURCE_DATA_FILE_NAME_PATTERN = 
-
-                @"^\w+-(?<" + UIK_GROUP_SD_FILE_NAME_PATTERN + @">\d{1,4})\.bin$"; 
-
- 
-
- 
-
-            sourceDataFilePath = null; 
-
-            uik = 0; 
-
- 
-
- 
-
-            var sourceDataDirName = _config.DataDirectories.SourceDataDirName; 
-
-            var sourceDataDirNameUpper = sourceDataDirName.ToUpper(); 
-
-			// ????????? ???????? ????????? ?????????? ? ?? 
-
-            var sourceDataDirNames = new[] 
-
-			{ 
-
-
-				sourceDataDirName,                                          // ??? ? ??????? 
-
-				sourceDataDirNameUpper,                                     // ???????? ??????? 
-
-                sourceDataDirNameUpper[0] + sourceDataDirName.Substring(1)  // ?????? ?????????, ????????? ??? ? ??????? 
-
-			}; 
-
- 
-
- 
-
-            int tryCount = 0;   // ??????? ??????? 
-
-            while (true) 
-
-            { 
-
-                tryCount++; 
-
- 
-
- 
-
-                // ????????? ??? ???????? ?????????? ??? ????? ? ??????? 
-
-                foreach (var sdName in sourceDataDirNames) 
-
-                    foreach (PathConfig item in _config.DataDirectories.RootPaths) 
-
-                    { 
-
-						try 
-
-						{ 
-
-							foreach (var rootDataDirPath in GetDirectoriesByWildcard(item)) 
-
-							{ 
-
-								var sourceDataDirPath = Path.Combine(rootDataDirPath, sdName); 
-
- 
-
- 
-
-								try 
-
-								{ 
-
-									var sourceDataDirInfo = new DirectoryInfo(sourceDataDirPath); 
-
- 
-
- 
-
-									if (!sourceDataDirInfo.Exists) 
-
-										continue; 
-
- 
-
- 
-
-									Logger.LogInfo(Message.ElectionSearchSourceDataInDir, sourceDataDirPath); 
-
- 
-
- 
-
-									// ??????? ????? ?????? ? ?????????? ?? ???????? ????? 
-
-									var files = sourceDataDirInfo.GetFiles(SOURCE_DATA_FILE_NAME_MASK); 
-
-									foreach (var file in files) 
-
-									{ 
-
-										Logger.LogInfo(Message.ElectionCheckSourceDataFile, file); 
-
- 
-
- 
-
-										// ???????? ??? ????? 
-
-										var match = Regex.Match(file.Name, SOURCE_DATA_FILE_NAME_PATTERN); 
-
-										if (!match.Success) 
-
-											continue; 
-
- 
-
- 
-
-										// ???? ? ?? ?????? 
-
-										Logger.LogInfo(Message.ElectionSourceDataFileFound, file.FullName); 
-
-
-										uik = int.Parse(match.Groups[UIK_GROUP_SD_FILE_NAME_PATTERN].Value); 
-
-										sourceDataFilePath = file.FullName; 
-
- 
-
- 
-
-										// ???????? ???? ? ???????? ?????????? 
-
-										_rootDataDirPath = rootDataDirPath; 
-
- 
-
- 
-
-										return true; 
-
-									} 
-
-								} 
-
-								catch (Exception ex) 
-
-								{ 
-
-									Logger.LogWarning( 
-
-										Message.ElectionFindSourceDataError, sourceDataDirPath, ex.Message, tryCount); 
-
-								} 
-
-							} 
-
-						} 
-
-						catch (Exception ex) 
-
-						{ 
-
-							Logger.LogWarning( 
-
-								Message.ElectionFindSourceDataError,  
-
-								Path.Combine(item.RootPath, item.Wildcard), 
-
-								ex.Message, 
-
-								tryCount); 
-
-						} 
-
-					} 
-
- 
-
- 
-
-                // ???? ???-?? ??????? ???????? ????????????? ???-?? 
-
-                if (tryCount >= _config.SourceDataFileSearch.MaxTryCount) 
-
-                    return false; 
-
- 
-
- 
-
-                // ???????? ? ????? ????????? ??? ??? 
-
-                Thread.Sleep(_config.SourceDataFileSearch.Delay); 
-
-            } 
-
-        } 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// ??????? ?????????? ??????????????? ?????????? ??????? 
-
-		/// </summary> 
-
-		/// <param name="path">?????? ??????? ?????????? ????</param> 
-
-		/// <returns>???? ? ???????????</returns> 
-
-		private string[] GetDirectoriesByWildcard(PathConfig path) 
-
-		{ 
-
-			// ???? ???????? ?????????? ??? ?????? ?????? ?????? 
-
-			if (!Directory.Exists(path.RootPath)) 
-
-				return new string[0]; 
-
-
- 
- 
-
-			// ?????? ?????? ???????? ?????????? 
-
-			if (string.IsNullOrEmpty(path.Wildcard)) 
-
-				return new string[1] { path.RootPath }; 
-
- 
-
- 
-
-			// ?????? ??? ?????????? ??????????????? ???????? ?????? 
-
-			return Directory.GetDirectories(path.RootPath, path.Wildcard); 
-
-		} 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// ???????? ??? ???? ??? ?????? ?? 
-
-		/// </summary> 
-
-		/// <returns></returns> 
-
-		public string[] GetSourceDataSearchPaths() 
-
-		{ 
-
-			var result = new List<string>(); 
-
- 
-
- 
-
-			foreach (PathConfig path in _config.DataDirectories.RootPaths) 
-
-				result.AddRange(GetDirectoriesByWildcard(path)); 
-
- 
-
- 
-
-			// ????????? ??? ?????????? ? ??????? ? ??? ?????????? ?? 
-
-			for (int i = 0; i < result.Count; i++) 
-
-				result[i] = Path.Combine(result[i], _config.DataDirectories.SourceDataDirName); 
-
- 
-
- 
-
-			return result.ToArray(); 
-
-		} 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????????? ?? 
-
-        /// </summary> 
-
-        /// <param name="sourceData">??</param> 
-
-        /// <param name="uik">????? ???, ??????? ?????. ??</param> 
-
-        public void SetSourceData(SourceData sourceData, int uik) 
-
-        { 
-
-            CodeContract.Requires(sourceData != null); 
-
-            CodeContract.Requires(0 < uik && uik <= 9999); 
-
- 
-
- 
-
-            UIK = uik; 
-
-            SourceData = sourceData; 
-
- 
-
- 
-
-            // ???????, ??? ????????? ?????????? 
-
-
-            RaiseStateChanged(); 
-
-        } 
-
- 
-
- 
-
-        #endregion 
-
- 
-
- 
-
-        #region ?????????? ??????????? 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????? ????????????? ??? ?????? ? ???????????? ??????????? 
-
-        /// </summary> 
-
-        private static object s_votingResultSync = new object(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????????? ??????????? 
-
-        /// </summary> 
-
-        public VotingResults VotingResults 
-
-        { 
-
-            get; 
-
-            private set; 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????????? ????????? ??????????? 
-
-        /// </summary> 
-
-        public VotingResult LastVotingResult 
-
-        { 
-
-            get; 
-
-            private set; 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ???????? ????????? ????????? ??????????? 
-
-        /// </summary> 
-
-        public void ResetLastVotingResult() 
-
-        { 
-
-            LastVotingResult = VotingResult.Empty; 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????????? ????????? ????????? ??????????? 
-
-        /// </summary> 
-
-        public void SetLastVotingResult(VotingResult votingResult) 
-
-        { 
-
-
-            // ????????????? ????????? ????????? ??????????? 
-
-            LastVotingResult = votingResult; 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ???????? ????????? ????????????? ????????? 
-
-        /// </summary> 
-
-        public void AddVotingResult( 
-
-            VotingResult votingResult,  
-
-            VotingMode votingMode,  
-
-            int scannerSerialNumber) 
-
-        { 
-
-            Logger.LogVerbose(Message.DebugVerbose, "call"); 
-
- 
-
- 
-
-            // ????????????? ????????? ????????? ??????????? 
-
-            SetLastVotingResult(votingResult); 
-
- 
-
- 
-
-            lock (s_votingResultSync) 
-
-            { 
-
-                // ?????? ???: [????? ??? ??????????, ??????? ?????????? ?????????? ??????] 
-
-                List<KeyValuePair<VoteKey, bool>> voteKeysForAdding = null; 
-
- 
-
- 
-
-                // ??????????? ???? ??? ??????????? ???????????????? ?????????? ??????? 
-
-                while (true) 
-
-                { 
-
-                    try 
-
-                    { 
-
-                        // ???? ?????? ??? ?????????? ??? ?? ???????? 
-
-                        if (voteKeysForAdding == null) 
-
-                            // ?? ??????? ?? 
-
-                            voteKeysForAdding = GetVoteKeysForAdding(LastVotingResult, votingMode, scannerSerialNumber); 
-
- 
-
- 
-
-                        for (var keyIndex = 0; keyIndex < voteKeysForAdding.Count; keyIndex++) 
-
-                        { 
-
-                            var item = voteKeysForAdding[keyIndex]; 
-
- 
-
- 
-
-                            // ???? ????? ??? ???????? 
-
-                            if (item.Value) 
-
-                                // ?? ????????? ? ?????????? 
-
-                                continue; 
-
- 
-
- 
-
-                            int votesCount = 0; 
-
-                            try 
-
-
-                            { 
-
-                                //???????? ?????????? ??????? 
-
-                                votesCount = VotingResults.VotesCount(item.Key); 
-
-                                //?????????? ???????? ????? 
-
-                                VotingResults.AddVote(item.Key); 
-
-                            } 
-
-                            catch (ThreadAbortException) 
-
-                            { 
-
-                                Logger.LogWarning(Message.ElectionAddVotingResultAbort); 
-
-                                Thread.ResetAbort(); 
-
-                            } 
-
-                            catch (Exception ex) 
-
-                            { 
-
-                                Logger.LogException(Message.ElectionAddVotingResultException, ex); 
-
-                            } 
-
-                            finally 
-
-                            { 
-
-                                // ???? ?????????? ?? ?????????? 
-
-                                if (votesCount == VotingResults.VotesCount(item.Key)) 
-
-                                    // ?????? ????? ?? ???????? => ????????? ???????? ??? ??? ??? 
-
-                                    keyIndex--; 
-
-                                else 
-
-                                    // ???????? ??????? ????, ??? ????? ???????? 
-
-                                    voteKeysForAdding[keyIndex] = new KeyValuePair<VoteKey, bool>(item.Key, true); 
-
-                            } 
-
-                        } 
-
-                        break; 
-
-                    } 
-
-                    catch (ThreadAbortException) 
-
-                    { 
-
-                        Logger.LogWarning(Message.ElectionAddVotingResultAbort); 
-
-                        Thread.ResetAbort(); 
-
-                    } 
-
-                    catch (Exception ex) 
-
-                    { 
-
-                        // ????? ?????? - ?????? ?????? ? ????????? ??????? ???????????? ??????????? ????? 
-
-                        Logger.LogException(Message.ElectionAddVotingResultException, ex); 
-
-                    } 
-
-                } 
-
-            } 
-
- 
-
- 
-
-            // ????????, ??? ????????? ?????????? 
-
-            RaiseStateChanged(); 
-
- 
-
- 
-
-            // TODO: ???????? ???? (???? ? ?????????? ???????? ???????? ???? ? ?? ????? ????????????) 
-
-        } 
-
- 
-
- 
-
-
-        /// <summary> 
-
-        /// ?????????? ?????????? ??????????? 
-
-        /// </summary> 
-
-        /// <param name="votingResult"></param> 
-
-        /// <param name="votingMode"></param> 
-
-        private List<KeyValuePair<VoteKey, bool>> GetVoteKeysForAdding( 
-
-            VotingResult votingResult, 
-
-            VotingMode votingMode, 
-
-            int scannerSerialNumber) 
-
-        { 
-
-            Logger.LogVerbose(Message.DebugVerbose, "call"); 
-
-            //??????????? ????? 
-
-            var keys = new List<KeyValuePair<VoteKey, bool>>(); 
-
- 
-
- 
-
-            Blank blank = 
-
-                (0 <= votingResult.BulletinNumber && votingResult.BulletinNumber < _sourceData.Blanks.Length) 
-
-                    ? _sourceData.Blanks[votingResult.BulletinNumber] : null; 
-
- 
-
- 
-
-            // ??????? ????? ??? ????????? 
-
-            var bulletinVote = new VoteKey() 
-
-            { 
-
-                // ????? ??????? 
-
-                ScannerSerialNumber = scannerSerialNumber, 
-
-                // ????? ??????????? 
-
-                VotingMode = votingMode, 
-
-                // ????? ????????? 
-
-                BlankId = (blank != null ? blank.Id : votingResult.BulletinNumber.ToString()), 
-
-                // ??? ?????? 
-
-                BlankType = votingResult.BlankType, 
-
-            }; 
-
- 
-
- 
-
-            // ???????? ???????????? ?????? 
-
-            if (bulletinVote.BlankType == BlankType.Valid) 
-
-            { 
-
-                // ????????, ?? ??? ????? ??? ????????? ???????????????? ?????? 
-
-                if (votingResult.SectionsMarks == null || votingResult.SectionsValidity == null) 
-
-                { 
-
-                    bulletinVote.BlankType = BlankType.NoMarks; 
-
-                } 
-
-                else 
-
-                { 
-
-                    bool invalid = true; 
-
- 
-
- 
-
-                    // ????????, ??? ???? ???? ?? ???? ??????? ?????? ? ??????? 
-
-                    for (int sectionIndex = 0; 
-
-                        sectionIndex <= votingResult.SectionsMarks.GetUpperBound(0); 
-
-
-                        sectionIndex++) 
-
-                    { 
-
-                        // ???? ?????? ???????? ? ???? ????? 
-
-                        if (votingResult.SectionsValidity[sectionIndex] && 
-
-                            votingResult.SectionsMarks[sectionIndex] != null && 
-
-                            votingResult.SectionsMarks[sectionIndex].Length > 0) 
-
-                        { 
-
-                            invalid = false; 
-
-                            break; 
-
-                        } 
-
-                    } 
-
- 
-
- 
-
-                    if (invalid) 
-
-                        bulletinVote.BlankType = BlankType.NoMarks; 
-
-                } 
-
-            } 
-
- 
-
- 
-
-            // ???? ????? ???????? 
-
-            if (bulletinVote.BlankType == BlankType.Valid) 
-
-            { 
-
-                // ?? ??? ?????? ??????? ????????? ?????, ?????? ?????? ? 1-?? ???????? ????????? ? ????????? 
-
-                for (int sectionIndex = 0; 
-
-                    sectionIndex <= votingResult.SectionsMarks.GetUpperBound(0); 
-
-                    sectionIndex++) 
-
-                { 
-
-                    // ???? ?????? ?? ????????? 
-
-                    if (!votingResult.SectionsValidity[sectionIndex]) 
-
-                        // ?? ?? ????????? ?? 
-
-                        continue; 
-
- 
-
- 
-
-                    // ????????? ??????????, ?? ??????? ????????????? ? ??????? ?????? ?????? 
-
-                    for (int markIndex = 0; markIndex < votingResult.SectionsMarks[sectionIndex].Length; markIndex++) 
-
-                    { 
-
-                        VoteKey candidateVote; 
-
- 
-
- 
-
-                        // ???? ??? ?????? ??????? ? ?????? ?????? 
-
-                        if (sectionIndex == 0 && markIndex == 0) 
-
-                            // ?? ?????????? ????? ??? ????????? 
-
-                            candidateVote = bulletinVote; 
-
-                        else 
-
-                            // ??????? ????? ????? ??? ????????? 
-
-                            candidateVote = new VoteKey() 
-
-                            { 
-
-                                // ????? ??????? 
-
-                                ScannerSerialNumber = scannerSerialNumber, 
-
-                                // ????? ????????? 
-
-
-                                BlankId = blank.Id, 
-
-                                // ????? ??????????? 
-
-                                VotingMode = votingMode 
-
-                            }; 
-
- 
-
- 
-
-                        // ?????? ??????? 
-
-                        candidateVote.ElectionNum = blank.Sections[sectionIndex]; 
-
-                        // ?????? ????????? 
-
-                        candidateVote.CandidateId = _sourceData.GetElectionByNum(blank.Sections[sectionIndex]). 
-
-                            Candidates[votingResult.SectionsMarks[sectionIndex][markIndex]].Id; 
-
- 
-
- 
-
-                        // ????????? ????? ?? ????????? 
-
-                        keys.Add(new KeyValuePair<VoteKey, bool>(candidateVote, false)); 
-
-                    } 
-
-                } 
-
-            } 
-
-            else 
-
-            { 
-
-                // ????????? ?????? ????????? 
-
-                keys.Add(new KeyValuePair<VoteKey, bool>(bulletinVote, false)); 
-
-            } 
-
- 
-
- 
-
-            return keys; 
-
-        } 
-
- 
-
- 
-
-        #endregion 
-
- 
-
- 
-
-        #region ?????????? ??????????? ??????????? 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????? ????????? 
-
-        /// </summary> 
-
-        public string _votingResultProtocolData; 
-
-        /// <summary> 
-
-        /// ??? ????? ??? ?????????? ????????? 
-
-        /// </summary> 
-
-        public string _votingResultProtocolFileName; 
-
-        /// <summary> 
-
-        /// ???? ? ?????, ? ??????? ????? ????????? ???????? ? ???????????? ??????????? 
-
-        /// </summary> 
-
-        private string _votingResultProtocolFilePath; 
-
-        /// <summary> 
-
-        /// ?????? ????????? (??????????? ? ?????????), ???????? ?? ???? ??????? 
-
-        /// </summary> 
-
-
-        private int _votingResultProtocolVersion = 0; 
-
- 
-
- 
-
-        #region ???????????? ?????? ? ????? ????? ????????? 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??? ????? ????????? ? ???????????? ??????????? 
-
-        /// </summary> 
-
-        public const string VOTINGRESULTPROTOCOL_XMLNS = "http://localhost/Schemas/xib.xsd"; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????????? ??? ????? ????????? ? ???????????? ??????????? 
-
-        /// </summary> 
-
-        /// <param name="timeStamp">????????? ?????</param> 
-
-        /// <param name="election">??????</param> 
-
-        /// <param name="preliminaryProtocol">??????? ????????????? ???????????? ??????????????? ????????</param> 
-
-        /// <returns>??? ?????</returns> 
-
-        private string GenerateVotingResultProtocolFileName( 
-
-            DateTime timeStamp, Election.Voting.Election election, bool preliminaryProtocol) 
-
-        { 
-
-            return string.Format("{0}Result-{1}-{2}{3}.xml", 
-
-                (preliminaryProtocol ? "Pre" : null), 
-
-                UIK, 
-
-                timeStamp.ToString("dd.MM.yyyy HH.mm.ss"), 
-
-                _sourceData.FileSuffix).Replace(':', '.'); 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????????? ?????? ????????? ? ???????????? ??????????? 
-
-        /// </summary> 
-
-        /// <param name="timeStamp">????????? ?????</param> 
-
-        /// <param name="election">?????? ??? null, ???? ????? ???????????? ???????? ?? ???? ???????</param> 
-
-        /// <param name="preliminaryProtocol">??????? ????????????? ???????????? ??????????????? ????????</param> 
-
-        /// <returns>?????? ?????????</returns> 
-
-        private string GenerateVotingResultProtocolData( 
-
-            DateTime timeStamp, Election.Voting.Election election, bool preliminaryProtocol) 
-
-        { 
-
-            using (var stringWriter = new StringWriter()) 
-
-            { 
-
-                using (var xmlWriter = new XmlTextWriter(stringWriter)) 
-
-                { 
-
-                    // <Xib> 
-
-                    xmlWriter.WriteStartElement("Xib", VOTINGRESULTPROTOCOL_XMLNS); 
-
-                    // ????? ??? 
-
-                    xmlWriter.WriteAttributeString("uik", UIK.ToString()); 
-
-                    // ??????? ???????? ? ??? "??????"/??? ??????????? 
-
-                    xmlWriter.WriteAttributeString("isGasVrn", XmlConvert.ToString(_sourceData.IsGasVrn)); 
-
-
-                    // ????????? ????? 
-
-                    xmlWriter.WriteAttributeString( 
-
-                        "ts", XmlConvert.ToString(timeStamp, XmlDateTimeSerializationMode.Local)); 
-
-                    // ?????? ????????? 
-
-                    xmlWriter.WriteAttributeString( 
-
-                        "version", XmlConvert.ToString(GetNextVotingResultProtocolVersion())); 
-
-                    // ?????????? ?? ???????? 
-
-                    WriteScannersInfo(xmlWriter, election); 
-
-                    // ???? ????????? 
-
-                    WriteProtocolBody(xmlWriter, election, preliminaryProtocol); 
-
-                    // ??????????? ????? 
-
-                    xmlWriter.WriteElementString("Check", String.Empty); 
-
-                    // </Xib> 
-
-                    xmlWriter.WriteEndElement(); 
-
-                } 
-
- 
-
- 
-
-                stringWriter.Flush(); 
-
-                return stringWriter.ToString(); 
-
-            } 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????????? ????????? ?????? ????????? 
-
-        /// </summary> 
-
-        /// <returns></returns> 
-
-        private int GetNextVotingResultProtocolVersion() 
-
-        { 
-
-            _votingResultProtocolVersion++; 
-
-            RaiseStateChanged(); 
-
- 
-
- 
-
-            return _votingResultProtocolVersion; 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????????? ?????????? ?? ???????? 
-
-        /// </summary> 
-
-        /// <param name="xmlWriter"></param> 
-
-        /// <param name="election">?????? ??? null, ???? ????? ???????????? ???????? ?? ???? ???????</param> 
-
-        private void WriteScannersInfo(XmlTextWriter xmlWriter, Election.Voting.Election election) 
-
-        { 
-
-            var scannerArr = _scannersInfo.GetScannerInfos(); 
-
-            foreach (var scanner in scannerArr) 
-
-            { 
-
-                var intScannerSerialNumber = Convert.ToInt32(scanner.Serial); 
-
- 
-
- 
-
-
-                // <Scanner> 
-
-                xmlWriter.WriteStartElement("Scanner"); 
-
-                // ???????? ????? ??????? 
-
-                xmlWriter.WriteAttributeString("n", scanner.Serial); 
-
- 
-
- 
-
-                // ???-?? ???-?? 
-
-                var mask = new VoteKey() 
-
-                { 
-
-                    ScannerSerialNumber = intScannerSerialNumber, 
-
-                    BlankType = BlankType.Bad, 
-
-                }; 
-
-                int nufCount = VotingResults.VotesCount(mask); 
-
-                xmlWriter.WriteAttributeString("nuf", XmlConvert.ToString(nufCount)); 
-
- 
-
- 
-
-                // ???? 
-
-                if (election != null) 
-
-                    WriteAttendInfo(xmlWriter, intScannerSerialNumber, election); 
-
-                else 
-
-                { 
-
-                    // ?? ???? ??????? 
-
-                    foreach (var el in _sourceData.Elections) 
-
-                        WriteAttendInfo(xmlWriter, intScannerSerialNumber, el); 
-
-                } 
-
- 
-
- 
-
-                // </Scanner> 
-
-                xmlWriter.WriteEndElement(); 
-
-            } 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????????? ?????????? ?? ???? ??? ????????? ??????? 
-
-        /// </summary> 
-
-        /// <param name="xmlWriter"></param> 
-
-        /// <param name="scannerSerialNumber">????? ???????</param> 
-
-        /// <param name="election">??????</param> 
-
-        private void WriteAttendInfo( 
-
-            XmlTextWriter xmlWriter, int scannerSerialNumber, Election.Voting.Election election) 
-
-        { 
-
-            // ?????????? ?????? 
-
-            foreach (var blank in _sourceData.Blanks) 
-
-            { 
-
-                if (election == null || SourceData.GetBlankIdByElectionNumber(election.ElectionId) == blank.Id) 
-
-                { 
-
-                    var mask = new VoteKey() 
-
-                    { 
-
-                        ScannerSerialNumber = scannerSerialNumber, 
-
-
-                        BlankId = blank.Id 
-
-                    }; 
-
- 
-
- 
-
-                    // <Blank> 
-
-                    xmlWriter.WriteStartElement("Bulletin"); 
-
- 
-
- 
-
-                    // ????????????? ?????? 
-
-                    xmlWriter.WriteAttributeString("id", blank.Id); 
-
-                    // ????? ?????? 
-
-                    xmlWriter.WriteAttributeString("n", XmlConvert.ToString(blank.Marker)); 
-
- 
-
- 
-
-                    // ????? ?????????????? ?????????? 
-
-                    mask.BlankType = BlankType.Valid; 
-
-                    xmlWriter.WriteAttributeString("Valid", XmlConvert.ToString(VotingResults.VotesCount(mask))); 
-
-                    // ????? ?????????? ??? ??????? 
-
-                    mask.BlankType = BlankType.NoMarks; 
-
-                    xmlWriter.WriteAttributeString("NoMarks", XmlConvert.ToString(VotingResults.VotesCount(mask))); 
-
-                    // ????? ?????????? ? ??????????? ????? ??????? 
-
-                    mask.BlankType = BlankType.TooManyMarks; 
-
-                    xmlWriter.WriteAttributeString("TooManyMarks", XmlConvert.ToString(VotingResults.VotesCount(mask))); 
-
-                    // ????? ?????????? ? ???????? ?????? 
-
-                    mask.BlankType = BlankType.BadMode; 
-
-                    xmlWriter.WriteAttributeString("BadMode", XmlConvert.ToString(VotingResults.VotesCount(mask))); 
-
- 
-
- 
-
-                    // </Blank> 
-
-                    xmlWriter.WriteEndElement(); 
-
-                } 
-
-            } 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????????? ???? ????????? 
-
-        /// </summary> 
-
-        /// <param name="xmlWriter"></param> 
-
-        /// <param name="election">?????? ??? null, ???? ????? ???????????? ???????? ?? ???? ???????</param> 
-
-        /// <param name="preliminaryProtocol">??????? ????????????? ???????????? ??????????????? ????????</param> 
-
-        private void WriteProtocolBody( 
-
-            XmlTextWriter xmlWriter, Election.Voting.Election election, bool preliminaryProtocol) 
-
-        { 
-
-            // <Protocol> 
-
-            xmlWriter.WriteStartElement("Protocol"); 
-
-            // ??????? ????, ??? ??? ???????? ???????? ??? ??? 
-
-            xmlWriter.WriteAttributeString("final", XmlConvert.ToString(!preliminaryProtocol)); 
-
- 
-
- 
-
-
-            if (election != null) 
-
-                WriteElectionInfo(xmlWriter, election, preliminaryProtocol); 
-
-            else 
-
-            { 
-
-                // ?? ???? ??????? 
-
-                foreach (var el in _sourceData.Elections) 
-
-                    WriteElectionInfo(xmlWriter, el, preliminaryProtocol); 
-
-            } 
-
- 
-
- 
-
-            // </Protocol> 
-
-            xmlWriter.WriteEndElement(); 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????????? ?????????? ?? ??????? 
-
-        /// </summary> 
-
-        /// <param name="xmlWriter"></param> 
-
-        /// <param name="election">?????? ??? null, ???? ????? ???????????? ???????? ?? ???? ???????</param> 
-
-        /// <param name="preliminaryProtocol">??????? ????????????? ???????????? ??????????????? ????????</param> 
-
-        private void WriteElectionInfo( 
-
-            XmlTextWriter xmlWriter, Election.Voting.Election election, bool preliminaryProtocol) 
-
-        { 
-
-            // <Election> 
-
-            xmlWriter.WriteStartElement("Election"); 
-
- 
-
- 
-
-            // ????? ??????? ??? ????? ? ???????? ????????? 
-
-            xmlWriter.WriteAttributeString("n", election.ExternalNumber); 
-
-            // ?????????? ? ??????????? ???????? 
-
-            xmlWriter.WriteAttributeString("parentid", election.ParentComittee.ParentID); 
-
-            xmlWriter.WriteAttributeString("e-mail", election.ParentComittee.EMail); 
-
- 
-
- 
-
-            // ???? ??? ?? ??????????????? ????????, ?? ??????? ???????? ????? ????????? 
-
-            if (!preliminaryProtocol) 
-
-            { 
-
-                foreach (var line in election.Protocol.Lines) 
-
-                { 
-
-                    // <Line> 
-
-                    xmlWriter.WriteStartElement("Line"); 
-
- 
-
- 
-
-                    xmlWriter.WriteAttributeString("n", XmlConvert.ToString(line.Num)); 
-
-                    if (!string.IsNullOrEmpty(line.AdditionalNum)) 
-
-                        xmlWriter.WriteAttributeString("a", line.AdditionalNum); 
-
- 
-
- 
-
-                    // ???????? ?????? ????????? 
-
-
-                    xmlWriter.WriteString(XmlConvert.ToString(line.Value.GetValueOrDefault(0))); 
-
- 
-
- 
-
-                    // </Line> 
-
-                    xmlWriter.WriteEndElement(); 
-
-                } 
-
-            } 
-
- 
-
- 
-
-            // ????? ?? ???????? ? ????????? ?????? ?????????? 
-
-            var showDisabledCandidates = !string.IsNullOrEmpty(election.Protocol.DisabledString); 
-
- 
-
- 
-
-            // ?????????? ?????????? 
-
-            foreach (var candidate in election.Candidates) 
-
-            { 
-
-                if (candidate.Disabled && !showDisabledCandidates) 
-
-                    continue; 
-
- 
-
- 
-
-                // <Candidate> 
-
-                xmlWriter.WriteStartElement("Candidate"); 
-
-                // ????????????? ????????? 
-
-                xmlWriter.WriteAttributeString("n", candidate.Id); 
-
- 
-
- 
-
-                // ??????? ????, ??? ???????? ???? 
-
-                if (candidate.Disabled) 
-
-                    xmlWriter.WriteAttributeString("disabled", XmlConvert.ToString(true)); 
-
- 
-
- 
-
-                // ?????????? ??????? ?? ??????? ????????? 
-
-                var mask = new VoteKey() 
-
-                { 
-
-                    ElectionNum = election.ElectionId, 
-
-                    CandidateId = candidate.Id 
-
-                }; 
-
-                var votesCount = VotingResults.VotesCount(mask); 
-
-                xmlWriter.WriteString(XmlConvert.ToString(votesCount)); 
-
- 
-
- 
-
-                // </Candidate> 
-
-                xmlWriter.WriteEndElement(); 
-
-            } 
-
- 
-
- 
-
-            // </Election> 
-
-            xmlWriter.WriteEndElement(); 
-
-        } 
-
- 
-
-
- 
-        #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ???????????? ??????????????? ???????? ? ???????????? ??????????? ?? ???? ??????? 
-
-        /// </summary> 
-
-        /// <remarks>???????? ??????????? ? ?????????? ? ?????? ????????? ???????, 
-
-        /// ? ????? ??????????? ? ????????? ????</remarks> 
-
-        public void GeneratePreliminaryVotingResultProtocol() 
-
-        { 
-
-            // ?????????? ??? ????? ? ?????? ????????? 
-
-            var timeStamp = DateTime.Now; 
-
-            _votingResultProtocolFileName = GenerateVotingResultProtocolFileName(timeStamp, null, true); 
-
-            _votingResultProtocolData = GenerateVotingResultProtocolData(timeStamp, null, true); 
-
- 
-
- 
-
-            // ???????? ???????? ? ????????? ?????????? 
-
-            SaveVotingResultProtocolToLocalDir(); 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ???????????? ???????? ? ???????????? ??????????? 
-
-        /// </summary> 
-
-        /// <param name="election">??????</param> 
-
-        /// <remarks> 
-
-        /// ???????? ???????????? ? ?????????? ? ?????? ????????? ???????, 
-
-        /// ????? ??? ? ?????????? ????? ???? ????????? ? ????, 
-
-        /// ????? ???????? ??????????? ? ????????? ????</remarks> 
-
-        /// <returns></returns> 
-
-        public void GenerateVotingResultProtocol(Election.Voting.Election election) 
-
-        { 
-
-            // ?????????? ??? ????? ? ?????? ????????? 
-
-            var timeStamp = DateTime.Now; 
-
-            _votingResultProtocolFileName = GenerateVotingResultProtocolFileName(timeStamp, election, false); 
-
-            _votingResultProtocolData = GenerateVotingResultProtocolData(timeStamp, election, false); 
-
- 
-
- 
-
-            // ???????? ???????? ? ????????? ?????????? 
-
-            SaveVotingResultProtocolToLocalDir(); 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????????? ???????? ? ????????? ?????????? 
-
-        /// </summary> 
-
-        private void SaveVotingResultProtocolToLocalDir() 
-
-        { 
-
-            try 
-
-
-            { 
-
-                var localDirPath = _fileSystemManager.GetDataDirectoryPath(FileType.VotingResultProtocol); 
-
- 
-
- 
-
-                // ???????? ????????? ??????????, ???? ?? ??? ??? 
-
-                if (!Directory.Exists(localDirPath)) 
-
-                    Directory.CreateDirectory(localDirPath); 
-
- 
-
- 
-
-                // ??????? ?????? ???? ????? ? ?????????? ??? ?????????? ? ????????? ?????????? 
-
-                var filePath = Path.Combine(localDirPath, _votingResultProtocolFileName); 
-
- 
-
- 
-
-                _fileSystemManager.WriteTextToFile( 
-
-                        FileType.VotingResultProtocol, 
-
-                        filePath, 
-
-                        FileMode.Create, 
-
-                        _votingResultProtocolData); 
-
-            } 
-
-            catch (Exception ex) 
-
-            { 
-
-                Logger.LogException(Message.ElectionSaveVotingResultToLocalDirFailed, ex); 
-
-            } 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????? ???? ? ????? ??? ?????????? ????????? ? ???????????? ??????????? 
-
-        /// </summary> 
-
-        /// <remarks> 
-
-        /// ??????????? ????? ????? ? ??, ???????? ?? ? ????????? (?? Guid) ? ???????? ??. 
-
-        /// ???? ?? ??????? ? ??? ????????? ? ???????? ??, ?? ?? ????????? ???????? ? ????????????  
-
-        /// ? ???? ? ???????? ??????????, ? ??????? ???? ??????? ??, ??????????? ???? ? ????? 
-
-        /// ??? ?????????? ????????? ? ???????????? ??????????? 
-
-        /// </remarks> 
-
-        /// <returns> 
-
-        /// true - ???? ?????? ? ???????? ? ?????? ????????? ??????? 
-
-        /// false - ???? ????? ?? ???????</returns> 
-
-        public bool FindFilePathToSaveVotingResultProtocol() 
-
-        { 
-
-            // ????????? ????? ???? ? ?? 
-
-            string sourceDataFilePath; 
-
-            int uik; 
-
- 
-
- 
-
-            var sdSearchResult = FindSourceDataFile(out sourceDataFilePath, out uik); 
-
-            // ???? ?? ????? ?? ? ?????????? ???????? ?? ?????? 
-
-            if (!sdSearchResult && _config.NeedSourceDataForSaveResults.Value) 
-
-                return false; 
-
- 
-
-
- 
-            // ???????? ?????????? ?????????? ??????????? 
-
-            string resultRootDir = null; 
-
- 
-
- 
-
-            // ???? ????? ?? ? ?????????? ???????? ?? ??????, ????????, ??? ?? ????????? ? ????????  
-
-            if (sdSearchResult && _config.NeedSourceDataForSaveResults.Value) 
-
-            { 
-
-                // ???????? ????????? ?? 
-
-                SourceData sd; 
-
-                try 
-
-                { 
-
-                    sd = SourceDataLoader.LoadDataFromFile(sourceDataFilePath); 
-
-                } 
-
-                catch (Exception ex) 
-
-                { 
-
-                    Logger.LogException(Message.ElectionSourceDataLoadException, ex); 
-
-                    return false; 
-
-                } 
-
- 
-
- 
-
-                // ??????? ?? ? ???????? 
-
-                if (!sd.Equals(_sourceData)) 
-
-                    return false; 
-
- 
-
- 
-
-                // ?????????? ? ?? 
-
-                resultRootDir = _rootDataDirPath; 
-
-            } 
-
-            // ???? ????? ????????? ? ????? ?????? ?????????? 
-
-            else 
-
-            { 
-
-                // ???? ???? ?????-?? ?? ???????? ????? ? ???? 
-
-                if (sdSearchResult) 
-
-                { 
-
-                    resultRootDir = _rootDataDirPath; 
-
-                } 
-
-                // ??? ?? ?????? ???? ????? ????????? 
-
-                else 
-
-                { 
-
-                    foreach (var directory in GetSourceDataSearchPaths()) 
-
-                    { 
-
-                        // ?????? ?? ????? ?????????? ???????? ????? ?????? ?? 
-
-                        var containsDirPath = directory.Replace(_config.DataDirectories.SourceDataDirName, ""); 
-
-                        if (Directory.Exists(containsDirPath)) 
-
-                        { 
-
-                            resultRootDir = containsDirPath; 
-
-                            break; 
-
-                        } 
-
-                    } 
-
-
-                    // ???? ?????? ????????? 
-
-                    if (String.IsNullOrEmpty(resultRootDir)) 
-
-                        return false; 
-
-                } 
-
-            } 
-
- 
-
- 
-
-            try 
-
-            { 
-
-                // ??????? ???? ? ??????????, ? ??????? ????? ????????? ???????? 
-
-                var protocolDirPath = Path.Combine(resultRootDir, _config.DataDirectories.VotingResultDirName); 
-
- 
-
- 
-
-                // ???????? ??? ??????????, ???? ?? ??? ??? 
-
-                if (!Directory.Exists(protocolDirPath)) 
-
-                    Directory.CreateDirectory(protocolDirPath); 
-
- 
-
- 
-
-                // ?????????? ???? ? ????? ??? ?????????? ????????? 
-
-                _votingResultProtocolFilePath = Path.Combine(protocolDirPath, _votingResultProtocolFileName); 
-
- 
-
- 
-
-                return true; 
-
-            } 
-
-            catch (Exception ex) 
-
-            { 
-
-                Logger.LogException(Message.ElectionFindFilePathToSaveVotingResultProtocolFailed, ex); 
-
-                return false; 
-
-            } 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????????? ???????? ? ???????????? ??????????? ? ????, ???? ???????? ??? ????? ????????? 
-
-        /// </summary> 
-
-        /// <returns> 
-
-        /// true - ???????? ??????? ???????? 
-
-        /// false - ?????? ??? ?????????? ????????? 
-
-        /// </returns> 
-
-        public bool SaveVotingResultProtocol() 
-
-        { 
-
-            // ???-?? ????????? ????? 
-
-            const int RESERVE_COPY_COUNT = 5; 
-
- 
-
- 
-
-            // ????????? ???????? ???? ????????? 
-
-            try 
-
-            { 
-
-                if (string.IsNullOrEmpty(_votingResultProtocolFilePath) || 
-
-                    string.IsNullOrEmpty(_votingResultProtocolData)) 
-
-
-                    throw new InvalidOperationException( 
-
-                        "???? ? ????? ??? ?????????? ????????? ?/??? ?????? ????????? ?? ??????????"); 
-
- 
-
- 
-
-                using (var fileStream = File.Open( 
-
-                    _votingResultProtocolFilePath, FileMode.Create, FileAccess.Write, FileShare.None)) 
-
-                { 
-
-                    using (var writer = new StreamWriter(fileStream)) 
-
-                        writer.Write(_votingResultProtocolData); 
-
-                } 
-
-            } 
-
-            catch (Exception ex) 
-
-            { 
-
-                Logger.LogException(Message.ElectionSaveVotingResultToFlashFailed, ex); 
-
-                return false; 
-
-            } 
-
- 
-
- 
-
-            // ????????? ????????? ????? ????? ????????? 
-
-            try 
-
-            { 
-
-                for (int i = 0; i < RESERVE_COPY_COUNT; ++i) 
-
-                    File.Copy(_votingResultProtocolFilePath, _votingResultProtocolFilePath + i); 
-
-            } 
-
-            catch (Exception ex) 
-
-            { 
-
-                Logger.LogException(Message.ElectionSaveVotingResultReserveCopiesToFlashFailed, ex); 
-
-                // ?????? ??? ?????????? ????????? ????? ?? ???????? 
-
-            } 
-
- 
-
- 
-
-            // ?????????????? ???????? ??????? 
-
-            _fileSystemManager.Sync(); 
-
- 
-
- 
-
-            return true; 
-
-        } 
-
- 
-
- 
-
-        #endregion 
-
- 
-
- 
-
-        #endregion 
-
- 
-
- 
-
-        #region StateSubsystem overrides 
-
- 
-
- 
-
-        private const int SOURCEDATA_STATEINDEX = 0; 
-
-        private const int VOTINGRESULTS_STATEINDEX = 1; 
-
-
-        private const int LASTVOTINGRESULT_STATEINDEX = 2; 
-
-        private const int UIK_STATEINDEX = 3; 
-
-        private const int CURRENTVOTINGMODE_STATEINDEX = 4; 
-
-        private const int VOTINGRESULTPROTOCOLVERSION_STATEINDEX = 5; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ???????? ????????? ?????????? 
-
-        /// </summary> 
-
-        /// <returns></returns> 
-
-        public override object GetState() 
-
-        { 
-
-            return new object[] {  
-
-                _sourceData,  
-
-                VotingResults,  
-
-                LastVotingResult,  
-
-                UIK,  
-
+            var args = new VotingModeChangedEventArgs( 
                 _currentVotingMode, 
-
-                _votingResultProtocolVersion}; 
-
+                newVotingMode, 
+                _votingResultManager.VotingResults.VotesCount( 
+                    new VoteKey 
+                        { 
+                            VotingMode = _currentVotingMode 
+                        })); 
+            _currentVotingMode = newVotingMode; 
+            if (newVotingMode > VotingMode.Test) 
+                _votingResultManager.VotingResults.ClearTestData(); 
+            VotingModeChanged.RaiseEvent(this, args); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ???????????? ????????? 
-
-        /// </summary> 
-
-        /// <param name="state"></param> 
-
-        public override void RestoreState(object state) 
-
+        public event EventHandler<VotingModeChangedEventArgs> VotingModeChanged; 
+        public bool NeedExecuteCheckExpressions 
         { 
-
-            var arr = (object[])state; 
-
- 
-
- 
-
-            SourceData = (SourceData)arr[SOURCEDATA_STATEINDEX]; 
-
-            VotingResults = (VotingResults)arr[VOTINGRESULTS_STATEINDEX]; 
-
-            LastVotingResult = (VotingResult)arr[LASTVOTINGRESULT_STATEINDEX]; 
-
-            UIK = (int)arr[UIK_STATEINDEX]; 
-
-            _currentVotingMode = (VotingMode)arr[CURRENTVOTINGMODE_STATEINDEX]; 
-
-            _votingResultProtocolVersion = (int)arr[VOTINGRESULTPROTOCOLVERSION_STATEINDEX]; 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??????? ????? ????????? 
-
-        /// </summary> 
-
-        /// <param name="newState">????? ?????????</param> 
-
-        /// <returns>????????? ???????? ?????? ????????? ???????????</returns> 
-
-        public override SubsystemStateAcceptanceResult AcceptNewState(object newState) 
-
-        { 
-
-            try 
-
+            get 
             { 
-
-                if (newState == null) 
-
-
-                    return SubsystemStateAcceptanceResult.Rejected; 
-
- 
-
- 
-
-                var res = SubsystemStateAcceptanceResult.Accepted; 
-
-                var arr = (object[])newState; 
-
- 
-
- 
-
-                // ????????? ?????? ????????? 
-
-                _votingResultProtocolVersion = (int)arr[VOTINGRESULTPROTOCOLVERSION_STATEINDEX]; 
-
- 
-
- 
-
-                // ?? ? ????? ??? ????? ??????, ???? ???? ?? ??? ?? ?????? 
-
-                var newSourceData = (SourceData)arr[SOURCEDATA_STATEINDEX]; 
-
-                var newUIK = (int)arr[UIK_STATEINDEX]; 
-
-                if (_sourceData == null && newSourceData != null) 
-
-                { 
-
-                    SourceData = newSourceData; 
-
-                    UIK = newUIK; 
-
-                } 
-
-                else if (newSourceData == null) 
-
-                { 
-
-                    res = SubsystemStateAcceptanceResult.Rejected; 
-
-                } 
-
- 
-
- 
-
-                // ????????? ????????? ??????????? ??????? ?? ????????? 
-
- 
-
- 
-
-                // ????? ??????????? ????????? ??????, ???? ?? ?????? ??? ??? 
-
-                var newCurrentVotingMode = (VotingMode)arr[CURRENTVOTINGMODE_STATEINDEX]; 
-
-                if (_currentVotingMode < newCurrentVotingMode) 
-
-                { 
-
-                    SetCurrentVotingMode(newCurrentVotingMode); 
-
-                } 
-
-                else if (_currentVotingMode > newCurrentVotingMode) 
-
-                { 
-
-                    res = SubsystemStateAcceptanceResult.Rejected; 
-
-                } 
-
- 
-
- 
-
-                // ????????? ??????? ??????????? ??????????? 
-
-                var newVotingResults = (VotingResults)arr[VOTINGRESULTS_STATEINDEX]; 
-
-                if (VotingResults.Merge(newVotingResults) == VotingResults.MergeResult.OurContainMoreVotes) 
-
-                { 
-
-                    res = SubsystemStateAcceptanceResult.AcceptedByMerge; 
-
-                } 
-
- 
-
- 
-
-                return res; 
-
+                return _config.ExecuteCheckExpressions.Value; 
             } 
-
-
-            catch (Exception ex) 
-
-            { 
-
-                var msg = "?????? ???????? ?????? ????????? ????????? ???????"; 
-
-                Logger.LogException(Message.Exception, ex, msg); 
-
-                throw new Exception(msg, ex); 
-
-            } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ???????? ????????? (????????? ??? ? ????????? ?????????) 
-
-        /// </summary> 
-
-        protected override void ResetStateInternal() 
-
+        public bool СanRestoreCandidateCanseledInSd 
         { 
-
-            SourceData = null; 
-
-            VotingResults = new VotingResults(); 
-
-            LastVotingResult = VotingResult.Empty; 
-
-            UIK = 0; 
-
-            _currentVotingMode = VotingMode.None; 
-
-            _votingResultProtocolVersion = 0; 
-
+            get 
+            { 
+                return _config.СanRestoreCandidateCanseledInSd.Value; 
+            } 
         } 
-
- 
-
- 
-
         #endregion 
-
+        #region Получение информации по исходным данным 
+        public SourceData SourceData { get; private set; } 
+        private SourceDataFileDescriptor _sourceDataFileDescriptor; 
+        private bool _isSourceDataCorrect; 
+        public bool IsSourceDataCorrect 
+        { 
+            get 
+            { 
+                return _isSourceDataCorrect; 
+            } 
+            set 
+            { 
+                _isSourceDataCorrect = value; 
+                RaiseStateChanged(); 
+            } 
+        } 
+        private SourceDataChangesCache _sourceDataChangesCache; 
+        public bool HasSourceDataChanged 
+        { 
+            get  
+            { 
+                return _sourceDataChangesCache != null && !_sourceDataChangesCache.IsEmpty; 
+            } 
+        } 
+        public ElectionDayСomming IsElectionDay() 
+        { 
+            return IsElectionDay(SourceData); 
+        } 
+        public ElectionDayСomming IsElectionDay(SourceData sourceData) 
+        { 
+            if (sourceData == null) 
+                return ElectionDayСomming.NotComeYet; 
+            var electionDay = sourceData.ElectionDate.Date; 
+            var currentDay = sourceData.LocalTimeNow.Date; 
+            if (currentDay < electionDay) 
+                return ElectionDayСomming.NotComeYet; 
+            if (currentDay == electionDay) 
+                return ElectionDayСomming.ItsElectionDay; 
+            var lastExtraElectionDay = electionDay.AddDays(_config.ElectionDayDuration.Value - 1).Date; 
+            if (currentDay <= lastExtraElectionDay) 
+                return ElectionDayСomming.ItsExtraElectionDay; 
+            return ElectionDayСomming.AlreadyPassed; 
+        } 
+        #endregion 
+        #region Загрузка исходных данных 
+        private string _rootDataDirPath; 
+        public bool HasSourceData() 
+        { 
+            return SourceData != null; 
+        } 
+        #region Поиск файла с исходными данными 
+        public string[] GetSourceDataSearchPaths() 
+        { 
+            var result = new List<string>(); 
+            foreach (PathConfig path in _config.DataDirectories.RootPaths) 
+                result.AddRange(GetDirectoriesByWildcard(path)); 
+            for (var i = 0; i < result.Count; i++) 
+                result[i] = Path.Combine(result[i], _config.DataDirectories.SourceDataDirName); 
+            return result.ToArray(); 
+        } 
+        public bool FindSourceDataFile( 
+            WaitHandle stopSearchingEvent, out SourceDataFileDescriptor sdFileDescriptor) 
+        { 
+            const string SOURCE_DATA_FILE_NAME_MASK = "*-?*.bin"; 
+            const string UIK_GROUP_SD_FILE_NAME_PATTERN = "uik"; 
+            sdFileDescriptor = null; 
+            var sourceDataDirName = _config.DataDirectories.SourceDataDirName; 
+            var sourceDataDirNameUpper = sourceDataDirName.ToUpper(); 
+            var sourceDataDirNames = new[] 
+            { 
+                sourceDataDirName,                                          // как в конфиге 
+                sourceDataDirNameUpper,                                     // БОЛЬШИМИ буквами 
+                sourceDataDirNameUpper[0] + sourceDataDirName.Substring(1)  // первая заглавная, остальные как в конфиге 
+            }; 
+            var tryCount = 0;   // счетчик попыток 
+            while (true) 
+            { 
+                tryCount++; 
+                foreach (var sdName in sourceDataDirNames) 
+                { 
+                    foreach (PathConfig item in _config.DataDirectories.RootPaths) 
+                    { 
+                        try 
+                        { 
+                            foreach (var rootDataDirPath in GetDirectoriesByWildcard(item)) 
+                            { 
+                                var sourceDataDirPath = Path.Combine(rootDataDirPath, sdName); 
+                                try 
+                                { 
+                                    var sourceDataDirInfo = new DirectoryInfo(sourceDataDirPath); 
+                                    if (!sourceDataDirInfo.Exists) 
+                                        continue; 
+                                    Logger.LogInfo(Message.Election_SearchSourceDataInDir, sourceDataDirPath); 
+                                    var files = sourceDataDirInfo.GetFiles(SOURCE_DATA_FILE_NAME_MASK); 
+                                    foreach (var file in files) 
+                                    { 
+                                        Logger.LogVerbose(Message.Election_CheckSourceDataFile, file); 
+                                        var regex = new SourceDataFileNameRegex(); 
+                                        var match = regex.Match(file.Name); 
+                                        if (!match.Success) 
+                                            continue; 
+                                        sdFileDescriptor = new SourceDataFileDescriptor( 
+                                            file.FullName, 
+                                            file.Length, 
+                                            int.Parse(match.Groups[UIK_GROUP_SD_FILE_NAME_PATTERN].Value), 
+                                            _syncManager.LocalScannerSerialNumber); 
+                                        _rootDataDirPath = rootDataDirPath; 
+                                        return true; 
+                                    } 
+                                } 
+                                catch (Exception ex) 
+                                { 
+                                    Logger.LogWarning( 
+                                        Message.Election_FindSourceDataError, sourceDataDirPath, ex.Message, tryCount); 
+                                } 
+                            } 
+                        } 
+                        catch (Exception ex) 
+                        { 
+                            Logger.LogWarning( 
+                                Message.Election_FindSourceDataError, 
+                                Path.Combine(item.RootPath, item.Wildcard), 
+                                ex.Message, 
+                                tryCount); 
+                        } 
+                    } 
+                } 
+                if (tryCount >= _config.SourceDataFileSearch.MaxTryCount) 
+                    return false; 
+                if (stopSearchingEvent == null) 
+                { 
+                    Thread.Sleep(_config.SourceDataFileSearch.Delay); 
+                } 
+                else if (stopSearchingEvent.WaitOne(_config.SourceDataFileSearch.Delay)) 
+                { 
+                    return false; 
+                } 
+            } 
+        } 
+        private static IEnumerable<string> GetDirectoriesByWildcard(PathConfig path) 
+        { 
+            if (!Directory.Exists(path.RootPath)) 
+                return new string[0]; 
+            if (string.IsNullOrEmpty(path.Wildcard)) 
+                return new[] { path.RootPath }; 
+            return Directory.GetDirectories(path.RootPath, path.Wildcard); 
+        } 
+        public string FindDirPathToSaveVotingResultProtocol(bool needSourceDataForSaveResults) 
+        { 
+            SourceDataFileDescriptor sdFileDescriptor; 
+            var sdSearchResult = FindSourceDataFile(null, out sdFileDescriptor); 
+            if (!sdSearchResult && needSourceDataForSaveResults) 
+                return null; 
+            string resultRootDir = null; 
+            if (sdSearchResult && needSourceDataForSaveResults) 
+            { 
+                if (!_sourceDataFileDescriptor.IsPointToSameFile(sdFileDescriptor)) 
+                    return null; 
+                resultRootDir = _rootDataDirPath; 
+            } 
+            else 
+            { 
+                if (sdSearchResult) 
+                { 
+                    resultRootDir = _rootDataDirPath; 
+                } 
+                else 
+                { 
+                    foreach (var directory in GetSourceDataSearchPaths()) 
+                    { 
+                        var containsDirPath = directory.Replace(_config.DataDirectories.SourceDataDirName, ""); 
+                        if (Directory.Exists(containsDirPath)) 
+                        { 
+                            resultRootDir = containsDirPath; 
+                            break; 
+                        } 
+                    } 
+                    if (String.IsNullOrEmpty(resultRootDir)) 
+                        return null; 
+                } 
+            } 
+            return Path.Combine(resultRootDir, _config.DataDirectories.VotingResultDirName); 
+        } 
+        #endregion 
+        #region Загрузка исходных данных из файла 
+        public bool LoadSourceDataFromFile( 
+            SourceDataFileDescriptor sdFileDescriptor, bool needVerify, out SourceData sd) 
+        { 
+            needVerify = !QuietMode && needVerify; 
+            try 
+            { 
+                using (var stream = new FileStream(sdFileDescriptor.FilePath, FileMode.Open, FileAccess.Read)) 
+                { 
+                    var uncompressedStream = ZipCompressor.Uncompress(stream); 
+                    sd = DeserializeSourceData(uncompressedStream); 
+                    uncompressedStream.Close(); 
+                    if (sd.Id == Guid.Empty) 
+                    { 
+                        if (_votingResultManager.PackResultsEnabled) 
+                            throw new SourceDataVerifierException( 
+                                "Исходные данные не содержат уникального идентификатора"); 
+                        sd.Id = GenerateSourceDataId(sd); 
+                    } 
+                } 
+                sd.Init(sdFileDescriptor.Uik); 
+                var verifier = new SourceDataVerifier(sd, _config.DefaultVotingModeTimes); 
+                Logger.LogVerbose(Message.Election_SourceDataRepairing); 
+                verifier.Repair(); 
+                if (needVerify) 
+                { 
+                    Logger.LogVerbose(Message.Election_SourceDataVerifying); 
+                    verifier.Verify(); 
+                } 
+            } 
+            catch (SourceDataVerifierException ex) 
+            { 
+                sd = null; 
+                Logger.LogWarning(Message.Election_SourceDataIncorrect, sdFileDescriptor.FilePath, ex.Message); 
+                return false; 
+            } 
+            catch (Exception ex) 
+            { 
+                sd = null; 
+                Logger.LogWarning(Message.Election_SourceDataLoadFromFileFailed, ex, sdFileDescriptor.FilePath); 
+                return false; 
+            } 
+            if (needVerify) 
+            { 
+                try 
+                { 
+                    Logger.LogVerbose(Message.Election_CheckCreateModel); 
+                    _recognitionManager.CheckCreateModel(sd); 
+                } 
+                catch (Exception ex) 
+                { 
+                    sd = null; 
+                    Logger.LogWarning(Message.Election_SourceDataIncorrect, sdFileDescriptor.FilePath, ex.Message); 
+                    return false; 
+                } 
+            } 
+            Logger.LogVerbose(Message.Election_SourceDataSuccessfullyLoadedFromFile, sdFileDescriptor.FilePath); 
+            return true; 
+        } 
+        private static SourceData DeserializeSourceData(Stream uncompressedStream) 
+        { 
+            Stream replacedStream; 
+            using (var xmlTextReader = new XmlTextReader(uncompressedStream, XmlNodeType.Document, null)) 
+            { 
+                replacedStream = GetReplaceXmlStream(xmlTextReader); 
+                replacedStream.Position = 0; 
+            } 
+            using (var replaceTextReader = new XmlTextReader(replacedStream, XmlNodeType.Document, null)) 
+            { 
+                var settings = new XmlReaderSettings(); 
+                settings.Schemas.Add(SourceData.XMLNS, SourceData.SHEMA_PATH); 
+                var xmlReader = XmlReader.Create(replaceTextReader, settings); 
+                var serializer = new XmlSerializer(typeof(SourceData), SourceData.XMLNS); 
+                return (SourceData)serializer.Deserialize(xmlReader); 
+            } 
+        } 
+        private static Stream GetReplaceXmlStream(XmlTextReader reader) 
+        { 
+            var result = new MemoryStream(); 
+            var writer = new XmlTextWriter(result, Encoding.Unicode); 
+            while (reader.Read()) 
+            { 
+                switch (reader.NodeType) 
+                { 
+                    case XmlNodeType.XmlDeclaration: 
+                        writer.WriteStartDocument(); 
+                        break; 
+                    case XmlNodeType.Whitespace: 
+                        writer.WriteWhitespace(reader.Value); 
+                        break; 
+                    case XmlNodeType.Element: 
+                        writer.WriteStartElement(reader.Name); 
+                        WriteXmlElementAttributes(reader, writer); 
+                        if (reader.IsEmptyElement) 
+                            writer.WriteEndElement(); 
+                        break; 
+                    case XmlNodeType.EndElement: 
+                        writer.WriteEndElement(); 
+                        break; 
+                    case XmlNodeType.CDATA: 
+                        writer.WriteCData(reader.Value); 
+                        break; 
+                    case XmlNodeType.Text: 
+                        writer.WriteValue(reader.Value); 
+                        break; 
+                } 
+            } 
+            writer.WriteEndDocument(); 
+            writer.Flush(); 
+            return result; 
+        } 
+        private static void WriteXmlElementAttributes(XmlTextReader reader, XmlTextWriter writer) 
+        { 
+            const string OLD_SOURCE_DATA_XMLNS = "www.croc.ru"; 
+            while (reader.MoveToNextAttribute()) 
+            { 
+                writer.WriteStartAttribute(reader.Name); 
+                writer.WriteValue(reader.Value.Replace(OLD_SOURCE_DATA_XMLNS, "localhost")); 
+                writer.WriteEndAttribute(); 
+            } 
+            reader.MoveToElement(); 
+        } 
+        private static string SerializeSourceData(SourceData sd) 
+        { 
+            var oSerializer = new XmlSerializer(typeof(SourceData), SourceData.XMLNS); 
+            using (var memStream = new MemoryStream()) 
+            { 
+                var writer = new StreamWriter(memStream); 
+                oSerializer.Serialize(writer, sd); 
+                memStream.Seek(0, SeekOrigin.Begin); 
+                var reader = new StreamReader(memStream); 
+                return reader.ReadToEnd(); 
+            } 
+        } 
+        private static Guid GenerateSourceDataId(SourceData sd) 
+        { 
+            var data = SerializeSourceData(sd); 
+            var hash = SHA1.Create().ComputeHash(Encoding.ASCII.GetBytes(data)); 
+            var bytes = hash.Take(16).ToArray(); 
+            return new Guid(bytes); 
+        } 
+        #endregion 
+        #region Установка исходных данных 
+        public bool SetSourceData(SourceData sourceData, SourceDataFileDescriptor sourceDataFileDescriptor) 
+        { 
+            CodeContract.Requires(sourceData != null); 
+            CodeContract.Requires(sourceDataFileDescriptor != null); 
+            try 
+            { 
+                SetSourceDataInternal( 
+                    sourceData, 
+                    sourceDataFileDescriptor, 
+                    null, 
+                    false); 
+            } 
+            catch (Exception ex) 
+            { 
+                Logger.LogError(Message.Election_SetSourceDataFailed, ex); 
+                return false; 
+            } 
+            RaiseStateChanged(); 
+            Logger.LogInfo( 
+                Message.Election_SetSourceDataSucceeded, 
+                SourceData.Uik, 
+                SourceData.ElectionDate.ToString("dd.MM.yyyy"), 
+                SourceData.GetVotingModeStartTime(VotingMode.Main), 
+                SourceData.GetVotingModeStartTime(VotingMode.Portable)); 
+            return true; 
+        } 
+        private void SetSourceDataInternal( 
+            SourceData newSd,  
+            SourceDataFileDescriptor newSdFileDescriptor, 
+            SourceDataChangesCache newSdChangesCache, 
+            bool newIsSdCorrect) 
+        { 
+            var newSdFileDescriptorDiffer = SetSourceDataFileDescriptor(newSdFileDescriptor); 
+            var newSdChangesCacheDiffer = SetSourceDataChangesCache(newSdChangesCache); 
+            var newSdDiffer = true; 
+            if (newSd == null) 
+            { 
+                if (newSdFileDescriptor == null) 
+                { 
+                    if (SourceData == null) 
+                        newSdDiffer = false; 
+                } 
+                else if (newSdFileDescriptorDiffer) 
+                { 
+                    LoadSourceDataFromFile(_sourceDataFileDescriptor, false, out newSd); 
+                } 
+                else 
+                { 
+                    newSdDiffer = false; 
+                } 
+            } 
+            if (newSdDiffer || newSdChangesCacheDiffer) 
+            { 
+                if (SourceData != null) 
+                { 
+                    UnsubscribeFromSourceDataChanges(); 
+                } 
+                if (newSdDiffer) 
+                    SourceData = newSd; 
+                if (SourceData != null) 
+                { 
+                    _sourceDataChangesCache.ApplyChanges(SourceData); 
+                    SubscribeToSourceDataChanges(); 
+                } 
+            } 
+            _isSourceDataCorrect = newIsSdCorrect; 
+        } 
+        private bool SetSourceDataChangesCache(SourceDataChangesCache newSdChangesCache) 
+        { 
+            if (newSdChangesCache == null) 
+                return false; 
+            if (_sourceDataChangesCache == null) 
+            { 
+                _sourceDataChangesCache = newSdChangesCache; 
+                return true; 
+            } 
+            if (_sourceDataChangesCache.Equals(newSdChangesCache)) 
+                return false; 
+            _sourceDataChangesCache = newSdChangesCache; 
+            return true; 
+        } 
+        private bool SetSourceDataFileDescriptor(SourceDataFileDescriptor newSdFileDescriptor) 
+        { 
+            var oldIsNull = (_sourceDataFileDescriptor == null); 
+            if (newSdFileDescriptor == null) 
+            { 
+                if (oldIsNull) 
+                    return false; 
+                _sourceDataFileDescriptor = null; 
+                return true; 
+            } 
+            var stateFilePath = Path.Combine( 
+                _fileSystemManager.GetDataDirectoryPath(FileType.State), 
+                Path.GetFileName(newSdFileDescriptor.FilePath)); 
+            _sourceDataFileDescriptor = new SourceDataFileDescriptor( 
+                stateFilePath, 
+                newSdFileDescriptor.FileSize, 
+                newSdFileDescriptor.Uik, 
+                _syncManager.LocalScannerSerialNumber); 
+            var stateFile = new FileInfo(stateFilePath); 
+            if (!stateFile.Exists) 
+            { 
+                CopySourceDataFile(newSdFileDescriptor, stateFilePath); 
+                return true; 
+            } 
+            if (_sourceDataFileDescriptor.IsPointToFile(stateFilePath, stateFile.Length)) 
+                return oldIsNull; 
+            CopySourceDataFile(newSdFileDescriptor, stateFilePath); 
+            return true; 
+        } 
+        private void CopySourceDataFile(SourceDataFileDescriptor sdFileDescriptor, string targetFilePath) 
+        { 
+            if (string.CompareOrdinal( 
+                sdFileDescriptor.ScannerSerialNumner, 
+                _syncManager.LocalScannerSerialNumber) == 0) 
+            { 
+                File.Copy(sdFileDescriptor.FilePath, targetFilePath, true); 
+                SystemHelper.SyncFileSystem(); 
+                return; 
+            } 
+            var content = _syncManager.RemoteScanner.GetFileContent(sdFileDescriptor.FilePath); 
+            File.WriteAllBytes(targetFilePath, content); 
+            SystemHelper.SyncFileSystem(); 
+        } 
+        private void SubscribeToSourceDataChanges() 
+        { 
+            foreach (var line in SourceData.Elections.SelectMany(election => election.Protocol.Lines)) 
+                line.ValueChangedHandler = ProtocolLineValueChanged; 
+            foreach (var candidate in SourceData.Elections.SelectMany(election => election.Candidates)) 
+                candidate.DisablingChangedHandler = CandidateDisablingChanged; 
+        } 
+        private void UnsubscribeFromSourceDataChanges() 
+        { 
+            foreach (var line in SourceData.Elections.SelectMany(election => election.Protocol.Lines)) 
+                line.ValueChangedHandler = null; 
+            foreach (var candidate in SourceData.Elections.SelectMany(election => election.Candidates)) 
+                candidate.DisablingChangedHandler = CandidateDisablingChanged; 
+        } 
+        private void ProtocolLineValueChanged(object sender, EventArgs e) 
+        { 
+            _sourceDataChangesCache.StoreLineValue((Line)sender); 
+            RaiseStateChanged(); 
+        } 
+        private void CandidateDisablingChanged(object sender, EventArgs e) 
+        { 
+            _sourceDataChangesCache.StoreCandidateDisabling((Candidate)sender); 
+        } 
+        #endregion 
+        #endregion 
+        #endregion 
+        #region StateSubsystem overrides 
+        private const int SOURCE_DATA_FILE_DESCRIPTOR_STATEINDEX = 0; 
+        private const int SOURCE_DATA_CHANGES_CACHE_STATEINDEX = 1; 
+        private const int IS_SOURCE_DATA_CORRECT_STATEINDEX = 2; 
+        private const int CURRENT_VOTING_MODE_STATEINDEX = 3; 
+        public override object GetState() 
+        { 
+            return new object[] 
+                       { 
+                           _sourceDataFileDescriptor, 
+                           _sourceDataChangesCache, 
+                           _isSourceDataCorrect, 
+                           _currentVotingMode, 
+                       }; 
+        } 
+        public override void RestoreState(object state) 
+        { 
+            var arr = (object[]) state; 
+            SetSourceDataInternal( 
+                null, 
+                (SourceDataFileDescriptor) arr[SOURCE_DATA_FILE_DESCRIPTOR_STATEINDEX], 
+                (SourceDataChangesCache) arr[SOURCE_DATA_CHANGES_CACHE_STATEINDEX], 
+                (bool) arr[IS_SOURCE_DATA_CORRECT_STATEINDEX]); 
+            _currentVotingMode = (VotingMode) arr[CURRENT_VOTING_MODE_STATEINDEX]; 
+        } 
+        public override SubsystemStateAcceptanceResult AcceptNewState(object newState) 
+        { 
+            try 
+            { 
+                if (newState == null) 
+                { 
+                    Logger.LogVerbose(Message.Election_NewStateRejectedBecauseIsNull); 
+                    return SubsystemStateAcceptanceResult.Rejected; 
+                } 
+                var arr = (object[]) newState; 
+                var newSdFileDescriptor = (SourceDataFileDescriptor) arr[SOURCE_DATA_FILE_DESCRIPTOR_STATEINDEX]; 
+                if (newSdFileDescriptor == null && _sourceDataFileDescriptor != null) 
+                { 
+                    Logger.LogVerbose(Message.Election_NewStateRejectedBecauseNewSourceDataIsNull); 
+                    return SubsystemStateAcceptanceResult.Rejected; 
+                } 
+                var newSdChangesCache = (SourceDataChangesCache)arr[SOURCE_DATA_CHANGES_CACHE_STATEINDEX]; 
+                var newIsSdCorrect = _isSourceDataCorrect || (bool) arr[IS_SOURCE_DATA_CORRECT_STATEINDEX]; 
+                SetSourceDataInternal(null, newSdFileDescriptor, newSdChangesCache, newIsSdCorrect); 
+                Logger.LogVerbose(Message.Election_NewStateAccepted); 
+                return SubsystemStateAcceptanceResult.Accepted; 
+            } 
+            catch (Exception ex) 
+            { 
+                const string MSG = "Ошибка принятия нового состояния менеджера выборов"; 
+                Logger.LogError(Message.Election_NewStateAссeptError, ex); 
+                throw new Exception(MSG, ex); 
+            } 
+        } 
+        protected override void ResetStateInternal() 
+        { 
+            SetSourceDataInternal(null, null, new SourceDataChangesCache(), false); 
+            _currentVotingMode = VotingMode.None; 
+        } 
+        #endregion 
     } 
-
 }
-
-

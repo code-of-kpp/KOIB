@@ -1,219 +1,81 @@
 using System; 
-
 using System.Collections.Specialized; 
-
-using Croc.Bpc.Election.Voting; 
-
- 
-
- 
-
+using Croc.Bpc.Voting; 
+using Croc.Workflow.ComponentModel; 
 namespace Croc.Bpc.Workflow.Activities.Testing 
-
 { 
-
-    /// <summary> 
-
-    /// Зачитывание протокола тестирования 
-
-    /// </summary> 
-
     [Serializable] 
-
     public class ReadTestingReportActivity : ElectionEnumeratorActivity 
-
     { 
-
-        /// <summary> 
-
-        /// Общее кол-во бюллетеней по текущим выборам 
-
-        /// </summary> 
-
         public int TotalBulletinCount 
-
         { 
-
             get 
-
             { 
-
-                var key = new VoteKey() 
-
+                var key = new VoteKey 
                 { 
-
                     VotingMode = VotingMode.Test, 
-
                     BlankType = BlankType.AllButBad, 
-
                     BlankId = _currentBlankId 
-
                 }; 
-
- 
-
- 
-
-                return _electionManager.VotingResults.VotesCount(key); 
-
+                return _votingResultManager.VotingResults.VotesCount(key); 
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Кол-во валидных бюллетеней по текущим выборам 
-
-        /// </summary> 
-
         public int ValidBulletinCount 
-
         { 
-
             get 
-
             { 
-
-                var key = new VoteKey() 
-
+                var key = new VoteKey 
                 { 
-
                     VotingMode = VotingMode.Test, 
-
                     BlankType = BlankType.Valid, 
-
                     BlankId = _currentBlankId 
-
                 }; 
-
- 
-
- 
-
-                return _electionManager.VotingResults.VotesCount(key); 
-
+                return _votingResultManager.VotingResults.VotesCount(key); 
             } 
-
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Кол-во не валидных бюллетеней по текущим выборам 
-
-        /// </summary> 
-
         public int NotValidBulletinCount 
-
         { 
-
             get 
-
             { 
-
-                var key = new VoteKey() 
-
+                var key = new VoteKey 
                 { 
-
                     VotingMode = VotingMode.Test, 
-
                     BlankType = BlankType.NotValid, 
-
                     BlankId = _currentBlankId 
-
                 }; 
-
- 
-
- 
-
-                return _electionManager.VotingResults.VotesCount(key); 
-
+                return _votingResultManager.VotingResults.VotesCount(key); 
             } 
-
         } 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// Параметры для печати тестового протокола 
-
-		/// </summary> 
-
-		public ListDictionary TestResultsPrintParameters 
-
-		{ 
-
-			get  
-
-			{ 
-
-				var parameters = new ListDictionary(); 
-
-				// параметр для печати тестового протокола 
-
-				parameters.Add("test", true); 
-
-				return parameters; 
-
-			} 
-
-		} 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Кол-во НУФ по текущим выборам 
-
-        /// </summary> 
-
-        public int BadBulletinCount 
-
+        public ListDictionary TestResultsPrintParameters 
         { 
-
-            get 
-
+            get  
             { 
-
-                var key = new VoteKey() 
-
-                { 
-
-                    VotingMode = VotingMode.Test, 
-
-                    BlankType = BlankType.Bad, 
-
-                    BlankId = _currentBlankId 
-
-
-                }; 
-
- 
-
- 
-
-                return _electionManager.VotingResults.VotesCount(key); 
-
+                var parameters = new ListDictionary(); 
+                parameters.Add("test", true); 
+                return parameters; 
             } 
-
         } 
+        public int BadBulletinCount 
+        { 
+            get 
+            { 
+                var key = new VoteKey 
+                { 
+                    VotingMode = VotingMode.Test, 
+                    BlankType = BlankType.Bad, 
+                    BlankId = _currentBlankId 
+                }; 
+                return _votingResultManager.VotingResults.VotesCount(key); 
+            } 
+        } 
+        public NextActivityKey NeedSayBadBulletinsCount( 
+            WorkflowExecutionContext context, ActivityParameterDictionary parameters) 
+        { 
+            if (_votingResultManager.AddBadBlankToCounterValue && BadBulletinCount > 0) 
+                return BpcNextActivityKeys.Yes; 
 
+
+            return BpcNextActivityKeys.No; 
+        } 
     } 
-
 }
-
-

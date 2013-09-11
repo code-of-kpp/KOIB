@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<ReportTemplate claspFooter="true" name="ElectionProtocol" 
+                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://localhost/Schemas/SIB2003/ReportTemplate"
+si:schemaLocation="http://localhost/Schemas/SIB2003/ReportTemplate ReportTemplate.xsd"> 
+  <Parameters> 
+
+
+    <Parameter>Election</Parameter> 
+
+
+    <Parameter>withResults</Parameter> 
+  </Parameters> 
+  <Header> 
+    <Line align="Left">Экземпляр № ___</Line> 
+    <Line align="Center">{$@Election.Name}</Line> 
+    <Line align="Center">{$ElectionManager.SourceData.ElectionDate|d MMMM yyyy года}</Line> 
+    <Line align="Center" bold="true">ПРОТОКОЛ</Line> 
+    <Line align="Center" split="\n" trim="true">{$@Election.Protocol.Name}</Line> 
+    <Line align="Center">Избирательный участок N{$ElectionManager.SourceData.Uik}</Line> 
+  </Header> 
+  <Body> 
+    <Table> 
+      <Header> 
+
+
+        <Col width="3"/> 
+
+
+        <Col width="65"/> 
+
+
+        <Col width="4"/> 
+
+
+        <Col width="28"/> 
+      </Header> 
+      <Body> 
+
+
+        <For in="@Election.Protocol.Lines" each="Line"> 
+          <Body> 
+            <Line> 
+              <Cols> 
+                <Col>{$@Line.Num}{$@Line.AdditionalNum}</Col> 
+                <Col>{$@Line.Name}</Col> 
+                <Col> 
+                  <Parts> 
+                    <Part condition="@withResults">{$@Line.Value}</Part> 
+                    <Part not="true" condition="@withResults">0</Part> 
+                  </Parts> 
+                </Col> 
+                <Col> 
+                  <Parts> 
+                    <Part condition="@withResults">({$@Line.Value|#w})</Part> 
+                    <Part not="true" condition="@withResults">(ноль)</Part> 
+                  </Parts> 
+                </Col> 
+              </Cols> 
+            </Line> 
+          </Body> 
+        </For> 
+
+
+        <SetCurrentRow>{$@Election.Protocol.LatestLineNumber}</SetCurrentRow> 
+
+
+        <For in="@Election.Candidates" each="Candidate"> 
+          <Body> 
+            <If not="true" condition="@Candidate.Disabled"> 
+              <Then> 
+
+
+                <Line> 
+                  <Cols> 
+                    <Col>{$CurrentRow}</Col> 
+                    <Col> 
+                      <Parts> 
+                        <Part condition="@Candidate.LastName">{$@Candidate.LastName|#u}</Part> 
+                        <Part condition="@Candidate.FirstName"> {$@Candidate.FirstName}</Part> 
+                        <Part condition="@Candidate.Patronymic"> {$@Candidate.Patronymic}</Part> 
+                      </Parts> 
+                    </Col> 
+                    <Col> 
+                      <Parts> 
+                        <Part
+ondition="@withResults">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;;;;$@Candidate.Id;$@Election.ElectionId;&gt;&gt;}</Part> 
+                        <Part not="true" condition="@withResults">0</Part> 
+                      </Parts> 
+                    </Col> 
+                    <Col> 
+                      <Parts> 
+                        <Part
+ondition="@withResults">({$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;;;;$@Candidate.Id;$@Election.ElectionId;&gt;&gt;|#w})</Part> 
+                        <Part not="true" condition="@withResults">(ноль)</Part> 
+                      </Parts> 
+                    </Col> 
+                  </Cols> 
+                </Line> 
+              </Then> 
+              <Else> 
+
+
+                <If condition="@Election.Protocol.DisabledString"> 
+                  <Then> 
+
+
+                    <Line> 
+                      <Cols> 
+                        <Col>{$CurrentRow}</Col> 
+                        <Col> 
+                          <Parts> 
+                            <Part condition="@Candidate.LastName">{$@Candidate.LastName|#u}</Part> 
+                            <Part condition="@Candidate.FirstName"> {$@Candidate.FirstName}</Part> 
+                            <Part condition="@Candidate.Patronymic"> {$@Candidate.Patronymic}</Part> 
+                          </Parts> 
+                        </Col> 
+                        <Col>{$@Election.Protocol.DisabledString}</Col> 
+                        <Col/> 
+                      </Cols> 
+                    </Line> 
+                  </Then> 
+                </If> 
+              </Else> 
+            </If> 
+          </Body> 
+        </For> 
+      </Body> 
+    </Table> 
+  </Body> 
+  <PageFooter> 
+            <Line align="Left"/> 
+      <Line align="Left">Председатель участковой избирательной комиссии</Line> 
+      <If not="true" condition="ElectionManager.SourceData.GetCommitteeMemberInitialByType&lt;Chairman&gt;"> 
+        <Then> 
+          <Line align="Right">______________________    _________________________________________</Line> 
+        </Then> 
+        <Else> 
+          <Line align="Right">{$ElectionManager.SourceData.GetCommitteeMemberInitialByType&lt;Chairman&gt;}    _________________________________________</Line> 
+        </Else> 
+      </If> 
+      <Line align="Right">(фамилия, инициалы)                            (подпись либо причина отсутствия,    </Line> 
+      <Line align="Right">                                     отметка об особом мнении)         </Line> 
+      <Line align="Left">Заместитель председателя комиссии</Line> 
+      <If not="true" condition="ElectionManager.SourceData.GetCommitteeMemberInitialByType&lt;ChairmanAssistant&gt;"> 
+        <Then> 
+          <Line align="Right">______________________    _________________________________________</Line> 
+        </Then> 
+        <Else> 
+          <Line align="Right">{$ElectionManager.SourceData.GetCommitteeMemberInitialByType&lt;ChairmanAssistant&gt;}
+________________________________________</Line> 
+        </Else> 
+      </If> 
+      <Line align="Left">Секретарь комиссии</Line> 
+      <If not="true" condition="ElectionManager.SourceData.GetCommitteeMemberInitialByType&lt;Secretary&gt;"> 
+        <Then> 
+          <Line align="Right">______________________    _________________________________________</Line> 
+        </Then> 
+        <Else> 
+          <Line align="Right">{$ElectionManager.SourceData.GetCommitteeMemberInitialByType&lt;Secretary&gt;}    _________________________________________</Line> 
+        </Else> 
+      </If> 
+      <Line align="Left">Члены комиссии:</Line> 
+            <Line align="Right">______________________    _________________________________________</Line> 
+      <Line align="Right">______________________    _________________________________________</Line> 
+      <Line align="Right">______________________    _________________________________________</Line> 
+      <Line align="Right">______________________    _________________________________________</Line> 
+      <Line align="Right">______________________    _________________________________________</Line> 
+      <Line align="Right">______________________    _________________________________________</Line> 
+      <Line align="Right">______________________    _________________________________________</Line> 
+      <Line align="Right">______________________    _________________________________________</Line> 
+      <Line align="Right">______________________    _________________________________________</Line> 
+      <Line align="Right">______________________    _________________________________________</Line> 
+      <Line align="Right">______________________    _________________________________________</Line> 
+      <Line align="Right">______________________    _________________________________________</Line> 
+      <Line align="Right">______________________    _________________________________________</Line> 
+      <Line align="Left"/> 
+            <Line align="Left" bold="true">    МП       Протокол подписан "___" _____ {$CurrentDateTime.Year} года   в ___ часов ___ минут</Line> 
+    </PageFooter> 
+    <Footer> 
+            <Line align="Left">Сведения о количестве поступивших в участковую избирательную комиссию в день голосования и до окончания   __________
+________________________</Line> 
+            <Line align="Left">подсчета голосов избирателей жалоб (заявлений), прилагаемых к протоколу                                                                   цифрами
+�рописью</Line> 
+    </Footer> 
+</ReportTemplate>

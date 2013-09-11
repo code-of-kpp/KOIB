@@ -1,770 +1,294 @@
 using System; 
-
-using System.Collections; 
-
 using System.Collections.Generic; 
-
 using System.Collections.Specialized; 
-
 using System.Data; 
-
-using System.Diagnostics; 
-
 using System.IO; 
-
-using System.Text; 
-
 using System.Xml; 
-
-using System.Xml.Schema; 
-
 using System.Xml.Serialization; 
-
-using Croc.Bpc.Common.Diagnostics; 
-
+using Croc.Bpc.Diagnostics; 
 using Croc.Core.Diagnostics; 
-
- 
-
- 
-
 namespace Croc.Bpc.Printing.Reports.Templates 
-
 { 
-
-    /// <summary> 
-
-    /// ?????? ?????? ???? 
-
-    /// </summary> 
-
     [Serializable, XmlType("ReportTemplate", Namespace = "http://localhost/Schemas/SIB2003/ReportTemplate")] 
-
     public class ReportTemplate 
-
     { 
-
-        /// <summary> 
-
-        /// ?????? ????????? 
-
-        /// </summary> 
-
-        ReportTemplateParser parser = new ReportTemplateParser(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??????????? ??????? ????????? 
-
-        /// </summary> 
-
+        private static readonly ReportTemplateParser s_parser = new ReportTemplateParser(); 
         [XmlArray("Parameters")] 
-
         [XmlArrayItem("Parameter", typeof(string))] 
-
         public string[] Parameters; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????? ????????? ?????? 
-
-        /// </summary> 
-
         [XmlArrayItem("Line", typeof(LineClause))] 
-
         [XmlArrayItem("For", typeof(ForClause))] 
-
         [XmlArrayItem("If", typeof(IfClause))] 
-
         [XmlArrayItem("SetCurrentRow", typeof(SetCurrentRow))] 
-
         public BasePlainElement[] Header = new BasePlainElement[0]; 
-
-        /// <summary> 
-
-        /// ???????????? ????????? ?????? 
-
-        /// </summary> 
-
         [XmlArrayItem("Line", typeof(LineClause))] 
-
         [XmlArrayItem("For", typeof(ForClause))] 
-
-
         [XmlArrayItem("If", typeof(IfClause))] 
-
         [XmlArrayItem("SetCurrentRow", typeof(SetCurrentRow))] 
-
         public BasePlainElement[] PageHeader = new BasePlainElement[0]; 
-
-        /// <summary> 
-
-        /// ???????????? ?????? ?????? 
-
-        /// </summary> 
-
         [XmlArrayItem("Line", typeof(LineClause))] 
-
         [XmlArrayItem("For", typeof(ForClause))] 
-
         [XmlArrayItem("If", typeof(IfClause))] 
-
         [XmlArrayItem("SetCurrentRow", typeof(SetCurrentRow))] 
-
         public BasePlainElement[] PageFooter = new BasePlainElement[0]; 
-
-        /// <summary> 
-
-        /// ????? ?????? ?????? 
-
-        /// </summary> 
-
         [XmlArrayItem("Line", typeof(LineClause))] 
-
         [XmlArrayItem("For", typeof(ForClause))] 
-
         [XmlArrayItem("If", typeof(IfClause))] 
-
         [XmlArrayItem("SetCurrentRow", typeof(SetCurrentRow))] 
-
         public BasePlainElement[] Footer = new BasePlainElement[0]; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??????? ?????? 
-
-        /// </summary> 
-
-        [XmlElement("Table")] 
-
-        public Table Table; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??? ?????? 
-
-        /// </summary> 
-
+        [XmlArrayItem("Table", typeof(Table))] 
+        [XmlArrayItem("TableFor", typeof(TableFor))] 
+        public BaseTableHolder[] Body; 
         [XmlAttribute("name")] 
-
         public string Name; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??????? "??????? ?????? ? ?????? ??????" 
-
-        /// </summary> 
-
         [XmlAttribute("claspFooter")] 
-
-        public bool ClaspFooter; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??????? ????????? ??????? 
-
-        /// </summary> 
-
+        public bool ClaspFooter = true; 
         [XmlAttribute("pageNumbered")] 
-
-        public bool PageNumbered; 
-
- 
-
- 
-
-        /// <summary> 
-
-
-        /// ???????? ??????? ?????? 
-
-        /// TODO: ????????, ???????? ????? ?????????? ????? 
-
-        /// </summary> 
-
-        /// <param name="reportType">??? ??????</param> 
-
-        /// <returns>?????? ??????</returns> 
-
+        public bool PageNumbered = true; 
+        [XmlAttribute("font")] 
+        public FontType Font = FontType.ArialNarrow; 
+        [XmlAttribute("font-size")] 
+        public int FontSize = 9; 
+        [XmlIgnore] 
+        public int[] Margins 
+        { 
+            get 
+            { 
+                var reportConfig = Managers.PrintingManager.ReportConfig; 
+                if (LeftMargin < 0) 
+                    LeftMargin = reportConfig.Margin.Left; 
+                if (RightMargin < 0) 
+                    RightMargin = reportConfig.Margin.Right; 
+                if (TopMargin < 0) 
+                    TopMargin = reportConfig.Margin.Top; 
+                if (BottomMargin < 0) 
+                    BottomMargin = reportConfig.Margin.Bottom; 
+                return new[] {LeftMargin, RightMargin, TopMargin, BottomMargin}; 
+            } 
+        } 
+        [XmlAttribute("margin-left")] 
+        public int LeftMargin = -1; 
+        [XmlAttribute("margin-top")] 
+        public int TopMargin = -1; 
+        [XmlAttribute("margin-right")] 
+        public int RightMargin = -1; 
+        [XmlAttribute("margin-bottom")] 
+        public int BottomMargin = -1; 
         public static ReportTemplate LoadTemplate(ReportType reportType, ILogger logger) 
-
         { 
-
+            logger.LogVerbose(Message.Common_DebugCall); 
             const string REPORTTEMPLATE_FILEPATH_FORMAT = "./Data/Templates/{0}.xml"; 
-
             const string REPORTTEMPLATE_SCHEMA_FILEPATH = "./Data/Schemas/ReportTemplate.xsd"; 
-
             const string REPORTTEMPLATE_SCHEMA_URL = "http://localhost/Schemas/SIB2003/ReportTemplate"; 
-
- 
-
- 
-
-            FileInfo templatePath = new FileInfo(string.Format(REPORTTEMPLATE_FILEPATH_FORMAT, reportType)); 
-
+            var templatePath = new FileInfo(string.Format(REPORTTEMPLATE_FILEPATH_FORMAT, reportType)); 
             if (!templatePath.Exists) 
-
             { 
-
                 logger.LogError(Message.PrintingReportTemplateNotFound, reportType); 
-
-                throw new Exception("?? ?????? ??????: " + reportType); 
-
+                throw new Exception("Не найден шаблон: " + reportType); 
             } 
-
- 
-
- 
-
             try 
-
             { 
-
-                // ???????? ????? 
-
-                XmlDocument doc = new XmlDocument(); 
-
+                var doc = new XmlDocument(); 
                 doc.Load(templatePath.FullName); 
-
- 
-
- 
-
-                // ???????? ????????????? ?? ??????? ?? ?? ??? ??????????? 
-
-                XmlTextReader xmlReader = new XmlTextReader(doc.InnerXml, XmlNodeType.Document, null); 
-
-                XmlValidatingReader xmlValidReader = new XmlValidatingReader(xmlReader); 
-
-                // ??????? ????? 
-
-                XmlSchemaCollection xmlSchemas = new XmlSchemaCollection(); 
-
-                xmlSchemas.Add(REPORTTEMPLATE_SCHEMA_URL, REPORTTEMPLATE_SCHEMA_FILEPATH); 
-
-                xmlValidReader.Schemas.Add(xmlSchemas); 
-
- 
-
- 
-
-                // ???????????? 
-
-                XmlSerializer oSerializer = new XmlSerializer(typeof(ReportTemplate), REPORTTEMPLATE_SCHEMA_URL); 
-
- 
-
- 
-
-                // ????????? ?????????? 
-
-                xmlValidReader.ValidationEventHandler += new ValidationEventHandler( 
-
-                    (sender, args) => 
-
-                    { 
-
-                        logger.LogException(Message.PrintingReportTemplateValidationError, args.Exception, reportType); 
-
-                    } 
-
-                ); 
-
- 
-
- 
-
-                return (ReportTemplate)oSerializer.Deserialize(xmlValidReader); ; 
-
-
+                var xmlSettings = new XmlReaderSettings(); 
+                xmlSettings.Schemas.Add(REPORTTEMPLATE_SCHEMA_URL, REPORTTEMPLATE_SCHEMA_FILEPATH); 
+                xmlSettings.ValidationEventHandler += 
+                    (sender, args) => logger.LogError( 
+                        Message.PrintingReportTemplateValidationError, 
+                        args.Exception, 
+                        reportType); 
+                var xmlTextReader = new XmlTextReader(doc.InnerXml, XmlNodeType.Document, null); 
+                var xmlReader = XmlReader.Create(xmlTextReader, xmlSettings); 
+                var oSerializer = new XmlSerializer(typeof(ReportTemplate), REPORTTEMPLATE_SCHEMA_URL); 
+                logger.LogVerbose(Message.Common_DebugReturn); 
+                return (ReportTemplate)oSerializer.Deserialize(xmlReader); 
             } 
-
             catch (Exception ex) 
-
             { 
-
-                logger.LogException(Message.PrintingLoadReportTemplateFailed, ex, reportType); 
-
+                logger.LogError(Message.PrintingLoadReportTemplateFailed, ex, reportType); 
                 throw; 
-
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????????????? ??????? ?????????? ?????? 
-
-        /// </summary> 
-
-        /// <param name="reportParameters">????????? ??????</param> 
-
         public void LoadParameters(ListDictionary reportParameters) 
-
         { 
-
             if (Parameters != null) 
-
             { 
-
                 foreach (string parameter in Parameters) 
-
                 { 
-
                     if (reportParameters.Contains(parameter)) 
-
                     { 
-
-                        parser.AddParameter(parameter, reportParameters[parameter]); 
-
+                        s_parser.AddParameter(parameter, reportParameters[parameter]); 
                     } 
-
                 } 
-
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????????? ?????????? ??????? ?????? 
-
-        /// </summary> 
-
-        /// <returns></returns> 
-
         public DataSet PrepareTable() 
-
         { 
-
-            if (Table != null && Table.Columns != null && Table.Columns.Length > 0) 
-
+            if (Body == null) 
             { 
-
-                DataSet ds = new DataSet(); 
-
- 
-
- 
-
-                // ??????? ?????? 
-
-                DataTable data = ds.Tables.Add("0"); 
-
- 
-
- 
-
-                // ??????? ????? ???????? 
-
-                DataTable props = ds.Tables.Add("C0"); 
-
-                props.Columns.Add(ServiceTableColumns.Name, typeof (string)); 
-
-                props.Columns.Add(ServiceTableColumns.Width, typeof (int)); 
-
-                props.Columns.Add(ServiceTableColumns.FontSize, typeof (int)); 
-
-                props.Columns.Add(ServiceTableColumns.IsBold, typeof (bool)); 
-
-                props.Columns.Add(ServiceTableColumns.IsItalic, typeof (bool)); 
-
-
-                // TODO: ???????????? ??? ???????? 
-
- 
-
- 
-
-                int dataColumnCount = 0; // ?????????? ???????? ?????? 
-
-                int overallWidth = 0; // ????? ?????? 
-
-                int zeroedCount = 0; // ?????????? ???????? ? ??????????? ??????? 
-
-                int widthCorrection = 0; // ???? (? ??????) ????????????? ????????? ????? ???? ????????? 100% 
-
-                int zeroedWidth = 0; // ??????, ???????????? ??? ???????? ? ??????????? ??????? 
-
- 
-
- 
-
-                // ????????? ????? ?????? ????????? ????? ? ????? ??????? ????? 
-
-                foreach (ColDefinition prop in Table.Columns) 
-
-                { 
-
-                    int colCount = 1; 
-
- 
-
- 
-
-                    if(prop.Count != null) 
-
-                    { 
-
-                        if (!Int32.TryParse(parser.getVariable(prop.Count).ToString(), out colCount)) 
-
-                        { 
-
-                            colCount = 1; 
-
-                        } 
-
-                    } 
-
- 
-
- 
-
-                    if (prop.Width > 0) 
-
-                    { 
-
-                        overallWidth += (prop.Width * colCount); 
-
-                    } 
-
-                    else 
-
-                    { 
-
-                        zeroedCount += 1 * colCount; 
-
-                    } 
-
-                } 
-
- 
-
- 
-
-                if(zeroedCount > 0) 
-
-                { 
-
-                    // ???????? ?????? ??????? ? ??????????? ??????? 
-
-                    zeroedWidth = (100 - overallWidth) / zeroedCount; 
-
-                } 
-
- 
-
- 
-
-                // ???? ????????? ?????? 100, ?? ???????????? ??? ??????? 
-
-                if(overallWidth > 100) 
-
-                { 
-
-                    widthCorrection = 100 / Table.Columns.Length; 
-
-                } 
-
- 
-
- 
-
-
-                foreach (ColDefinition prop in Table.Columns) 
-
-                { 
-
-                    int colCount = 1; 
-
- 
-
- 
-
-                    // ???? ??????? ????????? ??? ?????????? ?????????? ???????? 
-
-                    if (prop.Count != null) 
-
-                    { 
-
-                        if (!Int32.TryParse(parser.getVariable(prop.Count).ToString(), out colCount)) 
-
-                        { 
-
-                            colCount = 1; 
-
-                        } 
-
-                    } 
-
- 
-
- 
-
-                    for (int i = 0; i < colCount; i++) 
-
-                    { 
-
-                        DataRow dr = props.NewRow(); 
-
-                        // TODO: ??? ???????? ?????????????? ?????? Width 
-
-                        dr[ServiceTableColumns.Name] = "S" + dataColumnCount; 
-
-                        if (widthCorrection > 0) 
-
-                        { 
-
-                            // ????? ?????? ????? ?????? 100% 
-
-                            dr[ServiceTableColumns.Width] = widthCorrection; 
-
-                        } 
-
-                        else 
-
-                        { 
-
-                            if (prop.Width > 0) 
-
-                            { 
-
-                                dr[ServiceTableColumns.Width] = prop.Width; 
-
-                            } 
-
-                            else 
-
-                            { 
-
-                                dr[ServiceTableColumns.Width] = zeroedWidth; 
-
-                            } 
-
-                        } 
-
-                        dr[ServiceTableColumns.FontSize] = prop.FontSize; 
-
-                        dr[ServiceTableColumns.IsBold] = prop.IsBold; 
-
-                        dr[ServiceTableColumns.IsItalic] = prop.IsItalic; 
-
-                        props.Rows.Add(dr); 
-
-                        data.Columns.Add("S" + dataColumnCount, typeof (string)); 
-
-                        dataColumnCount++; 
-
-                    } 
-
-                } 
-
- 
-
- 
-
-                // ????????? ??????? 
-
-                data.Columns.Add(ServiceTableColumns.FontSize, typeof(int)); 
-
-                data.Columns.Add(ServiceTableColumns.IsBold, typeof(bool)); 
-
-                data.Columns.Add(ServiceTableColumns.IsItalic, typeof(bool)); 
-
-
-                data.Columns.Add(ServiceTableColumns.NewPage, typeof(bool)); 
-
-                // TODO: ????????????, ?????????? ??????? ??? ????? 
-
- 
-
- 
-
-                // ???????? ?????? 
-
-                Lines lines = ConstructHeader(Table.Body); 
-
- 
-
- 
-
-                foreach (IReportElement line in lines) 
-
-                { 
-
-                    if (line.IsPrintable) 
-
-                    { 
-
-                        DataRow dr = data.NewRow(); 
-
-                        // TODO: ???????????? 
-
-                        // ???????? ??????? ?????? 
-
-                        for (int index = 0; index < dataColumnCount; index++) 
-
-                        { 
-
-                            // TODO: ????? ???????? ? ????? ????? ??????? 
-
-                            dr["S" + index] = (line as ReportLine).Lines.Length > index ? (line as ReportLine).Lines[index] : " "; 
-
-                        } 
-
-                        dr[ServiceTableColumns.FontSize] = (line as ReportLine).FontSize; 
-
-                        dr[ServiceTableColumns.IsBold] = (line as ReportLine).Bold; 
-
-                        dr[ServiceTableColumns.IsItalic] = (line as ReportLine).Italic; 
-
-                        dr[ServiceTableColumns.NewPage] = (line as ReportLine).NewPage; 
-
-                        data.Rows.Add(dr); 
-
-                    } 
-
-                } 
-
- 
-
- 
-
-                return ds; 
-
-            } 
-
-            else 
-
-            { 
-
                 return null; 
-
             } 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ???????????? ???? ????????? 
-
-        /// </summary> 
-
-        /// <param name="headerBody"></param> 
-
-        /// <returns></returns> 
-
-        public Lines ConstructHeader(BasePlainElement[] headerBody) 
-
-        { 
-
-            Lines header = new Lines(); 
-
- 
-
- 
-
-            if(headerBody != null) 
-
+            var logger = Managers.PrintingManager.Logger; 
+            logger.LogVerbose(Message.Common_DebugCall); 
+            var ds = new DataSet(); 
+            var bodyTables = new List<Table>(); 
+            foreach (var baseTableHolder in Body) 
             { 
-
-
-                // ???????????? ????????? 
-
-                foreach (BasePlainElement element in headerBody) 
-
-                { 
-
-                    header.AddRange(element.ConstructContent(parser)); 
-
-                } 
-
- 
-
- 
-
-                // ????????? ??????????? ??????? ????? 
-
-                int rowIndex = 0; 
-
-                for (int i = 0; i < header.Count; i++) 
-
-                { 
-
-                    rowIndex++; 
-
-                    if (header[i].IsPrintable) 
-
-                    { 
-
-                        ((ReportLine)header[i]).TransformLine(str => str.Replace(ReportTemplateParser.MACRO_CURRENT_ROW, rowIndex.ToString())); 
-
-                    } 
-
-                    else 
-
-                    { 
-
-                        if(header[i] is ServiceLine) 
-
-                        { 
-
-                            rowIndex = (header[i] as ServiceLine).CurrentRow; 
-
-                        } 
-
-                    } 
-
-                } 
-
+                bodyTables.AddRange(baseTableHolder.GetTables(s_parser)); 
             } 
-
- 
-
- 
-
-            return header; 
-
+            int tableNumber = 0; 
+            foreach (var bodyTable in bodyTables) 
+            { 
+                DataTable data = ds.Tables.Add(tableNumber.ToString()); 
+                DataTable props = ds.Tables.Add("C" + tableNumber); 
+                props.Columns.Add(ServiceTableColumns.Name, typeof(string)); 
+                props.Columns.Add(ServiceTableColumns.Width, typeof(int)); 
+                props.Columns.Add(ServiceTableColumns.FontSize, typeof(string)); 
+                props.Columns.Add(ServiceTableColumns.IsBold, typeof(bool)); 
+                props.Columns.Add(ServiceTableColumns.IsItalic, typeof(bool)); 
+                props.Columns.Add(ServiceTableColumns.Align, typeof(LineAlign)); 
+                int dataColumnCount = 0; // количество столбцов данных 
+                int overallWidth = 0; // общая ширина 
+                int zeroedCount = 0; // количество столбцов с неуказанной шириной 
+                int widthCorrection = 0; // флаг (и размер) необходимости коррекции ширин если превысили 100% 
+                int zeroedWidth = 0; // размер, рассчитанный для столбцов с неуказанной шириной 
+                foreach (ColDefinition prop in bodyTable.Columns) 
+                { 
+                    int colCount = 1; 
+                    if (prop.Count != null) 
+                    { 
+                        if (!Int32.TryParse(s_parser.GetVariable(prop.Count).ToString(), out colCount)) 
+                        { 
+                            colCount = 1; 
+                        } 
+                    } 
+                    if (prop.Width > 0) 
+                    { 
+                        overallWidth += (prop.Width * colCount); 
+                    } 
+                    else 
+                    { 
+                        zeroedCount += 1 * colCount; 
+                    } 
+                } 
+                if (zeroedCount > 0) 
+                { 
+                    zeroedWidth = (int)((100.0 - overallWidth) / zeroedCount); 
+                } 
+                if (overallWidth > 100) 
+                { 
+                    widthCorrection = (int)(100.0 / bodyTable.Columns.Length); 
+                } 
+                foreach (ColDefinition prop in bodyTable.Columns) 
+                { 
+                    int colCount = 1; 
+                    if (prop.Count != null) 
+                    { 
+                        if (!Int32.TryParse(s_parser.GetVariable(prop.Count).ToString(), out colCount)) 
+                        { 
+                            colCount = 1; 
+                        } 
+                    } 
+                    for (int i = 0; i < colCount; i++) 
+                    { 
+                        DataRow dr = props.NewRow(); 
+                        dr[ServiceTableColumns.Name] = "S" + dataColumnCount; 
+                        if (widthCorrection > 0) 
+                        { 
+                            dr[ServiceTableColumns.Width] = widthCorrection; 
+                        } 
+                        else 
+                        { 
+                            if (prop.Width > 0) 
+                            { 
+                                dr[ServiceTableColumns.Width] = prop.Width; 
+                            } 
+                            else 
+                            { 
+                                dr[ServiceTableColumns.Width] = zeroedWidth; 
+                            } 
+                        } 
+                        dr[ServiceTableColumns.FontSize] = prop.FontSize; 
+                        dr[ServiceTableColumns.IsBold] = prop.IsBold; 
+                        dr[ServiceTableColumns.IsItalic] = prop.IsItalic; 
+                        if(prop.Align.HasValue) 
+                        { 
+                            dr[ServiceTableColumns.Align] = prop.Align; 
+                        } 
+                        else 
+                        { 
+                            dr[ServiceTableColumns.Align] = DBNull.Value; 
+                        } 
+                        props.Rows.Add(dr); 
+                        data.Columns.Add("S" + dataColumnCount, typeof(string)); 
+                        dataColumnCount++; 
+                    } 
+                } 
+                data.Columns.Add(ServiceTableColumns.FontSize, typeof(int)); 
+                data.Columns.Add(ServiceTableColumns.IsBold, typeof(bool)); 
+                data.Columns.Add(ServiceTableColumns.IsItalic, typeof(bool)); 
+                data.Columns.Add(ServiceTableColumns.ServiceMode, typeof(ServiceMode)); 
+                data.Columns.Add(ServiceTableColumns.IsTableDotted, typeof(bool)); 
+                data.Columns.Add(ServiceTableColumns.Align, typeof(LineAlign)); 
+                Lines lines = bodyTable.Lines; 
+                foreach (IReportElement line in lines) 
+                { 
+                    if (line.IsPrintable) 
+                    { 
+                        var repLine = (ReportLine)line; 
+                        DataRow dr = data.NewRow(); 
+                        for (int index = 0; index < dataColumnCount; index++) 
+                        { 
+                            dr["S" + index] = repLine.Lines.Length > index ? repLine.Lines[index] : " "; 
+                        } 
+                        dr[ServiceTableColumns.FontSize] = repLine.FontSize(FontSize); 
+                        dr[ServiceTableColumns.IsBold] = repLine.Bold; 
+                        dr[ServiceTableColumns.IsItalic] = repLine.Italic; 
+                        dr[ServiceTableColumns.ServiceMode] = repLine.Mode; 
+                        var lineDotted = repLine.IsLineDotted < 0 
+                                             ? bodyTable.IsDotted 
+                                             : Convert.ToBoolean(repLine.IsLineDotted); 
+                        dr[ServiceTableColumns.IsTableDotted] = lineDotted; 
+                        dr[ServiceTableColumns.Align] = repLine.Align; 
+                        data.Rows.Add(dr); 
+                    } 
+                } 
+                tableNumber++; 
+            } 
+            logger.LogVerbose(Message.Common_DebugReturn); 
+            return ds; 
         } 
-
+        public static Lines ConstructHeader(BasePlainElement[] headerBody) 
+        { 
+            var logger = Managers.PrintingManager.Logger; 
+            logger.LogVerbose(Message.Common_DebugCall); 
+            var header = new Lines(); 
+            if(headerBody != null) 
+            { 
+                foreach (BasePlainElement element in headerBody) 
+                { 
+                    header.AddRange(element.ConstructContent(s_parser)); 
+                } 
+                int rowIndex = 0; 
+                foreach (IReportElement t in header) 
+                { 
+                    rowIndex++; 
+                    if (t.IsPrintable) 
+                    { 
+                        ((ReportLine) t).TransformLine( 
+                            str => str.Replace(ReportTemplateParser.MACRO_CURRENT_ROW, rowIndex.ToString())); 
+                    } 
+                    else 
+                    { 
+                        if(t is ServiceLine) 
+                        { 
+                            rowIndex = ((ServiceLine) t).CurrentRow; 
+                        } 
+                    } 
+                } 
+            } 
+            logger.LogVerbose(Message.Common_DebugReturn); 
+            return header; 
+        } 
     } 
-
 }
-
-

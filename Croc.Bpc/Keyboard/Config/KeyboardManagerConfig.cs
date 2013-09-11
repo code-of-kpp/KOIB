@@ -1,53 +1,30 @@
 using System; 
-
 using Croc.Core.Configuration; 
-
 using System.Configuration; 
-
- 
-
- 
-
 namespace Croc.Bpc.Keyboard.Config 
-
 { 
-
-    /// <summary> 
-
-    /// Конфиг-элемент менеджера клавиатуры 
-
-    /// </summary> 
-
     public class KeyboardManagerConfig : SubsystemConfig 
-
     { 
-
-        [ConfigurationProperty("keyboard", IsRequired = true)] 
-
-        public KeyboardConfig Keyboard 
-
+        [ConfigurationProperty("driver", IsRequired = true)] 
+        public KeyboardDriverConfig Driver 
         { 
-
             get 
-
             { 
-
-                return (KeyboardConfig)this["keyboard"]; 
-
+                return (KeyboardDriverConfig)this["driver"]; 
             } 
-
             set 
-
             { 
-
-                this["keyboard"] = value; 
-
+                this["driver"] = value; 
             } 
-
         } 
-
+        [ConfigurationProperty("keys", IsDefaultCollection = false, IsRequired = false)] 
+        [ConfigurationCollection(typeof(KeyConfigCollection), AddItemName = "key")] 
+        public KeyConfigCollection Keys 
+        { 
+            get 
+            { 
+                return (KeyConfigCollection)base["keys"]; 
+            } 
+        } 
     } 
-
 }
-
-

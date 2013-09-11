@@ -1,132 +1,89 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
   xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
 
- 
-
- 
-
-  <!--Действие, которое содержит общую функциональность--> 
 
   <CompositeActivity Name="Common" Class="Croc.Bpc.Workflow.Activities.CommonActivity, Croc.Bpc.Workflow"> 
-
- 
-
- 
-
-    <!--является ли данный сканер Главным?--> 
-
-    <Activity Name="IsMasterScanner" Execute="IsMasterScanner" Tracking="false"/> 
-
-    <!--установить тест на индикаторе сканера--> 
-
-    <Activity Name="SetIndicator" Execute="SetIndicator" Tracking="false"/> 
-
- 
-
- 
-
-    <!--нужен ли переносной режим голосования--> 
-
-    <Activity Name="NeedPortableVoting" Execute="NeedPortableVoting" Tracking="false"/> 
-
- 
-
- 
-
-    <!--воспроизвести фразу и считать значение--> 
-
-    <Activity Name="SayAndReadValue" Execute="SayAndReadValue" Tracking="false"/> 
-
-    <!--воспроизвести фразу и считать значение, событие "Отмена" = нажатие кнопки "Возврат"--> 
-
-    <Activity Name="SayAndReadValueCancelIsBack" Execute="SayAndReadValueCancelIsBack" Tracking="false"/> 
-
- 
-
- 
-
-    <!--воспроизвести фразу--> 
-
-    <Activity Name="SayPhrase" Execute="SayPhrase" Tracking="false"/> 
-
-    <!--воспроизвести фразу и ждать нажатия Да--> 
-
-    <Activity Name="SayAndWaitYes" Execute="SayAndWaitYes" Tracking="false"/> 
-
-    <!--воспроизвести фразу и ждать нажатия Нет--> 
-
-    <Activity Name="SayAndWaitNo" Execute="SayAndWaitNo" Tracking="false"/> 
-
-    <!--воспроизвести фразу и ждать нажатия Да или Нет--> 
-
-    <Activity Name="SayAndWaitYesOrNo" Execute="SayAndWaitYesOrNo" Tracking="false"/> 
-
-    <!--воспроизвести фразу и ждать нажатия Да и Нет одновременно--> 
-
-    <Activity Name="SayAndWaitYesAndNoAtOnce" Execute="SayAndWaitYesAndNoAtOnce" Tracking="false"/> 
-
-    <!--воспроизвести фразу и ждать нажатия Да или Нет или Возврат--> 
-
-    <Activity Name="SayAndWaitYesOrNoOrBack" Execute="SayAndWaitYesOrNoOrBack" Tracking="false"/> 
-
-    <!--воспроизвести фразу и ждать нажатия Помощь--> 
-
-    <Activity Name="SayAndWaitHelp" Execute="SayAndWaitHelp" Tracking="false"/> 
-
-    <!--воспроизвести фразу и заснуть--> 
-
-    <Activity Name="SayAndSleep" Execute="SayAndSleep" Tracking="false"/> 
-
-    <!--воспроизвести фразу и заснуть на таймаут--> 
-
-    <Activity Name="SayAndWaitTimeout" Execute="SayAndWaitTimeout" Tracking="false"/> 
-
-    <!--воспроизвести фразу и ждать заданные события--> 
-
-    <Activity Name="SayAndWaitEvents" Execute="SayAndWaitEvents" Tracking="false"/> 
-
-    <!--ждать заданные события--> 
-
-    <Activity Name="WaitEvents" Execute="WaitEvents" Tracking="false"/> 
-
- 
-
- 
-
-    <!--сообщить информацию об ошибке--> 
+    <Region Note="Общие методы"> 
 
 
-    <Activity Name="ReportError" Execute="ReportError" Tracking="false"/> 
+      <Activity Name="IsMasterScanner" Execute="IsMasterScanner" Tracking="false"/> 
 
-    <!--сбросить счетчики ошибок--> 
 
-    <Activity Name="ResetErrorCounters" Execute="ResetErrorCounters" Tracking="false"/> 
+      <Activity Name="SetIndicator" Execute="SetIndicator" Tracking="false"/> 
 
- 
 
- 
+      <Activity Name="NeedPortableVoting" Execute="NeedPortableVoting" Tracking="false"/> 
 
-    <!--перезапустить приложение--> 
 
-    <Activity Name="RestartApplication" Execute="RestartApplication" Tracking="false"/> 
+      <Activity Name="SyncWorkflowState" Execute="SyncWorkflowState" Tracking="false"/> 
 
-    <!--перезагрузить операционную систему--> 
 
-    <Activity Name="RestartOperationSystem" Execute="RestartOperationSystem" Tracking="false"/> 
+      <Activity Name="IsSourceDataLoaded" Execute="IsSourceDataLoaded" Tracking="false"/> 
 
- 
 
- 
+      <Activity Name="HasSourceDataChanged" Execute="HasSourceDataChanged" Tracking="false"/> 
+    </Region> 
 
+
+    <Region Note="Воспроизведение фраз и считывание значений"> 
+
+
+      <Activity Name="SayAndReadValue" Execute="SayAndReadValue" Tracking="false"/> 
+
+
+      <Activity Name="SayAndReadValueCancelIsBack" Execute="SayAndReadValueCancelIsBack" Tracking="false"/> 
+    </Region> 
+    <Region Note="Воспроизведение фраз и ожидание событий"> 
+
+
+      <Activity Name="SayPhrase" Execute="SayPhrase" Tracking="false"/> 
+
+
+      <Activity Name="SayAndWaitYes" Execute="SayAndWaitYes" Tracking="false"/> 
+
+
+      <Activity Name="SayAndWaitNo" Execute="SayAndWaitNo" Tracking="false"/> 
+
+
+      <Activity Name="SayAndWaitYesOrNo" Execute="SayAndWaitYesOrNo" Tracking="false"/> 
+
+
+      <Activity Name="SayAndWaitYesAndNoAtOnce" Execute="SayAndWaitYesAndNoAtOnce" Tracking="false"/> 
+
+
+      <Activity Name="SayAndWaitYesOrNoOrBack" Execute="SayAndWaitYesOrNoOrBack" Tracking="false"/> 
+
+
+      <Activity Name="SayAndWaitHelp" Execute="SayAndWaitHelp" Tracking="false"/> 
+
+
+      <Activity Name="SayAndSleep" Execute="SayAndSleep" Tracking="false"/> 
+
+
+      <Activity Name="SayAndWaitTimeout" Execute="SayAndWaitTimeout" Tracking="false"/> 
+
+
+      <Activity Name="SayAndWaitEvents" Execute="SayAndWaitEvents" Tracking="false"/> 
+
+
+      <Activity Name="WaitEvents" Execute="WaitEvents" Tracking="false"/> 
+    </Region> 
+    <Region Note="Обработка ошибок"> 
+
+
+      <Activity Name="ReportError" Execute="ReportError" Tracking="false"/> 
+
+
+      <Activity Name="ResetErrorCounters" Execute="ResetErrorCounters" Tracking="false"/> 
+    </Region> 
+    <Region Note="Перезапуск"> 
+
+
+      <Activity Name="RestartApplication" Execute="RestartApplication" Tracking="false"/> 
+
+
+      <Activity Name="RestartOperationSystem" Execute="RestartOperationSystem" Tracking="false"/> 
+    </Region> 
   </CompositeActivity> 
-
- 
-
- 
-
 </Workflow>
-
-

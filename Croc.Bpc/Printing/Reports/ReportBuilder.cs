@@ -1,1058 +1,432 @@
 using System; 
-
 using System.Collections.Generic; 
-
-using System.Linq; 
-
-using System.Text; 
-
 using System.Collections.Specialized; 
-
+using System.Text; 
+using System.Text.RegularExpressions; 
+using Croc.Bpc.Diagnostics; 
 using Croc.Bpc.Printing.Reports.Templates; 
-
-using Croc.Bpc.Election.Voting; 
-
+using Croc.Bpc.RegExpressions; 
+using Croc.Core; 
 using Croc.Core.Utils; 
-
 using Croc.Core.Utils.Text; 
-
-using Croc.Bpc.Election; 
-
-using Croc.Bpc.Common.Diagnostics; 
-
- 
-
- 
-
+using Croc.Bpc.Voting; 
 namespace Croc.Bpc.Printing.Reports 
-
 { 
-
-    /// <summary> 
-
-    /// Генератор отчетов 
-
-    /// </summary> 
-
     public class ReportBuilder 
-
     { 
-
         #region Константы 
-
- 
-
- 
-
         #region Параметры формирования отчетов 
-
-        /// <summary> 
-
-        /// Наименование отчета (PrintAction) 
-
-        /// </summary> 
-
         internal const string PRN_REPORT_NAME = "reportName"; 
-
-        /// <summary> 
-
-        /// Задает, какой протокол печатать:  
-
-        /// true - итоговый 
-
-        /// false - предварительные результаты 
-
-        /// </summary> 
-
-        internal const string PRN_FINAL_PROTOCOL = "final"; 
-
-        /// <summary> 
-
-        /// Задает, какой из тестовых протоколов печатать:  
-
-        /// true - данные тестового режима (протокол тестирования) 
-
-        /// false - технологический протокол 
-
-        /// </summary> 
-
         internal const string PRN_TEST_PROTOCOL = "test"; 
-
-        /// <summary> 
-
-        /// Признак печати результатов в итоговом или предварительном протоколе 
-
-        /// true - выводить результаты голосования 
-
-        /// false - выводить нулю (режим печати шаблона протокола) 
-
-        /// </summary> 
-
         internal const string PRN_PRINT_RESULTS = "withResults"; 
-
-        /// <summary> 
-
-        /// Выборы, на основе которых печатается протокол 
-
-        /// </summary> 
-
         internal const string PRN_ELECTION = "Election"; 
-
-
         #endregion 
-
- 
-
- 
-
         #region Макро переменные шаблонов отчета 
-
-        /// <summary> 
-
-        /// Наименование выборов 
-
-        /// </summary> 
-
         internal const string MACRO_ELECTION_NAME = "{ElectionName}"; 
-
-        /// <summary> 
-
-        /// Дата выборов 
-
-        /// </summary> 
-
         internal const string MACRO_VOTING_DATE = "{VotingDate}"; 
-
-        /// <summary> 
-
-        /// Дата и время печати (формирования) отчета 
-
-        /// </summary> 
-
         internal const string MACRO_CURRENT_DATE = "{CurrentDate}"; 
-
-        /// <summary> 
-
-        /// Номер УИК 
-
-        /// </summary> 
-
         internal const string MACRO_UIK = "{UIK}"; 
-
-        /// <summary> 
-
-        /// Наименование протокола 
-
-        /// </summary> 
-
         internal const string MACRO_PROTOCOL_NAME = "{ProtocolName}"; 
-
         #endregion 
-
- 
-
- 
-
         #region Форматы даты и времени 
-
-        /// <summary> 
-
-        /// Формат вывода даты выборов 
-
-        /// </summary> 
-
         internal const string ELECTION_DATE_FORMAT = "d MMMM yyyy года"; 
-
-        /// <summary> 
-
-        /// Формат вывода текущей даты 
-
-        /// </summary> 
-
         internal const string CURRENT_DATETIME_FORMAT = "dd.MM.yyyy HH:mm:ss"; 
-
- 
-
- 
-
         #endregion 
-
- 
-
- 
-
         #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Менеджер печати 
-
-        /// </summary> 
-
-        private IPrintingManager _printingManager; 
-
-        /// <summary> 
-
-        /// Менеджер выборов 
-
-
-        /// </summary> 
-
-        private IElectionManager _electionManager; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Описание отчета 
-
-        /// </summary> 
-
-        private struct ReportDesc 
-
+        private readonly IPrintingManager _printingManager; 
+        private readonly IElectionManager _electionManager; 
+        private readonly IVotingResultManager _votingResultManager; 
+        private struct ReportDescription 
         { 
-
-            /// <summary> 
-
-            /// Метод построения отчета 
-
-            /// </summary> 
-
-            public ReportDelegate Builder; 
-
- 
-
- 
-
-            /// <summary> 
-
-            /// Метод, выполняемый перед построением отчета 
-
-            /// </summary> 
-
-            public PrologEpilogDelegate Prolog; 
-
- 
-
- 
-
-            /// <summary> 
-
-            /// Метод, выполняемый после вывода отчета на печать 
-
-            /// </summary> 
-
-            public PrologEpilogDelegate Epilog; 
-
- 
-
- 
-
-            /// <summary> 
-
-            /// Конструктор 
-
-            /// </summary> 
-
-            /// <param name="builder">Метод построения отчета</param> 
-
-            public ReportDesc(ReportDelegate builder) 
-
+            public readonly ReportDelegate Builder; 
+            public readonly PrologEpilogDelegate Prolog; 
+            public readonly PrologEpilogDelegate Epilog; 
+            public ReportDescription(ReportDelegate builder) 
             { 
-
                 Builder = builder; 
-
                 Prolog = delegate(ListDictionary parameters) { }; 
-
                 Epilog = delegate(ListDictionary parameters) { }; 
-
             } 
-
- 
-
- 
-
-            /// <summary> 
-
-            /// Конструктор 
-
-            /// </summary> 
-
-            /// <param name="builder">Метод построения отчета</param> 
-
-            /// <param name="prolog">Метод, выполняемый перед построением отчета</param> 
-
-            /// <param name="epilog">Метод, выполняемый после вывода отчета на печать</param> 
-
-            public ReportDesc(ReportDelegate builder, PrologEpilogDelegate prolog, PrologEpilogDelegate epilog) 
-
+            public ReportDescription(ReportDelegate builder, PrologEpilogDelegate prolog, PrologEpilogDelegate epilog) 
             { 
-
                 Builder = builder; 
-
                 Prolog = prolog; 
-
                 Epilog = epilog; 
-
-
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Делегат - функция пролога/эпилога к отчету отчета 
-
-        /// </summary> 
-
         private delegate void PrologEpilogDelegate(ListDictionary reportParameters); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Делегат - функция построения отчета 
-
-        /// </summary> 
-
         private delegate PrinterJob ReportDelegate( 
-
             PdfReportBuilder pdfBuilder, 
-
             ListDictionary reportParameters, 
-
+            int copies, 
             PrologEpilogDelegate prolog, PrologEpilogDelegate epilog); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Функции построения отчетов 
-
-        /// индекс: PrintAction 
-
-        /// </summary> 
-
-        private ReportDesc[] _reportMap; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// конструктор 
-
-        /// </summary> 
-
-        public ReportBuilder(IPrintingManager printingManager, IElectionManager electionManager) 
-
+        private ReportDescription[] _reportMap; 
+        public ReportBuilder( 
+            IPrintingManager printingManager, 
+            IElectionManager electionManager, 
+            IVotingResultManager votingResultManager) 
         { 
-
             CodeContract.Requires(printingManager != null); 
-
             CodeContract.Requires(electionManager != null); 
-
- 
-
- 
-
+            CodeContract.Requires(votingResultManager != null); 
             _printingManager = printingManager; 
-
             _electionManager = electionManager; 
-
+            _votingResultManager = votingResultManager; 
             InitReportMap(); 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// заполняем массив функций построения отчетов 
-
-        /// </summary> 
-
         private void InitReportMap() 
-
         { 
-
             var reportTypes = Enum.GetValues(typeof(ReportType)); 
-
-            _reportMap = new ReportDesc[reportTypes.Length]; 
-
- 
-
- 
-
-
+            _reportMap = new ReportDescription[reportTypes.Length]; 
             foreach (var reportType in reportTypes) 
-
-                _reportMap[(int)reportType] = new ReportDesc(GenericPrintThread); 
-
- 
-
- 
-
-            _reportMap[(int)ReportType.SourceData] = new ReportDesc(GenericPrintThread, 
-
-                (reportParameters) => { }, 
-
-                (reportParameters) => { }); 
-
-            _reportMap[(int)ReportType.FailedControlRelations] = new ReportDesc(GenericPrintThread, 
-
-                // свяжем автовычисляемые строки с методами их вычисления 
-
-                (reportParameters) => _electionManager.SourceData. 
-
-                    BindAutoLinesAndChecksCountMethods((Election.Voting.Election)reportParameters[PRN_ELECTION]), 
-
-                (reportParameters) => { }); 
-
-            _reportMap[(int)ReportType.TestResults] = new ReportDesc(GenericPrintThread); 
-
-            _reportMap[(int)ReportType.ElectionProtocol] = new ReportDesc(GenericPrintThread, 
-
-                // свяжем автовычисляемые строки с методами их вычисления 
-
-                (reportParameters) => _electionManager.SourceData. 
-
-                    BindAutoLinesAndChecksCountMethods((Election.Voting.Election)reportParameters[PRN_ELECTION]), 
-
-                (reportParameters) => { }); 
-
+                _reportMap[(int)reportType] = new ReportDescription(GenericPrintThread); 
+            _reportMap[(int)ReportType.FailedControlRelations] = new ReportDescription(GenericPrintThread, 
+                reportParameters => _electionManager.SourceData. 
+                    BindAutoLinesAndChecksCountMethods((Election)reportParameters[PRN_ELECTION]), 
+                reportParameters => { }); 
+            _reportMap[(int)ReportType.ElectionProtocol] = new ReportDescription(GenericPrintThread, 
+                reportParameters => _electionManager.SourceData. 
+                    BindAutoLinesAndChecksCountMethods((Election)reportParameters[PRN_ELECTION]), 
+                reportParameters => { }); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Построить указанный отчет 
-
-        /// </summary> 
-
-        /// <param name="reportType">Тип отчета</param> 
-
-        /// <param name="parameters">параметры отчета</param> 
-
-        public PrinterJob BuildReport(ReportType reportType, ListDictionary parameters) 
-
+        public PrinterJob BuildReport(ReportType reportType, ListDictionary parameters, int copies) 
         { 
-
             var pdfBuilder = new PdfReportBuilder(); 
-
- 
-
- 
-
             var reportParameters = new ListDictionary(); 
-
             reportParameters[PRN_REPORT_NAME] = reportType; 
-
- 
-
- 
-
-			// добавим параметры 
-
-			foreach (string key in parameters.Keys) 
-
-			{ 
-
-				reportParameters[key] = parameters[key]; 
-
-			} 
-
- 
-
- 
-
+            foreach (string key in parameters.Keys) 
+            { 
+                reportParameters[key] = parameters[key]; 
+            } 
             var reportDesc = _reportMap[(int)reportType]; 
-
-            return reportDesc.Builder(pdfBuilder, reportParameters, reportDesc.Prolog, reportDesc.Epilog); 
-
+            return reportDesc.Builder(pdfBuilder, reportParameters, copies, reportDesc.Prolog, reportDesc.Epilog); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Объект синхронизации для построения отчетов 
-
-        /// </summary> 
-
-
-        private static object buildReportSync = new object(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Печать отчета 
-
-        /// </summary> 
-
+        private static readonly object s_buildReportSync = new object(); 
         private PrinterJob GenericPrintThread( 
-
-            PdfReportBuilder report, ListDictionary reportParameters, PrologEpilogDelegate prolog, PrologEpilogDelegate epilog) 
-
+            PdfReportBuilder report, 
+            ListDictionary reportParameters, 
+            int copies, 
+            PrologEpilogDelegate prolog, 
+            PrologEpilogDelegate epilog) 
         { 
-
-            lock (buildReportSync) 
-
+            lock (s_buildReportSync) 
             { 
-
                 prolog(reportParameters); 
-
                 PrepareReport((ReportType)reportParameters[PRN_REPORT_NAME], report, reportParameters); 
-
-				var job = report.Build(); 
-
+                var job = report.Build((ReportType)reportParameters[PRN_REPORT_NAME], copies); 
                 epilog(reportParameters); 
-
- 
-
- 
-
-				return job; 
-
+                return job; 
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Подготовка отчета для печати 
-
-        /// </summary> 
-
         private void PrepareReport(ReportType reportType, PdfReportBuilder pdfBuilder, ListDictionary reportParameters) 
-
         { 
-
             var template = ReportTemplate.LoadTemplate(reportType, _printingManager.Logger); 
-
- 
-
- 
-
-            if (reportType == ReportType.ElectionProtocol) 
-
-                ApplySourceDataTemplate(reportParameters, template); 
-
- 
-
- 
-
+            if (reportType == ReportType.ElectionProtocol || reportType == ReportType.PreliminaryElectionProtocol) 
+                ApplySourceDataTemplate(reportType, reportParameters, template); 
             template.LoadParameters(reportParameters); 
-
- 
-
- 
-
-            pdfBuilder.Headers[Section.Header] = template.ConstructHeader(template.Header); 
-
-            pdfBuilder.Headers[Section.PageHeader] = template.ConstructHeader(template.PageHeader); 
-
-            pdfBuilder.Headers[Section.Footer] = template.ConstructHeader(template.Footer); 
-
-            pdfBuilder.Headers[Section.PageFooter] = template.ConstructHeader(template.PageFooter); 
-
-            pdfBuilder.m_data = template.PrepareTable(); 
-
-            if (template.Table != null) 
-
-                pdfBuilder.TableDotted = template.Table.IsDotted; 
-
+            pdfBuilder.Headers[PageSection.Header] = ReportTemplate.ConstructHeader(template.Header); 
+            pdfBuilder.Headers[PageSection.PageHeader] = ReportTemplate.ConstructHeader(template.PageHeader); 
+            pdfBuilder.Headers[PageSection.Footer] = ReportTemplate.ConstructHeader(template.Footer); 
+            pdfBuilder.Headers[PageSection.PageFooter] = ReportTemplate.ConstructHeader(template.PageFooter); 
+            pdfBuilder.Data = template.PrepareTable(); 
+            pdfBuilder.TemplateFont = template.Font; 
+            pdfBuilder.FontSize = template.FontSize; 
+            pdfBuilder.Margins = template.Margins; 
             pdfBuilder.ClaspFooter = template.ClaspFooter; 
-
             pdfBuilder.PageNumbered = template.PageNumbered; 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-
-        /// Применяет шаблон протокола, если он есть в ИД 
-
-        /// </summary> 
-
-        /// <param name="reportParameters">Параметры отчета</param> 
-
-        /// <param name="template">Шаблон по умолчанию</param> 
-
-        private void ApplySourceDataTemplate(ListDictionary reportParameters, ReportTemplate template) 
-
+        #region Применение шаблона из ИД 
+        private void ApplySourceDataTemplate(ReportType reportType, ListDictionary reportParameters, ReportTemplate template) 
         { 
-
-            var election = (Election.Voting.Election)reportParameters[PRN_ELECTION]; 
-
- 
-
- 
-
-            // коррекция размеров столбцов, считаем, что столбцы идут в следующем порядке 
-
-            // numberWidth; nameWidth; valueWidth; textValueWidth 
-
-            if (template.Table.Columns.Length >= 4) 
-
+            int fromElection = -1; 
+            if (reportParameters.Contains(PRN_ELECTION)) 
             { 
-
-                template.Table.Columns[0].Width = election.Protocol.NumberWidth; 
-
-                template.Table.Columns[1].Width = election.Protocol.NameWidth; 
-
-                template.Table.Columns[2].Width = election.Protocol.ValueWidth; 
-
-                template.Table.Columns[3].Width = election.Protocol.TextValueWidth; 
-
+                fromElection = _electionManager.SourceData.GetElectionIndex( 
+                    (Election)reportParameters[PRN_ELECTION]); 
             } 
-
- 
-
- 
-
-            // добавляю произвольные строки протокола если они есть 
-
-            if (election.Protocol.Texts != null) 
-
+            var toElection = fromElection != -1 ? 
+                fromElection + 1 : _electionManager.SourceData.Elections.Length; 
+            fromElection = fromElection == -1 ? 0 : fromElection; 
+            var tables = new List<BaseTableHolder>(); 
+            for (int i = fromElection; i < toElection; i++) 
             { 
-
-                // получаем шаблон протокола 
-
+                var election = _electionManager.SourceData.Elections[i]; 
+                Table headerTable = null; 
+                Table footerTable = null; 
+                Table bodyTable = null; 
+                if (election.Protocol.FontType != FontType.Default) 
+                    template.Font = election.Protocol.FontType; 
+                if (election.Protocol.FontSize > 0) 
+                    template.FontSize = election.Protocol.FontSize; 
                 ProtocolText protocolTemplate = election.Protocol.GetProtocolTemplate( 
-
-                    (bool)reportParameters[PRN_FINAL_PROTOCOL]); 
-
- 
-
- 
-
-                // если шаблон протокола есть 
-
-                if (protocolTemplate != null) 
-
+                    reportType == ReportType.ElectionProtocol); 
+                if (protocolTemplate == null) 
+                    return; 
+                if (protocolTemplate.ProtocolLines.Length > 0) 
                 { 
-
-                    // если шаблон содержит заголовки 
-
-                    if (protocolTemplate.m_aProtocolLines.Length > 0) 
-
+                    var headers = new Dictionary<PageSection, List<BasePlainElement>>(); 
+                    foreach (PageSection section in Enum.GetValues(typeof(PageSection))) 
                     { 
-
-                        var headers = new Dictionary<Section, List<BasePlainElement>>(); 
-
-                        foreach (Section section in Enum.GetValues(typeof(Section))) 
-
-                        { 
-
-                            headers[section] = new List<BasePlainElement>(); 
-
-                        } 
-
- 
-
- 
-
-                        try 
-
-                        { 
-
-                            // перебираем элементы массива 
-
-                            foreach (ProtocolTextLine oTextLine in protocolTemplate.m_aProtocolLines) 
-
-                            { 
-
-                                // текст строки 
-
-                                StringBuilder sText = new StringBuilder(oTextLine.m_sText); 
-
- 
-
- 
-
-
-                                // стандартные замены 
-
-                                sText.Replace(MACRO_ELECTION_NAME, election.Name); 
-
-                                if (PlatformDetector.IsUnix) 
-
-                                { 
-
-                                    sText.Replace(MACRO_VOTING_DATE, ReportTemplateParser.DataConvert( 
-
-                                        _electionManager.SourceData.ElectionDate.ToString(ELECTION_DATE_FORMAT))); 
-
-                                    sText.Replace(MACRO_CURRENT_DATE, ReportTemplateParser.DataConvert( 
-
-                                        DateTime.Now.ToString(CURRENT_DATETIME_FORMAT))); 
-
-                                } 
-
-                                else 
-
-                                { 
-
-                                    sText.Replace(MACRO_VOTING_DATE, _electionManager.SourceData.ElectionDate.ToString(ELECTION_DATE_FORMAT)); 
-
-                                    sText.Replace(MACRO_CURRENT_DATE, DateTime.Now.ToString(CURRENT_DATETIME_FORMAT)); 
-
-                                } 
-
-                                sText.Replace(MACRO_UIK, _electionManager.UIK.ToString()); 
-
- 
-
- 
-
-                                if (oTextLine.m_sText != null && oTextLine.m_sText.IndexOf(MACRO_PROTOCOL_NAME) != -1) 
-
-                                { 
-
-                                    string[] sLines = election.Protocol.Name.Split('\n'); 
-
- 
-
- 
-
-                                    if (sLines.Length > 1) 
-
-                                    { 
-
-                                        for (int idx = 0; idx < sLines.Length; idx++) 
-
-                                        { 
-
-                                            headers[oTextLine.m_eSection].Add( 
-
-                                                new LineClause( 
-
-                                                    sLines[idx].Trim(),  
-
-                                                    oTextLine.m_eAlign,  
-
-                                                    oTextLine.FontSize,  
-
-                                                    oTextLine.Bold,  
-
-                                                    oTextLine.Italic)); 
-
-                                        } 
-
-                                        continue; 
-
-                                    } 
-
-                                    else 
-
-                                    { 
-
-                                        sText.Replace(MACRO_PROTOCOL_NAME, election.Protocol.Name); 
-
-                                    } 
-
-                                } 
-
- 
-
- 
-
-                                // строки которые мы добавляем 
-
-                                headers[oTextLine.m_eSection].Add( 
-
-                                    new LineClause( 
-
-                                        sText.ToString(),  
-
-                                        oTextLine.m_eAlign,  
-
-                                        oTextLine.FontSize,  
-
-                                        oTextLine.Bold,  
-
-
-                                        oTextLine.Italic)); 
-
-                            } 
-
- 
-
- 
-
-                            template.PageHeader = new BasePlainElement[headers[Section.PageHeader].Count]; 
-
-                            headers[Section.PageHeader].CopyTo(template.PageHeader); 
-
-                            template.Header = new BasePlainElement[headers[Section.Header].Count]; 
-
-                            headers[Section.Header].CopyTo(template.Header); 
-
-                            template.Footer = new BasePlainElement[headers[Section.Footer].Count]; 
-
-                            headers[Section.Footer].CopyTo(template.Footer); 
-
-                            template.PageFooter = new BasePlainElement[headers[Section.PageFooter].Count]; 
-
-                            headers[Section.PageFooter].CopyTo(template.PageFooter); 
-
-                        } 
-
-                        catch (Exception ex) 
-
-                        { 
-
-                            Managers.PrintingManager.Logger.LogException(Message.PrintingReportHeadersBuildFailed, ex); 
-
-                        } 
-
+                        headers[section] = new List<BasePlainElement>(); 
                     } 
-
- 
-
- 
-
-                    // если есть строки таблицы протокола 
-
-                    if (protocolTemplate.m_aVoteLines != null && protocolTemplate.m_aVoteLines.Length > 0) 
-
+                    try 
                     { 
-
-                        try 
-
+                        ApplyStandartTemplates(protocolTemplate, election, headers); 
+                        template.PageHeader = new BasePlainElement[headers[PageSection.PageHeader].Count]; 
+                        headers[PageSection.PageHeader].CopyTo(template.PageHeader); 
+                        if (toElection - fromElection > 1) 
                         { 
-
-                            int nLineNumber = election.Protocol.GetLatestLineNumber((bool)reportParameters[PRN_FINAL_PROTOCOL]); 
-
-                            // сформирую строку для снятого кандидата 
-
-                            string sDisabled = election.Protocol.DisabledString; 
-
- 
-
- 
-
-                            // признак необходимости отображения снятых кандидатов 
-
-                            bool bShowDisabled = sDisabled != null && sDisabled != String.Empty; 
-
- 
-
- 
-
-                            List<BasePlainElement> table = new List<BasePlainElement>(); 
-
- 
-
- 
-
-                            // признак переноса строк 
-
-                            bool bDelimiter = false; 
-
- 
-
- 
-
-                            foreach (VoteTextLine oVoteLine in protocolTemplate.m_aVoteLines) 
-
+                            template.Header = new BasePlainElement[0]; 
+                            headerTable = new Table 
                             { 
-
-                                // введем фильтрацию 
-
-                                var oMask = new VoteKey(); 
-
-								oMask.ElectionNum = election.ElectionId; 
-
- 
-
- 
-
-                                switch (oVoteLine.Type) 
-
+                                Columns = new[] 
+                                    { 
+                                        new ColDefinition 
+                                            { 
+                                                Width = 100,  
+                                                Align = null, 
+                                            }, 
+                                    }, 
+                                Body = headers[PageSection.Header].ToArray(), 
+                            }; 
+                            template.Footer = new BasePlainElement[0]; 
+                            headers[PageSection.Footer].Add( 
+                                new LineClause 
                                 { 
-
-
-                                    case VoteLineType.Vote: 
-
-                                        // перебираем всех кандидатов 
-
-                                        foreach (Candidate oCurCand in election.Candidates) 
-
-                                        { 
-
-                                            if ((oCurCand.Id == oVoteLine.ID) && (!oCurCand.Disabled || bShowDisabled)) 
-
+                                    Columns = new[] { new LinePart { Text = "" } }, 
+                                    NewPage = true, 
+                                    ResetPageNumber = true 
+                                }); 
+                            footerTable = new Table 
+                            { 
+                                Columns = new[] 
+                                    { 
+                                        new ColDefinition 
                                             { 
-
-                                                nLineNumber++; 
-
-                                                // ограничение: 
-
-                                                oMask.CandidateId = oCurCand.Id; 
-
-                                                // число голосов: 0 - для предварительного протокола 
-
-                                                int nVotesCount = Managers.ElectionManager.VotingResults.VotesCount(oMask); 
-
-                                                table.Add(new LineClause( 
-
-                                                    new string[] { 
-
-                                                        nLineNumber.ToString(), 
-
-                                                        oCurCand.GetFIO(!oCurCand.NoneAbove), 
-
-                                                        oCurCand.Disabled ? sDisabled : ((bool)reportParameters[PRN_PRINT_RESULTS] ? nVotesCount.ToString() : "0"), 
-
-                                                        oCurCand.Disabled ? "" : ((bool)reportParameters[PRN_PRINT_RESULTS]  
-
-                                                        ? "(" + CustomRusNumber.Str(nVotesCount, true).Trim() + ")" 
-
-                                                        : CustomRusNumber.Str(0, true).Trim()) 
-
-                                                    }, 
-
-                                                    oVoteLine.FontSize, oVoteLine.Bold, oVoteLine.Italic, bDelimiter)); 
-
- 
-
- 
-
-                                                bDelimiter = false; 
-
-                                                break; 
-
-                                            } 
-
-                                        } 
-
-                                        break; 
-
-                                    case VoteLineType.Line: 
-
-                                        // перебираем все строки протокола 
-
-                                        foreach (Line oCurLine in election.Protocol.Lines) 
-
-                                        { 
-
-                                            if (oCurLine.Id == oVoteLine.ID) 
-
-                                            { 
-
-                                                // значение  строки - 0, для предварительного протокола 
-
-                                                int nValue = (bool)reportParameters[PRN_FINAL_PROTOCOL] && oCurLine.Value.HasValue 
-
-                                                    ? oCurLine.Value.Value : 0; 
-
- 
-
- 
-
-                                                table.Add(new LineClause( 
-
-                                                    new string[] { 
-
-                                                        oCurLine.Num + oCurLine.AdditionalNum, 
-
-                                                        oCurLine.Name, 
-
-                                                        (bool)reportParameters[PRN_PRINT_RESULTS] ? nValue.ToString() : "0", 
-
-                                                        (bool)reportParameters[PRN_PRINT_RESULTS]  
-
-                                                        ? "(" + CustomRusNumber.Str(nValue, true).Trim() + ")"  
-
-                                                        : CustomRusNumber.Str(0, true).Trim() 
-
-                                                    }, 
-
-                                                    oVoteLine.FontSize, oVoteLine.Bold, oVoteLine.Italic, bDelimiter)); 
-
- 
-
-
- 
-                                                bDelimiter = false; 
-
-                                                break; 
-
-                                            } 
-
-                                        } 
-
-                                        break; 
-
-                                    case VoteLineType.Delimiter: 
-
-                                        bDelimiter = true; 
-
-                                        break; 
-
-                                } 
-
-                            } 
-
-                            template.Table.Body = new BasePlainElement[table.Count]; 
-
-                            table.CopyTo(template.Table.Body); 
-
+                                                Width = 100,  
+                                                Align = null, 
+                                            }, 
+                                    }, 
+                                Body = headers[PageSection.Footer].ToArray(), 
+                            }; 
                         } 
-
-                        catch (Exception ex) 
-
+                        else 
                         { 
-
-                            Managers.PrintingManager.Logger.LogException(Message.PrintingReportBodyBuildFailed, ex); 
-
+                            template.Header = new BasePlainElement[headers[PageSection.Header].Count]; 
+                            headers[PageSection.Header].CopyTo(template.Header); 
+                            template.Footer = new BasePlainElement[headers[PageSection.Footer].Count]; 
+                            headers[PageSection.Footer].CopyTo(template.Footer); 
                         } 
-
+                        template.PageFooter = new BasePlainElement[headers[PageSection.PageFooter].Count]; 
+                        headers[PageSection.PageFooter].CopyTo(template.PageFooter); 
                     } 
-
+                    catch (Exception ex) 
+                    { 
+                        _printingManager.Logger.LogError(Message.PrintingReportHeadersBuildFailed, ex); 
+                    } 
                 } 
-
+                if (protocolTemplate.VoteLines != null && protocolTemplate.VoteLines.Length > 0) 
+                { 
+                    try 
+                    { 
+                        bodyTable = new Table 
+                        { 
+                            Columns = new[] 
+                            { 
+                                new ColDefinition {Width = election.Protocol.NumberWidth}, 
+                                new ColDefinition {Width = election.Protocol.NameWidth}, 
+                                new ColDefinition {Width = election.Protocol.ValueWidth}, 
+                                new ColDefinition {Width = election.Protocol.TextValueWidth}, 
+                            } 
+                        }; 
+                        var tableEntry = CreateProtocolBodyTable( 
+                            protocolTemplate, 
+                            election, 
+                            reportType == ReportType.ElectionProtocol, 
+                            (bool)reportParameters[PRN_PRINT_RESULTS]); 
+                        bodyTable.Body = tableEntry.ToArray(); 
+                    } 
+                    catch (Exception ex) 
+                    { 
+                        _printingManager.Logger.LogError(Message.PrintingReportBodyBuildFailed, ex); 
+                    } 
+                } 
+                if (headerTable != null) 
+                { 
+                    tables.Add(headerTable); 
+                } 
+                if (bodyTable != null) 
+                { 
+                    tables.Add(bodyTable); 
+                } 
+                if (footerTable != null) 
+                { 
+                    tables.Add(footerTable); 
+                } 
             } 
-
+            template.Body = tables.ToArray(); 
         } 
-
+        private List<BasePlainElement> CreateProtocolBodyTable( 
+            ProtocolText protocolTemplate, 
+            Election election, 
+            bool final, 
+            bool printResults) 
+        { 
+            int lineNumber = election.Protocol.GetLatestLineNumber(final); 
+            string disabled = election.Protocol.DisabledString; 
+            bool showDisabled = !string.IsNullOrEmpty(disabled); 
+            bool delimiter = false; 
+            var table = new List<BasePlainElement>(); 
+            foreach (var voteLine in protocolTemplate.VoteLines) 
+            { 
+                var mask = new VoteKey { ElectionNum = election.ElectionId }; 
+                switch (voteLine.Type) 
+                { 
+                    case VoteLineType.Vote: 
+                        foreach (Candidate currentCand in election.Candidates) 
+                        { 
+                            if ((currentCand.Id == voteLine.ID) && (!currentCand.Disabled || showDisabled)) 
+                            { 
+                                lineNumber++; 
+                                mask.CandidateId = currentCand.Id; 
+                                int votesCount = _votingResultManager.VotingResults.VotesCount(mask); 
+                                table.Add(new LineClause( 
+                                    new[]  
+                                    { 
+                                        lineNumber.ToString(), 
+                                        currentCand.GetInitials(!currentCand.NoneAbove), 
+                                        currentCand.Disabled ? disabled : (printResults ? votesCount.ToString() : "0"), 
+                                        currentCand.Disabled ? "" : (printResults 
+                                        ? "(" + CustomRusNumber.Str(votesCount, true).Trim() + ")" 
+                                        : CustomRusNumber.Str(0, true).Trim()) 
+                                    }, 
+                                    voteLine.FontSize, voteLine.Bold, voteLine.Italic, delimiter)); 
+                                delimiter = false; 
+                                break; 
+                            } 
+                        } 
+                        break; 
+                    case VoteLineType.Line: 
+                        if (string.CompareOrdinal(voteLine.ID, VoteTextLine.TOTAL_RECEIVED_VOTETEXTLINE_ID) == 0) 
+                        { 
+                            var value = _votingResultManager.VotingResults.VotesCount( 
+                                new VoteKey( 
+                                    BlankType.AllButBad, 
+                                    null, null, null, null, 
+                                    _electionManager.SourceData.GetBlankIdByElectionNumber(election.ElectionId))); 
+                            var text = string.IsNullOrEmpty(voteLine.Text) 
+                                           ? VoteTextLine.TOTAL_RECEIVED_VOTETEXTLINE_DEFAULT_TEXT 
+                                           : voteLine.Text; 
+                            table.Add(new LineClause( 
+                                          new[] 
+                                              { 
+                                                  "", 
+                                                  text, 
+                                                  printResults ? value.ToString() : "0", 
+                                                  printResults 
+                                                      ? "(" + CustomRusNumber.Str(value, true).Trim() + ")" 
+                                                      : CustomRusNumber.Str(0, true).Trim() 
+                                              }, 
+                                          voteLine.FontSize, voteLine.Bold, voteLine.Italic, delimiter)); 
+                        } 
+                        else 
+                        { 
+                            foreach (Line currentLine in election.Protocol.Lines) 
+                            { 
+                                if (currentLine.Id == voteLine.ID) 
+                                { 
+                                    int value = final && currentLine.Value.HasValue ? currentLine.Value.Value : 0; 
+                                    table.Add(new LineClause( 
+                                                  new[] 
+                                                      { 
+                                                          currentLine.Num + currentLine.AdditionalNum, 
+                                                          currentLine.Name, 
+                                                          printResults ? value.ToString() : "0", 
+                                                          printResults 
+                                                              ? "(" + CustomRusNumber.Str(value, true).Trim() + ")" 
+                                                              : CustomRusNumber.Str(0, true).Trim() 
+                                                      }, 
+                                                  voteLine.FontSize, voteLine.Bold, voteLine.Italic, delimiter)); 
+                                    break; 
+                                } 
+                            } 
+                        } 
+                        delimiter = false; 
+                        break; 
+                    case VoteLineType.Delimiter: 
+                        delimiter = true; 
+                        break; 
+                } 
+            } 
+            return table; 
+        } 
+        private void ApplyStandartTemplates( 
+            ProtocolText protocolTemplate, 
+            Election election, 
+            Dictionary<PageSection, List<BasePlainElement>> headers) 
+        { 
+            foreach (ProtocolTextLine textLine in protocolTemplate.ProtocolLines) 
+            { 
+                var text = new StringBuilder(textLine.Text); 
+                ApplyStandartTemplatesToLine(election, text); 
+                if (textLine.Text != null && textLine.Text.IndexOf(MACRO_PROTOCOL_NAME) != -1) 
+                { 
+                    var lines = election.Protocol.Name.Split('\n'); 
+                    if (lines.Length > 1) 
+                    { 
+                        foreach (var line in lines) 
+                            AddLineToList(headers[textLine.Section], textLine, line); 
+                        continue; 
+                    } 
+                    text.Replace(MACRO_PROTOCOL_NAME, election.Protocol.Name); 
+                } 
+                AddLineToList(headers[textLine.Section], textLine, text.ToString()); 
+            } 
+        } 
+        private void ApplyStandartTemplatesToLine(Election election, StringBuilder text) 
+        { 
+            text.Replace(MACRO_ELECTION_NAME, election.Name); 
+            if (PlatformDetector.IsUnix) 
+            { 
+                text.Replace(MACRO_VOTING_DATE, ReportTemplateParser.DataConvert( 
+                    _electionManager.SourceData.ElectionDate.ToString(ELECTION_DATE_FORMAT, 
+                                                                      new System.Globalization.CultureInfo("ru-RU")))); 
+                text.Replace(MACRO_CURRENT_DATE, ReportTemplateParser.DataConvert( 
+                    DateTime.Now.ToString(CURRENT_DATETIME_FORMAT, new System.Globalization.CultureInfo("ru-RU")))); 
+            } 
+            else 
+            { 
+                text.Replace(MACRO_VOTING_DATE, 
+                    _electionManager.SourceData.ElectionDate.ToString(ELECTION_DATE_FORMAT)); 
+                text.Replace(MACRO_CURRENT_DATE, DateTime.Now.ToString(CURRENT_DATETIME_FORMAT)); 
+            } 
+            text.Replace(MACRO_UIK, _electionManager.SourceData.Uik.ToString()); 
+            var exp = new UikMemberNamesRegex(); 
+            foreach (Match match in exp.Matches(text.ToString())) 
+            { 
+                var altValue = match.Value.Split(':')[1].Trim('}'); 
+                string name = null; 
+                if (match.Value.Contains(CommitteeMemberType.ChairmanAssistant.ToString())) 
+                { 
+                    name = _electionManager.SourceData.GetCommitteeMemberInitialByType(CommitteeMemberType.ChairmanAssistant); 
+                } 
+                else if (match.Value.Contains(CommitteeMemberType.Chairman.ToString())) 
+                { 
+                    name = 
+                        _electionManager.SourceData.GetCommitteeMemberInitialByType(CommitteeMemberType.Chairman); 
+                } 
+                else if (match.Value.Contains(CommitteeMemberType.Secretary.ToString())) 
+                { 
+                    name = _electionManager.SourceData.GetCommitteeMemberInitialByType(CommitteeMemberType.Secretary); 
+                } 
+                text.Replace(match.Value, string.IsNullOrEmpty(name) ? altValue : name); 
+            } 
+        } 
+        private static void AddLineToList(List<BasePlainElement> list, ProtocolTextLine textLine, string lineText) 
+        { 
+            list.Add( 
+                new LineClause(lineText.Trim(), textLine.Align, textLine.FontSize, textLine.Bold, textLine.Italic)); 
+        } 
+        #endregion 
     } 
-
 }
-
-

@@ -1,57 +1,20 @@
 using System; 
-
- 
-
- 
-
 namespace Croc.Workflow.ComponentModel 
-
 { 
-
-    /// <summary> 
-
-    /// Специальное действие, которое означает, что нужно выполнить выход из составного 
-
-    /// действия с заданным результатом (ключом след. действия) 
-
-    /// </summary> 
-
     [Serializable] 
-
     public class ReturnActivity : Activity 
-
     { 
-
-        /// <summary> 
-
-        /// Результат - ключ след. действия 
-
-        /// </summary> 
-
+        private const string NAME_FORMAT_STRING = "@@Return({0})"; 
         public NextActivityKey Result 
-
         { 
-
             get; 
-
             private set; 
-
         } 
-
- 
-
- 
-
         public ReturnActivity(NextActivityKey result) 
-
         { 
-
             Result = result; 
-
+            Name = string.Format(NAME_FORMAT_STRING, result); 
+            Tracking = false; 
         } 
-
     } 
-
 }
-
-

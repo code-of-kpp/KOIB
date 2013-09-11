@@ -1,230 +1,118 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
   xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
-
- 
-
   <Include Ref="Activities/Common.wf" /> 
-
+  <Include Ref="Activities/Summarizing/SaveVotingResults.wf" /> 
+  <Include Ref="Activities/Summarizing/ReadVotingReport.wf" /> 
+  <Include Ref="Activities/Summarizing/EnterAdditionalInfo.wf" /> 
   <Include Ref="Activities/Printing.wf" /> 
 
-  <Include Ref="Activities/Summarizing/SaveVotingResults.wf" /> 
-
-  <Include Ref="Activities/Summarizing/ReadVotingReport.wf" /> 
-
-  <Include Ref="Activities/Summarizing/EnterAdditionalInfo.wf" /> 
-
- 
-
-  <!--подведение итогов голосования--> 
 
   <CompositeActivity Name="SummarizingActivity" 
-
                      Class="Croc.Bpc.Workflow.Activities.Summarizing.SummarizingActivity, Croc.Bpc.Workflow" 
-
                      Tracking="false"> 
 
- 
-
-    <!--сформируем протокол с предварительными результатами голосования по всем выборам--> 
-
-    <Activity Name="GeneratePreliminaryVotingResultProtocol" 
-
-Execute="GeneratePreliminaryVotingResultProtocol"/> 
-
- 
-
-    <!--проверим, является ли данный сканер Главным--> 
 
     <ReferenceActivity Name="IsMasterScanner" Execute="Common.IsMasterScanner" 
+                       k:Yes="ResetGeneratedProtocolElectionIds" k:No="WaitForAddInfoEnteredOnMaster"/> 
+    <Region Note="На главном сканере"> 
 
-                       k:Yes="SavePreliminaryVotingResults" k:No="MoveFirstElection"/> 
 
- 
+      <Activity Name="ResetGeneratedProtocolElectionIds" Execute="ResetGeneratedProtocolElectionIds"/> 
 
-    <!--сохраним результаты голосования--> 
 
-    <ReferenceActivity Name="SavePreliminaryVotingResults" Execute="SaveVotingResultsActivity"/> 
+      <Activity Name="ResetElectionEnumerator" Execute="ResetElectionEnumerator"/> 
 
-     
 
-    <!--сбросим счетчик выборов--> 
 
-    <Activity Name="ResetElectionEnumerator" Execute="ResetElectionEnumerator"/> 
 
-     
+      <Activity Name="MoveNextElection" Execute="MoveNextElection" 
+                k:Yes="IsProtocolGeneratedForCurrentElection" k:No="IsProtocolsGeneratedForAllElections"/> 
 
 
-    <!--перебираем выборы для печати--> 
+      <Activity Name="IsProtocolGeneratedForCurrentElection" Execute="IsProtocolGeneratedForCurrentElection" 
+                k:Yes="MoveNextElection" k:No="SayReadVotingReport"/> 
 
-    <Activity Name="MoveNextElectionForPrinting" Execute="MoveNextElection" 
 
-              k:Yes="PrintPreliminaryElectionProtocol" k:No="PrintMoreCopies"/> 
+      <ReferenceActivity Name="SayReadVotingReport" Execute="Common.SayAndWaitYesOrNo" 
+                         Parameters="Parameters=@CurrentElectionNumber" 
+                         k:Yes="ReadVotingReport" k:No="EnterAdditionalInfo"/> 
 
- 
 
-    <!--печатаем предварительный протокол голосования по выборам--> 
+      <ReferenceActivity Name="ReadVotingReport" Execute="ReadVotingReportActivity" 
+                         Parameters="ElectionIndex=@CurrentElectionIndex"/> 
 
-    <ReferenceActivity Name="PrintPreliminaryElectionProtocol" Execute="PrintingActivity" 
 
-                       
+      <ReferenceActivity Name="EnterAdditionalInfo" Execute="EnterAdditionalInfoActivity" 
+                         Parameters="ElectionIndex=@CurrentElectionIndex" 
+                         k:No="MoveNextElection" 
+                         k:Yes="NoticeSlaveAboutAddInfoEnteredAndGenerateVotingResultProtocol"/> 
 
-Parameters="ReportType=PreliminaryElectionProtocol;ReportParameters=@PreliminaryElectionProtoco
 
-lParameters;ImplicitPrint=@@True;NeedPrintCopies=@@False" 
+      <Activity Name="NoticeSlaveAboutAddInfoEnteredAndGenerateVotingResultProtocol" 
+                Execute="NoticeSlaveAboutAddInfoEnteredAndGenerateVotingResultProtocol"/> 
 
-                       k:Yes="MoveNextElectionForPrinting" k:No="MoveNextElectionForPrinting"/> 
 
- 
+      <ReferenceActivity Name="SaveVotingResults" Execute="SaveVotingResultsActivity" 
+                         k:Yes="SayPrintAdditionalCopiesOfProtocol"/> 
 
-    <!--говорим: распечатать дополнительные копии протокола?--> 
 
-    <ReferenceActivity Name="PrintMoreCopies" Execute="Common.SayAndWaitYesOrNo" 
+      <ReferenceActivity Name="SayPrintAdditionalCopiesOfProtocol" Execute="Common.SayAndWaitYesOrNo" 
+                         k:Yes="PrintElectionProtocolAddCopies" k:No="MoveNextElection"/> 
 
-                       Parameters="Parameters=@CurrentElectionNumber" 
 
-                       k:Yes="ResetElectionEnumerator" k:No="MoveFirstElection"/> 
+      <ReferenceActivity Name="PrintElectionProtocolAddCopies" Execute="PrintingActivity" 
+                         Parameters=" 
+                             ReportType=ElectionProtocol; 
+                             ReportParameters=@ElectionProtocolParameters; 
+                             NotGenerateNewReport=@@True; 
+                             NeedCopiesCountNumber=@@True; 
+                             ImplicitPrint=@@True" 
+                         DefaultNextActivity="MoveNextElection"/> 
 
-     
 
-    <!--
+      <Activity Name="IsProtocolsGeneratedForAllElections" Execute="IsProtocolsGeneratedForAllElections" 
+                k:No="SayProtocolsGeneratedForNotAllElectionsRetry" 
+                k:Yes="NoticeSlaveAboutAddInfoEnteringFinished"/> 
 
-=====================================================================================
 
-========================--> 
+      <ReferenceActivity Name="SayProtocolsGeneratedForNotAllElectionsRetry" Execute="Common.SayAndWaitYesOrNo" 
+                         Parameters="Parameters=@ElectionNumsWithoutProtocolsPhraseParameters" 
+                         k:Yes="ResetElectionEnumerator" k:No="ResetGeneratedProtocolElectionIds"/> 
 
-    <!--сбросим счетчик выборов на 0--> 
 
-    <Activity Name="MoveFirstElection" Execute="ResetElectionEnumerator"/> 
+      <Activity Name="NoticeSlaveAboutAddInfoEnteringFinished" Execute="NoticeSlaveAboutAddInfoEnteringFinished" 
+                k:Yes="@@Return(Yes)"/> 
+    </Region> 
+    <Region Note="На подчиненном сканере"> 
 
- 
 
-    <!--перебираем выборы--> 
+      <Activity Name="WaitForAddInfoEnteredOnMaster" Execute="WaitForAddInfoEnteredOnMaster" 
+                k:Yes="GenerateVotingResultProtocolOnSlave" 
+                k:No="@@Return(Yes)"/> 
 
-    <Activity Name="MoveNextElection" Execute="MoveNextElection" 
 
-              k:Yes="IsMasterScanner2" k:No="@@Return(Yes)"/> 
-
-     
-
-    <!--проверим, является ли данный сканер Главным--> 
-
-    <ReferenceActivity Name="IsMasterScanner2" Execute="Common.IsMasterScanner" 
-
-                       k:Yes="SayReadVotingReport" k:No="WaitForAddInfoEnteredOnMaster"/> 
-
- 
-
-
-    <!--
-
-=====================================================================================
-
-========================--> 
-
-    <!--На главном сканере--> 
-
- 
-
-    <!--говорим: зачитать протокол голосования по выборам?--> 
-
-    <ReferenceActivity Name="SayReadVotingReport" Execute="Common.SayAndWaitYesOrNo" 
-
-                       Parameters="Parameters=@CurrentElectionNumber" 
-
-                       k:Yes="ReadVotingReport" k:No="EnterAdditionalInfo"/> 
-
- 
-
-    <!--зачитываем протокол голосования по выборам--> 
-
-    <ReferenceActivity Name="ReadVotingReport" Execute="ReadVotingReportActivity" 
-
-                       Parameters="ElectionIndex=@CurrentElectionIndex"/> 
-
-     
-
-    <!--ввод доп. сведений по текущим выборам--> 
-
-    <ReferenceActivity Name="EnterAdditionalInfo" Execute="EnterAdditionalInfoActivity" 
-
-                       Parameters="ElectionIndex=@CurrentElectionIndex"/> 
-
- 
-
-    <!--известим подчиненный о завершении ввода доп. сведений и  
-
-        сформируем протокол с результатами голосования--> 
-
-    <Activity Name="NoticeSlaveAboutAddInfoEnteredAndGenerateVotingResultProtocol"  
-
-              Execute="NoticeSlaveAboutAddInfoEnteredAndGenerateVotingResultProtocol"/> 
-
- 
-
-    <!--сохраним результаты голосования--> 
-
-    <ReferenceActivity Name="SaveVotingResults" Execute="SaveVotingResultsActivity" 
-
-                       k:Yes="MoveNextElection"/> 
-
-     
-
-    <!--
-
-=====================================================================================
-
-========================--> 
-
-
-    <!--На подчиненном сканере--> 
-
- 
-
-    <!--ждем завершения ввода доп. сведений по текущим выборам на главном сканере 
-
-        возвращает No, если во время ожидания главный сканер был потерян--> 
-
-    <Activity Name="WaitForAddInfoEnteredOnMaster" Execute="WaitForAddInfoEnteredOnMaster" 
-
-              k:Yes="GenerateVotingResultProtocol" k:No="@@Return(Yes)"/> 
-
-     
-
-    <!--сформируем протокол с результатами голосования--> 
-
-    <Activity Name="GenerateVotingResultProtocol" Execute="GenerateVotingResultProtocol" 
-
-              k:Yes="MoveNextElection"/> 
-
- 
-
+      <Activity Name="GenerateVotingResultProtocolOnSlave" Execute="GenerateVotingResultProtocolOnSlave" 
+                k:Yes="WaitForAddInfoEnteredOnMaster"/> 
+    </Region> 
   </CompositeActivity> 
-
- 
-
-  <ActivityParametersBinding ActivityName="SummarizingActivity.SayReadVotingReport"> 
-
-    <Parameter Name="TextFormat">Зачитать протокол по выборам {p0}?</Parameter> 
-
-    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
-
-    <Parameter Name="Sounds">read_voting_report</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="SummarizingActivity.PrintMoreCopies"> 
-
-    <Parameter Name="TextFormat">Распечатать дополнительные копии протокола?</Parameter> 
-
-    <Parameter Name="Sounds">print_additional_copies_of_protocol</Parameter> 
-
-  </ActivityParametersBinding> 
-
-   
-
-</Workflow> 
+  <ActivityParametersBindings CompositeActivityName="SummarizingActivity"> 
+    <ActivityParametersBinding ActivityName="SayReadVotingReport"> 
+      <Parameter Name="TextFormat">Зачитать результаты по выборам {p0}?</Parameter> 
+      <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+      <Parameter Name="Sounds">read_voting_report</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayPrintAdditionalCopiesOfProtocol"> 
+      <Parameter Name="TextFormat">Распечатать дополнительные копии протокола?</Parameter> 
+      <Parameter Name="Sounds">print_additional_copies_of_protocol</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayProtocolsGeneratedForNotAllElectionsRetry"> 
+      <Parameter Name="TextFormat">По выборам №: {p0-*:delim[, ]} не сформированы протоколы. Чтобы повторить ввод дополнительных сведений только по
+�ропущенным выборам, нажмите ДА, по всем выборам – нажмите НЕТ</Parameter> 
+      <Parameter Name="PhraseFormat">{s0}{p0-*}{s1}</Parameter> 
+      <Parameter Name="Sounds">[for_election_number,protocols_not_generated_retry]</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
 
 
+</Workflow>

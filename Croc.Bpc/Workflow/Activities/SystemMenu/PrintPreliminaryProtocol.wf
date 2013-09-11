@@ -1,0 +1,57 @@
+<Workflow 
+  xmlns="http://schemas.croc.ru/Workflow" 
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+  <Include Ref="Activities/Common.wf" /> 
+  <Include Ref="Activities/Printing.wf" /> 
+  <Include Ref="Activities/SystemMenu/PrintSD.wf" /> 
+
+
+  <CompositeActivity Name="PrintPreliminaryProtocolActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.PrintPreliminaryProtocolActivity, Croc.Bpc.Workflow"> 
+
+
+    <ReferenceActivity Name="IsSourceDataLoaded" Execute="Common.IsSourceDataLoaded" 
+                       k:Yes="IsVotingModeResults" k:No="SaySdNotLoaded"/> 
+
+
+    <ReferenceActivity Name="SaySdNotLoaded" Execute="Common.SayAndWaitTimeout" 
+                       Parameters="Timeout=3000;Silent=@@True" 
+                       DefaultNextActivity="@@Return(Yes)"/> 
+
+
+    <Activity Name="IsVotingModeResults" Execute="IsVotingModeResults" 
+              k:Yes="AskWantToPrintProtol" k:No="SayForbiddenTillResults"/> 
+
+
+    <ReferenceActivity Name="SayForbiddenTillResults" Execute="Common.SayAndWaitTimeout" 
+                       Parameters="Timeout=3000;Silent=@@True" 
+                       DefaultNextActivity="@@Return(Yes)"/> 
+
+
+    <ReferenceActivity Name="AskWantToPrintProtol" Execute="Common.SayAndWaitYesOrNo" 
+                       Parameters="Silent=@@True" 
+                       k:Yes="PrintPreliminaryProtocol" k:No="@@Return(Yes)"/> 
+
+
+
+
+    <ReferenceActivity Name="PrintPreliminaryProtocol" Execute="PrintingActivity" 
+                       Parameters=" 
+                             ReportType=PreliminaryElectionProtocol; 
+                             ImplicitPrint=@@True; 
+                             NeedCopiesCountNumber=@@True; 
+                             ReportParameters=@PreliminaryElectionProtocolParameters" 
+                       DefaultNextActivity="@@Return(Yes)"/> 
+  </CompositeActivity> 
+  <ActivityParametersBindings CompositeActivityName="PrintPreliminaryProtocolActivity"> 
+    <ActivityParametersBinding ActivityName="SaySdNotLoaded"> 
+      <Parameter Name="TextFormat">ИД не загружены!</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayForbiddenTillResults"> 
+      <Parameter Name="TextFormat">Доступно только при подведении итогов!</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="AskWantToPrintProtol"> 
+      <Parameter Name="TextFormat">Распечатать предварительный протокол?</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
+</Workflow>

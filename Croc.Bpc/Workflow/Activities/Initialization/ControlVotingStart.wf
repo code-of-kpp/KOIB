@@ -1,63 +1,102 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
-  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
-
- 
-
- 
-
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys" 
+  xmlns:vt="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/VotingTime"> 
   <Include Ref="Activities/Common.wf"/> 
 
-  <Include Ref="Activities/Testing/Testing.wf"/> 
-
-  <Include Ref="Activities/SystemMenu/ResetUIK.wf"/> 
-
- 
-
- 
-
-  <!--Контроль начала голосования--> 
 
   <CompositeActivity Name="ControlVotingStartActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.Initialization.ControlVotingStartActivity, Croc.Bpc.Workflow"> 
+    <Region Note="Запуск контроля начала голосования"> 
 
-                     Class="Croc.Bpc.Workflow.Activities.Initialization.ControlVotingStartActivity, Croc.Bpc.Workflow" 
 
-                     Tracking="false"> 
+      <Activity Name="CheckVotingDate" Execute="CheckVotingDate" 
+                vt:ElectionDayPassed="SayElectionDayPassed" 
+                vt:ElectionDayHasNotCome="SayWereSomeDaysToVotingStart" 
+                vt:ElectionDayNow="IsNoMoreThanMinTimeToVotingStart"/> 
 
- 
 
- 
+      <ReferenceActivity Name="SayElectionDayPassed" Execute="Common.SayPhrase" 
+                         k:Yes="@@Return(Yes)"/> 
 
-    <!--проверим, режим выборов - тренировка?--> 
 
-    <Activity Name="IsElectionModeTraining" Execute="IsElectionModeTraining" 
+      <ReferenceActivity Name="SayWereSomeDaysToVotingStart" Execute="Common.SayPhrase" 
+                         Parameters="Parameters=@DaysToVotingStart" 
+                         k:Yes="StartControlThread"/> 
 
-              k:Yes="StartControlThread" k:No="@@Return(Yes)"/> 
 
- 
+      <Activity Name="IsNoMoreThanMinTimeToVotingStart" Execute="IsNoMoreThanMinTimeToVotingStart" 
+                k:No="SayWereSomeTimeToVotingStart" 
+                k:Yes="StartControlThread"/> 
 
- 
 
-    <!--запустим поток отслеживания времени начала голосования--> 
+      <ReferenceActivity Name="SayWereSomeTimeToVotingStart" Execute="Common.SayPhrase" 
+                         Parameters="Parameters=@VotingStartRemainingTime" 
+                         k:Yes="StartControlThread"/> 
 
-    <Activity Name="StartControlThread" Execute="StartControlThread" 
 
-              Parameters="ControlPeriod=00:01:00;MinTimeToVotingStart=02:00:00" 
+      <Activity Name="StartControlThread" Execute="StartControlThread" 
+                k:Yes="@@Return(Yes)"/> 
+    </Region> 
+    <Region Note="Обработка события 'Скоро начало голосования'"> 
 
-              k:Yes="@@Return(Yes)"/> 
 
- 
+      <Activity Name="HasVotingStarted" Execute="HasVotingStarted" 
+                k:Yes="SayBeginVoting"  
+                k:No="SayWereSomeTimeToVotingStart2"/> 
 
- 
 
+
+
+      <ReferenceActivity Name="SayBeginVoting" Execute="Common.SayPhrase" 
+                         k:Yes="SetVotingWillSoonStartEventIsProcessed"/> 
+
+
+
+
+      <ReferenceActivity Name="SayWereSomeTimeToVotingStart2" Execute="Common.SayPhrase" 
+                         Parameters="Parameters=@VotingStartRemainingTime" 
+                         k:Yes="SetVotingWillSoonStartEventIsProcessed"/> 
+
+
+      <Activity Name="SetVotingWillSoonStartEventIsProcessed" Execute="SetVotingWillSoonStartEventIsProcessed" 
+                k:Yes="IsElectionModeTraining"/> 
+
+
+      <Activity Name="IsElectionModeTraining" Execute="IsElectionModeTraining" 
+                k:Yes="ResetUik"  
+                k:No="@@Return(Yes)"/> 
+
+
+      <Activity Name="ResetUik" Execute="ResetUik" 
+                k:Yes="@@Return(Yes)"/> 
+    </Region> 
   </CompositeActivity> 
-
- 
-
- 
-
+  <ActivityParametersBindings CompositeActivityName="ControlVotingStartActivity"> 
+    <ActivityParametersBinding ActivityName="SayElectionDayPassed"> 
+      <Parameter Name="TextFormat">Голосование прошло!</Parameter> 
+      <Parameter Name="Sounds">voting_day_passed</Parameter> 
+      <Parameter Name="SilentOnSlave">true</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayWereSomeDaysToVotingStart"> 
+      <Parameter Name="TextFormat">{p0:d} до голосования</Parameter> 
+      <Parameter Name="PhraseFormat">{p0:d}{s0}</Parameter> 
+      <Parameter Name="Sounds">to_voting_start_remains</Parameter> 
+      <Parameter Name="SilentOnSlave">true</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayWereSomeTimeToVotingStart"> 
+      <Parameter Name="TextFormat">{p0:hhmm} до голосования</Parameter> 
+      <Parameter Name="PhraseFormat">{p0:hhmm}{s0}</Parameter> 
+      <Parameter Name="Sounds">to_voting_start_remains</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayBeginVoting"> 
+      <Parameter Name="TextFormat">Время голосования наступило!</Parameter> 
+      <Parameter Name="Sounds">begin_voting</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayWereSomeTimeToVotingStart2"> 
+      <Parameter Name="TextFormat">{p0:hhmm} до голосования</Parameter> 
+      <Parameter Name="PhraseFormat">{p0:hhmm}{s0}</Parameter> 
+      <Parameter Name="Sounds">to_voting_start_remains</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
 </Workflow>
-
-

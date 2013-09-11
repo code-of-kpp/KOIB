@@ -1,309 +1,207 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
   xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
-
- 
-
- 
-
   <Include Ref="Activities/Common.wf" /> 
-
-  <Include Ref="Activities/SystemMenu/ResetSoft.wf" /> 
-
   <Include Ref="Activities/SystemMenu/DateTimeSettings.wf" /> 
-
-  <Include Ref="Activities/SystemMenu/LimitSettings.wf" /> 
-
+  <Include Ref="Activities/SystemMenu/PrintSD.wf" /> 
+  <Include Ref="Activities/SystemMenu/PrintPreliminaryProtocol.wf" /> 
+  <Include Ref="Activities/SystemMenu/DssLevelSettings.wf" /> 
   <Include Ref="Activities/SystemMenu/PaperSettings.wf" /> 
-
-  <Include Ref="Activities/SystemMenu/ShutDownDSS.wf" /> 
-
+  <Include Ref="Activities/SystemMenu/MarkerSettings.wf" /> 
+  <Include Ref="Activities/SystemMenu/BlankPaperTypeSettings.wf" /> 
+  <Include Ref="Activities/SystemMenu/DssEnabledSettings.wf" /> 
   <Include Ref="Activities/SystemMenu/BadBulletinSettings.wf" /> 
-
   <Include Ref="Activities/SystemMenu/StampSettings.wf" /> 
+  <Include Ref="Activities/SystemMenu/ExitSoft.wf" /> 
+  <Include Ref="Activities/SystemMenu/ResetConfig.wf" /> 
+  <Include Ref="Activities/SystemMenu/ResetSoft.wf" /> 
+  <Include Ref="Activities/SystemMenu/ResetUik.wf" /> 
 
-  <Include Ref="Activities/SystemMenu/VolumeSettings.wf" /> 
-
-  <Include Ref="Activities/SystemMenu/ResetUIK.wf" /> 
-
- 
-
- 
-
-  <!--Системное меню--> 
 
   <CompositeActivity Name="SystemMenuActivity" 
-
                      Class="Croc.Bpc.Workflow.Activities.SystemMenu.SystemMenuActivity, Croc.Bpc.Workflow" 
-
                      Tracking="false"> 
+    <Region Note="Проверка, что рабочий конфиг уже загружен"> 
 
- 
 
- 
+      <Activity Name="CheckWorkingConfigLoaded" Execute="CheckWorkingConfigLoaded" 
+                k:Yes="ReadPassword" k:No="SayWorkingConfigNotLoaded"/> 
 
-    <!--запрашиваем пароль--> 
 
-    <ReferenceActivity Name="ReadPassword" Execute="Common.SayAndReadValue" 
+      <ReferenceActivity Name="SayWorkingConfigNotLoaded" Execute="Common.SayAndWaitTimeout" 
+                         Parameters="Timeout=5000;Silent=@@True" 
+                         k:Yes="@@Return(Yes)"/> 
+    </Region> 
 
-                       Parameters="Required=@@True;Silent=@@True;PasswordChar=*" 
 
-                       k:Yes="AcceptPassword" k:No="@@Return(Yes)"/> 
+    <Region Note="Авторизация"> 
 
-	  <!--проверка пароля--> 
 
-	  <Activity Name="AcceptPassword" Execute="AcceptPassword"  
+      <ReferenceActivity Name="ReadPassword" Execute="Common.SayAndReadValue" 
+                         Parameters="Required=@@True;Silent=@@True;PasswordChar=*" 
+                         k:Yes="AcceptPassword" k:No="@@Return(Yes)"/> 
 
-              k:Yes="GoToResetSoft" k:No="SayBadPassword"/> 
 
-    <!--индикатор, что неверный пароль--> 
+      <Activity Name="AcceptPassword" Execute="AcceptPassword" 
+                k:Yes="GoToDateTimeSettings" k:No="SayBadPassword"/> 
 
-    <ReferenceActivity Name="SayBadPassword" Execute="Common.SayAndWaitTimeout" 
 
-                       Parameters="Timeout=5000;Silent=@@True" 
+      <ReferenceActivity Name="SayBadPassword" Execute="Common.SayAndWaitTimeout" 
+                         Parameters="Timeout=5000;Silent=@@True" 
+                         k:Yes="ReadPassword"/> 
+    </Region> 
+    <Region Note="Пункты меню"> 
 
-                       k:Yes="ReadPassword"/> 
 
- 
+      <ReferenceActivity Name="GoToDateTimeSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                         Parameters="Silent=@@True" 
+                         k:No="GoToPrintSd" k:Back="ExitMenu"/> 
+      <ReferenceActivity Name="DateTimeSettings" Execute="DateTimeSettingsActivity"/> 
 
- 
 
-	  <!--Перейти к сбросу ПО?--> 
+      <ReferenceActivity Name="GoToPrintSd" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                         Parameters="Silent=@@True" 
+                         k:No="GoToPrintPreliminaryProtocol" k:Back="GoToDateTimeSettings"/> 
+      <ReferenceActivity Name="PrintSd" Execute="PrintSDActivity"/> 
 
-	  <ReferenceActivity Name="GoToResetSoft" Execute="Common.SayAndWaitYesOrNoOrBack" 
 
+      <ReferenceActivity Name="GoToPrintPreliminaryProtocol" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                         Parameters="Silent=@@True" 
+                         k:No="GoToPaperSettings" k:Back="GoToPrintSd"/> 
+      <ReferenceActivity Name="PrintPreliminaryProtocol" Execute="PrintPreliminaryProtocolActivity"/> 
+
+
+      <ReferenceActivity Name="GoToPaperSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                         Parameters="Silent=@@True" 
+                         k:No="GoToBlankPaperTypeSettings" k:Back="GoToPrintPreliminaryProtocol"/> 
+      <ReferenceActivity Name="PaperSettings" Execute="PaperSettingsActivity"/> 
+
+
+      <ReferenceActivity Name="GoToBlankPaperTypeSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                         Parameters="Silent=@@True" 
+                         k:No="GoToDssLevelSettings" k:Back="GoToPaperSettings"/> 
+      <ReferenceActivity Name="BlankPaperTypeSettings" Execute="BlankPaperTypeSettingsActivity"/> 
+
+
+      <ReferenceActivity Name="GoToDssLevelSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                         Parameters="Silent=@@True" 
+                         k:No="GoToDssEnabledSettings" k:Back="GoToBlankPaperTypeSettings"/> 
+      <ReferenceActivity Name="DssLevelSettings" Execute="DssLevelSettingsActivity"/>     
+
+
+
+
+      <ReferenceActivity Name="GoToDssEnabledSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                         Parameters="Silent=@@True" 
+                         k:No="GoToMarkerSettings" k:Back="GoToDssLevelSettings"/> 
+      <ReferenceActivity Name="DssEnabledSettings" Execute="DssEnabledSettingsActivity"/> 
+
+
+      <ReferenceActivity Name="GoToMarkerSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                         Parameters="Silent=@@True" 
+                         k:No="GoToBadBulletinSettings" k:Back="GoToDssEnabledSettings"/> 
+      <ReferenceActivity Name="MarkerSettings" Execute="MarkerSettingsActivity"/> 
+
+
+      <ReferenceActivity Name="GoToBadBulletinSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                         Parameters="Silent=@@True" 
+                         k:No="GoToStampSettings" k:Back="GoToMarkerSettings"/> 
+      <ReferenceActivity Name="BadBulletinSettings" Execute="BadBulletinSettingsActivity"/> 
+
+
+      <ReferenceActivity Name="GoToStampSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                         Parameters="Silent=@@True" 
+                         k:No="GoToExitSoft" k:Back="GoToBadBulletinSettings"/> 
+      <ReferenceActivity Name="StampSettings" Execute="StampSettingsActivity"/> 
+
+
+
+
+      <ReferenceActivity Name="GoToExitSoft" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                         Parameters="Silent=@@True" 
+                         k:No="GoToResetConfig" k:Back="GoToStampSettings"/> 
+      <ReferenceActivity Name="ExitSoft" Execute="ExitSoftActivity"/> 
+
+
+      <ReferenceActivity Name="GoToResetConfig" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                         Parameters="Silent=@@True" 
+                         k:No="GoToResetSoft" k:Back="GoToExitSoft"/> 
+      <ReferenceActivity Name="ResetConfig" Execute="ResetConfigActivity"/> 
+
+
+      <ReferenceActivity Name="GoToResetSoft" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                         Parameters="Silent=@@True" 
+                         k:No="GoToResetUik" k:Back="GoToResetConfig"/> 
+      <ReferenceActivity Name="ResetSoft" Execute="ResetSoftActivity"/> 
+
+
+      <ReferenceActivity Name="GoToResetUik" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                         Parameters="Silent=@@True" 
+                         k:No="ExitMenu" k:Back="GoToResetSoft"/> 
+      <ReferenceActivity Name="ResetUik" Execute="ResetUikActivity"/> 
+    </Region> 
+
+
+    <ReferenceActivity Name="ExitMenu" Execute="Common.SayAndWaitYesOrNoOrBack" 
                        Parameters="Silent=@@True" 
-
-                       k:No="GoToResetUIK" k:Back="ExitSystemMenu"/> 
-
-    <!--Сброс ПО--> 
-
-    <ReferenceActivity Name="ResetSoft" Execute="ResetSoftActivity"/> 
-
- 
-
- 
-
-    <!--Перейти к сбросу УИК?--> 
-
-    <ReferenceActivity Name="GoToResetUIK" Execute="Common.SayAndWaitYesOrNoOrBack" 
-
-                       Parameters="Silent=@@True" 
-
-                       k:No="GoToDateTimeSettings" k:Back="GoToResetSoft"/> 
-
-    <!--Сброс УИК--> 
-
-    <ReferenceActivity Name="ResetUIK" Execute="ResetUIKActivity"/> 
-
-
- 
- 
-
-    <!--Перейти к изменению даты и времени?--> 
-
-	  <ReferenceActivity Name="GoToDateTimeSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
-
-                       Parameters="Silent=@@True" 
-
-                       k:No="GoToLimitSettings" k:Back="GoToResetUIK"/> 
-
-    <!--изменение даты и времени--> 
-
-    <ReferenceActivity Name="DateTimeSettings" Execute="DateTimeSettingsActivity"/> 
-
- 
-
- 
-
-    <!--Перейти к установке порогов?--> 
-
-	  <ReferenceActivity Name="GoToLimitSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
-
-                       Parameters="Silent=@@True" 
-
-                       k:No="GoToPaperSettings" k:Back="GoToDateTimeSettings"/> 
-
-    <!--установка порогов--> 
-
-    <ReferenceActivity Name="LimitSettings" Execute="LimitSettingsActivity"/> 
-
- 
-
- 
-
-    <!--Перейти к заданию плотности бумаги?--> 
-
-	  <ReferenceActivity Name="GoToPaperSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
-
-                       Parameters="Silent=@@True" 
-
-                       k:No="GoToShutDownDDL" k:Back="GoToLimitSettings"/> 
-
-    <!--задание плотности бумаги--> 
-
-    <ReferenceActivity Name="PaperSettings" Execute="PaperSettingsActivity"/> 
-
- 
-
- 
-
-    <!--Перейти к отключению ДДЛ?--> 
-
-	  <ReferenceActivity Name="GoToShutDownDDL" Execute="Common.SayAndWaitYesOrNoOrBack" 
-
-                       Parameters="Silent=@@True" 
-
-                       k:No="GoToBadBulletinSettings" k:Back="GoToPaperSettings"/> 
-
-    <!--отключение ДДЛ--> 
-
-    <ReferenceActivity Name="ShutDownDSS" Execute="ShutDownDSSActivity"/> 
-
- 
-
- 
-
-    <!--Перейти к настройке реверса НУФ?--> 
-
-	  <ReferenceActivity Name="GoToBadBulletinSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
-
-                       Parameters="Silent=@@True" 
-
-                       k:No="GoToStampSettings" k:Back="GoToShutDownDDL"/> 
-
-    <!--настройка реверса НУФ--> 
-
-    <ReferenceActivity Name="BadBulletinSettings" Execute="BadBulletinSettingsActivity"/> 
-
- 
-
- 
-
-    <!--Перейти к настройке контроля печати УИК?--> 
-
-    <ReferenceActivity Name="GoToStampSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
-
-                       Parameters="Silent=@@True" 
-
-                       k:No="GoToVolumeSettings" k:Back="GoToBadBulletinSettings"/> 
-
-    <!--настройка контроля печати УИК--> 
-
-    <ReferenceActivity Name="StampSettings" Execute="StampSettingsActivity"/> 
-
- 
-
- 
-
-
-    <!--Перейти к изменению громкости?--> 
-
-	  <ReferenceActivity Name="GoToVolumeSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
-
-                       Parameters="Silent=@@True" 
-
-                       k:No="ExitSystemMenu" k:Back="GoToStampSettings"/> 
-
-    <!--изменение громкости--> 
-
-    <ReferenceActivity Name="VolumeSettings" Execute="VolumeSettingsActivity"/> 
-
- 
-
- 
-
-    <!--Выйти из меню?--> 
-
-	  <ReferenceActivity Name="ExitSystemMenu" Execute="Common.SayAndWaitYesOrNoOrBack" 
-
-                       Parameters="Silent=@@True" 
-
-                       k:No="GoToResetSoft" k:Back="GoToVolumeSettings" 
-
+                       k:No="GoToDateTimeSettings" k:Back="GoToResetUik" 
                        k:Yes="@@Return(Yes)"/> 
-
   </CompositeActivity> 
-
- 
-
- 
-
-  <ActivityParametersBinding ActivityName="SystemMenuActivity.ReadPassword"> 
-
-    <Parameter Name="TextFormat">Пароль: ____</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToResetSoft"> 
-
-	  <Parameter Name="TextFormat">Перейти к сбросу ПО?</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToResetUIK"> 
-
-    <Parameter Name="TextFormat">Перейти к сбросу УИК?</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToDateTimeSettings"> 
-
-    <Parameter Name="TextFormat">Перейти к изменению даты и времени?</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToLimitSettings"> 
-
-    <Parameter Name="TextFormat">Перейти к установке порогов?</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToPaperSettings"> 
-
-    <Parameter Name="TextFormat">Перейти к заданию плотности бумаги?</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToShutDownDDL"> 
-
-    <Parameter Name="TextFormat">Перейти к отключению ДДЛ?</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToBadBulletinSettings"> 
-
-    <Parameter Name="TextFormat">Перейти к настройке реверса НУФ?</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToStampSettings"> 
-
-    <Parameter Name="TextFormat">Перейти к настройке контроля печати УИК?</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToVolumeSettings"> 
-
-    <Parameter Name="TextFormat">Перейти к изменению громкости?</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="SystemMenuActivity.SayBadPassword"> 
-
-    <Parameter Name="TextFormat">Неправильный пароль!</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="SystemMenuActivity.ExitSystemMenu"> 
-
-
-    <Parameter Name="TextFormat">Выйти из меню?</Parameter> 
-
-  </ActivityParametersBinding> 
-
+  <ActivityParametersBindings CompositeActivityName="SystemMenuActivity"> 
+    <ActivityParametersBinding ActivityName="SayWorkingConfigNotLoaded"> 
+      <Parameter Name="TextFormat">Конфигурация еще не загружена!</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="ReadPassword"> 
+      <Parameter Name="TextFormat">Пароль: ____</Parameter> 
+      <Parameter Name="HelpSounds">no_for_exit</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayBadPassword"> 
+      <Parameter Name="TextFormat">Неправильный пароль!</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="GoToDateTimeSettings"> 
+      <Parameter Name="TextFormat">> дата и время</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="GoToPrintSd"> 
+      <Parameter Name="TextFormat">> печать ИД</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="GoToPrintPreliminaryProtocol"> 
+      <Parameter Name="TextFormat">> печать предварительного протокола</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="GoToPaperSettings"> 
+      <Parameter Name="TextFormat">> плотность бумаги</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="GoToBlankPaperTypeSettings"> 
+      <Parameter Name="TextFormat">> типы бумаги бланков</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="GoToDssLevelSettings"> 
+      <Parameter Name="TextFormat">> пороги ДДЛ</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="GoToDssEnabledSettings"> 
+      <Parameter Name="TextFormat">> отключение ДДЛ</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="GoToMarkerSettings"> 
+      <Parameter Name="TextFormat">> параметры маркера</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="GoToBadBulletinSettings"> 
+      <Parameter Name="TextFormat">> реверс НУФ</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="GoToStampSettings"> 
+      <Parameter Name="TextFormat">> контроль печати УИК</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="GoToExitSoft"> 
+      <Parameter Name="TextFormat">> завершение работы ПО</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="GoToResetConfig"> 
+      <Parameter Name="TextFormat">> сброс конфигурации</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="GoToResetSoft"> 
+      <Parameter Name="TextFormat">> сброс ПО</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="GoToResetUik"> 
+      <Parameter Name="TextFormat">> сброс УИК</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="ExitMenu"> 
+      <Parameter Name="TextFormat">Выйти из меню?</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
 </Workflow>
-
-

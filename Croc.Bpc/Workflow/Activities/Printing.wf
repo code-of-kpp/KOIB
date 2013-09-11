@@ -1,176 +1,106 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
   xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
-
- 
-
- 
-
   <Include Ref="Activities/Common.wf" /> 
 
- 
 
- 
-
-	<!--Печать отчетов--> 
-
-	<CompositeActivity Name="PrintingActivity" 
-
+  <CompositeActivity Name="PrintingActivity" 
                      Class="Croc.Bpc.Workflow.Activities.PrintingActivity, Croc.Bpc.Workflow" 
-
                      Tracking="false"> 
 
- 
 
- 
+    <Activity Name="CheckGenerateNewReport" Execute="CheckGenerateNewReport"/> 
 
-		<!--проверка безусловной печати--> 
 
-		<Activity Name="CheckNeedToImplicitPrint" Execute="CheckNeedToImplicitPrint" 
 
+
+    <Activity Name="CheckNeedToImplicitPrint" Execute="CheckNeedToImplicitPrint" 
               k:Yes="FindPrinter" k:No="SayPrintReport"/> 
 
- 
 
- 
-
-		<!--говорим: распечатать <название отчета>?--> 
-
-		<ReferenceActivity Name="SayPrintReport" Execute="Common.SayAndWaitYesOrNo" 
-
+    <ReferenceActivity Name="SayPrintReport" Execute="Common.SayAndWaitYesOrNo" 
                        Parameters="Sounds=@ReportTypeSound;Parameters=@ReportTypeName" 
-
-                       k:Yes="FindPrinter" k:No="@@Return(Yes)"/> 
-
- 
-
- 
-
-		<!--найдем принтер на текущем сканере--> 
-
-		<Activity Name="FindPrinter" Execute="FindPrinter" 
-
-              k:Yes="PrintReport" k:No="FindRemotePrinter"/> 
-
- 
-
- 
-
-		<!--найдем принтер на удаленном сканере--> 
-
-		<Activity Name="FindRemotePrinter" Execute="FindRemotePrinter" 
-
-              k:Yes="PrintReport" k:No="SayPrinterNotFound"/> 
-
- 
-
- 
-
-		<!--печатаем отчет--> 
-
-		<Activity Name="PrintReport" Execute="PrintReport" 
-
-              k:Yes="CheckNeedPrintCopies" k:No="SayPrintingError"/> 
-
- 
-
- 
-
-		<!--проверка нужны ли копии--> 
-
-		<Activity Name="CheckNeedPrintCopies" Execute="CheckNeedPrintCopies"  
-
-              k:Yes="SayPrintOneMoreCopy" k:No="@@Return(Yes)"/> 
-
- 
-
- 
-
-		<!--говорим: ошибка печати--> 
-
-		<ReferenceActivity Name="SayPrintingError" Execute="Common.SayPhrase" 
-
-                       k:Yes="SayTryToPrintOnesMore"/> 
-
- 
-
- 
-
-
-		<!--сообщение: принтер не найден...--> 
-
-		<ReferenceActivity Name="SayPrinterNotFound" Execute="Common.SayPhrase" 
-
-                       k:Yes="SayTryToPrintOnesMore"/> 
-
- 
-
- 
-
-		<!--говорим: для поворной печати нажмите ДА, для отмены НЕТ--> 
-
-		<ReferenceActivity Name="SayTryToPrintOnesMore" Execute="Common.SayAndWaitYesOrNo" 
-
                        k:Yes="FindPrinter" k:No="@@Return(No)"/> 
 
- 
 
- 
+    <Activity Name="FindPrinter" Execute="FindPrinter" 
+              k:Yes="CheckNeedCopiesNumber" k:No="FindRemotePrinter"/> 
 
-		<!--говорим: распечатать еще одну копию--> 
 
-		<ReferenceActivity Name="SayPrintOneMoreCopy" Execute="Common.SayAndWaitYesOrNo" 
+    <Activity Name="FindRemotePrinter" Execute="FindRemotePrinter" 
+              k:Yes="CheckNeedCopiesNumber" k:No="SayPrinterNotFound"/> 
 
+
+    <Activity Name="CheckNeedCopiesNumber" Execute="CheckNeedCopiesNumber" 
+              k:Yes="ReadCopiesNumber" k:No="CreateReport"/> 
+
+
+    <ReferenceActivity Name="ReadCopiesNumber" Execute="Common.SayAndReadValue" 
+                       Parameters="Required=@@True" 
+                       k:Yes="AsseptCopiesNumberValue" k:No="@@Return(No)"/> 
+
+
+    <Activity Name="AsseptCopiesNumberValue" Execute="AsseptCopiesNumberValue"/> 
+
+
+
+
+    <Activity Name="CreateReport" Execute="CreateReport" 
+              k:Yes="PrintReport" k:No="SayPrintingError"/> 
+
+
+    <Activity Name="PrintReport" Execute="PrintReport" 
+              k:Yes="CheckNeedPrintCopies" k:No="SayPrintingError"/> 
+
+
+
+
+    <Activity Name="CheckNeedPrintCopies" Execute="CheckNeedPrintCopies" 
+              k:Yes="SayPrintOneMoreCopy" k:No="@@Return(Yes)"/> 
+
+
+    <ReferenceActivity Name="SayPrintingError" Execute="Common.SayPhrase" 
+                       k:Yes="SayTryToPrintOnesMore"/> 
+
+
+    <ReferenceActivity Name="SayPrinterNotFound" Execute="Common.SayPhrase" 
+                       k:Yes="SayTryToPrintOnesMore"/> 
+
+
+    <ReferenceActivity Name="SayTryToPrintOnesMore" Execute="Common.SayAndWaitYesOrNo" 
+                       k:Yes="FindPrinter" k:No="@@Return(No)"/> 
+
+
+    <ReferenceActivity Name="SayPrintOneMoreCopy" Execute="Common.SayAndWaitYesOrNo" 
                        k:Yes="FindPrinter" k:No="@@Return(Yes)"/> 
-
- 
-
- 
-
-	</CompositeActivity> 
-
- 
-
- 
-
-	<ActivityParametersBinding ActivityName="PrintingActivity.SayPrintReport"> 
-
-		<Parameter Name="TextFormat">Распечатать {p0}?</Parameter> 
-
-	</ActivityParametersBinding> 
-
-	<ActivityParametersBinding ActivityName="PrintingActivity.SayPrintingError"> 
-
-		<Parameter Name="TextFormat">Ошибка печати</Parameter> 
-
-		<Parameter Name="Sounds">print_error</Parameter> 
-
-	</ActivityParametersBinding> 
-
-	<ActivityParametersBinding ActivityName="PrintingActivity.SayPrinterNotFound"> 
-
-		<Parameter Name="TextFormat">Нет принтера</Parameter> 
-
-		<Parameter Name="Sounds">printer_not_connected</Parameter> 
-
-	</ActivityParametersBinding> 
-
-	<ActivityParametersBinding ActivityName="PrintingActivity.SayPrintOneMoreCopy"> 
-
-		<Parameter Name="TextFormat">Распечатать еще одну копию?</Parameter> 
-
-		<Parameter Name="Sounds">print_one_more_copy</Parameter> 
-
-	</ActivityParametersBinding> 
-
-	<ActivityParametersBinding ActivityName="PrintingActivity.SayTryToPrintOnesMore"> 
-
-		<Parameter Name="Sounds">try_to_print_ones_more</Parameter> 
-
-	</ActivityParametersBinding> 
-
+  </CompositeActivity> 
+  <ActivityParametersBindings CompositeActivityName="PrintingActivity"> 
+    <ActivityParametersBinding ActivityName="SayPrintReport"> 
+      <Parameter Name="TextFormat">Распечатать {p0}?</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="PrintReport"> 
+      <Parameter Name="Text">Печать выполняется, подождите...</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayPrintingError"> 
+      <Parameter Name="TextFormat">Ошибка печати</Parameter> 
+      <Parameter Name="Sounds">print_error</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayPrinterNotFound"> 
+      <Parameter Name="TextFormat">Нет принтера</Parameter> 
+      <Parameter Name="Sounds">printer_not_connected</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayPrintOneMoreCopy"> 
+      <Parameter Name="TextFormat">Распечатать копию?</Parameter> 
+      <Parameter Name="Sounds">print_copy</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayTryToPrintOnesMore"> 
+      <Parameter Name="Sounds">try_to_print_ones_more</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="ReadCopiesNumber"> 
+      <Parameter Name="TextFormat">Число копий: __</Parameter> 
+      <Parameter Name="PhraseFormat">{s0}</Parameter> 
+      <Parameter Name="Sounds">enter_copies_number</Parameter> 
+      <Parameter Name="StartTimeout">0:0:03</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
 </Workflow>
-
-

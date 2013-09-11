@@ -1,0 +1,24 @@
+<Workflow 
+  xmlns="http://schemas.croc.ru/Workflow" 
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+  <Include Ref="Activities/Common.wf" /> 
+
+
+  <CompositeActivity Name="ResetUikActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.ResetUikActivity, Croc.Bpc.Workflow"> 
+
+
+    <ReferenceActivity Name="AskWantToResetUik" Execute="Common.SayAndWaitYesOrNo" 
+                       Parameters="Silent=@@True" 
+                       k:Yes="ResetUik" k:No="@@Return(Yes)"/> 
+
+
+    <Activity Name="ResetUik" Execute="ResetUik" 
+                       k:Yes="@@Return(Yes)"/> 
+  </CompositeActivity> 
+  <ActivityParametersBindings CompositeActivityName="ResetUikActivity"> 
+    <ActivityParametersBinding ActivityName="AskWantToResetUik"> 
+      <Parameter Name="TextFormat">Сбросить УИК?</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
+</Workflow>

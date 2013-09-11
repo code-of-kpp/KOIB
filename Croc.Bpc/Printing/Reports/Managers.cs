@@ -1,182 +1,60 @@
-using System; 
-
-using System.Collections.Generic; 
-
-using System.Linq; 
-
-using System.Text; 
-
-using Croc.Core; 
-
-using Croc.Bpc.Election; 
-
 using Croc.Bpc.FileSystem; 
-
-using Croc.Bpc.Common.Interfaces; 
-
- 
-
- 
-
+using Croc.Bpc.Scanner; 
+using Croc.Bpc.Voting; 
+using Croc.Core; 
 namespace Croc.Bpc.Printing.Reports 
-
 { 
-
-    /// <summary> 
-
-    /// Класс для доступа к менеджерам 
-
-    /// </summary> 
-
-    /// <remarks>FIX: необходимость в этом классе возникла из-за того, что при загрузке шаблонов, 
-
-    /// когда они десериализуются, то никак не добраться до нужных данных, кроме как через статич. 
-
-    /// св-ва. Надеюсь, это временно решение и рефакторинг не за горами</remarks> 
-
     internal static class Managers 
-
     { 
-
-        private static IPrintingManager _printingManager; 
-
-        /// <summary> 
-
-        /// Менеджер печати 
-
-        /// </summary> 
-
-        public static IPrintingManager PrintingManager 
-
+        private static PrintingManager s_printingManager; 
+        public static PrintingManager PrintingManager 
         { 
-
             get 
-
             { 
-
-                if (_printingManager == null) 
-
-                    _printingManager = CoreApplication.Instance.GetSubsystemOrThrow<IPrintingManager>(); 
-
- 
-
- 
-
-                return _printingManager; 
-
+                if (s_printingManager == null) 
+                    s_printingManager = CoreApplication.Instance.GetSubsystemOrThrow<PrintingManager>(); 
+                return s_printingManager; 
             } 
-
         } 
-
- 
-
- 
-
-        private static IElectionManager _electionManager; 
-
-        /// <summary> 
-
-        /// Менеджер выборов 
-
-        /// </summary> 
-
+        private static IElectionManager s_electionManager; 
         public static IElectionManager ElectionManager 
-
         { 
-
             get 
-
             { 
-
-                if (_electionManager == null) 
-
-                    _electionManager = CoreApplication.Instance.GetSubsystemOrThrow<IElectionManager>(); 
-
- 
-
- 
-
-                return _electionManager; 
-
-
+                if (s_electionManager == null) 
+                    s_electionManager = CoreApplication.Instance.GetSubsystemOrThrow<IElectionManager>(); 
+                return s_electionManager; 
             } 
-
         } 
-
- 
-
- 
-
-        private static IFileSystemManager _fsManager; 
-
-        /// <summary> 
-
-        /// Менеджер файлов 
-
-        /// </summary> 
-
+        private static IVotingResultManager s_votingResultManager; 
+        public static IVotingResultManager VotingResultManager 
+        { 
+            get 
+            { 
+                if (s_votingResultManager == null) 
+                    s_votingResultManager = CoreApplication.Instance.GetSubsystemOrThrow<IVotingResultManager>(); 
+                return s_votingResultManager; 
+            } 
+        } 
+        private static IFileSystemManager s_fileSystemManager; 
         public static IFileSystemManager FileSystemManager 
-
         { 
-
             get 
-
             { 
-
-                if (_fsManager == null) 
-
-                    _fsManager = CoreApplication.Instance.GetSubsystemOrThrow<IFileSystemManager>(); 
-
- 
-
- 
-
-                return _fsManager; 
-
+                if (s_fileSystemManager == null) 
+                    s_fileSystemManager = CoreApplication.Instance.GetSubsystemOrThrow<IFileSystemManager>(); 
+                return s_fileSystemManager; 
             } 
-
         } 
-
- 
-
- 
-
-        private static IScannersInfo _scannersInfo; 
-
-        /// <summary> 
-
-        /// Интерфейс для получения информации о сканерах 
-
-        /// </summary> 
-
+        private static IScannersInfo s_scannersInfo; 
         public static IScannersInfo ScannersInfo 
-
         { 
-
             get 
-
             { 
-
-                if (_scannersInfo == null) 
-
-                    _scannersInfo = CoreApplication.Instance.FindSubsystemImplementsInterfaceOrThrow<IScannersInfo>(); 
-
- 
-
- 
-
-                return _scannersInfo; 
-
+                if (s_scannersInfo == null) 
+                    s_scannersInfo = CoreApplication.Instance.FindSubsystemImplementsInterfaceOrThrow<IScannersInfo>(); 
+                return s_scannersInfo; 
             } 
-
         } 
-
     } 
-
- 
-
- 
-
 }
-
-

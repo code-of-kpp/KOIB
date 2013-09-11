@@ -1,430 +1,99 @@
 using System; 
-
-using Croc.Workflow.ComponentModel; 
-
 using System.Threading; 
-
- 
-
- 
-
+using Croc.Core; 
+using Croc.Core.Extensions; 
+using Croc.Core.Utils.Threading; 
+using Croc.Workflow.ComponentModel; 
 namespace Croc.Workflow.Runtime 
-
 { 
-
     public class WorkflowInstance 
-
     { 
-
-        /// <summary> 
-
-        /// Идентификатор экземпляра потока работ 
-
-        /// </summary> 
-
         public readonly Guid InstanceId; 
-
-        /// <summary> 
-
-        /// Исполняющая среда 
-
-        /// </summary> 
-
-        public WorkflowRuntime Runtime 
-
-        { 
-
-            get; 
-
-            private set; 
-
-        } 
-
-        /// <summary> 
-
-        /// Контекст выполнения экземпляра потока работ 
-
-        /// </summary> 
-
-        public WorkflowExecutionContext ExecutionContext 
-
-        { 
-
-            get; 
-
-            private set; 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конструктор 
-
-        /// </summary> 
-
-        /// <param name="runtime"></param> 
-
-        /// <param name="executionContext"></param> 
-
+        public readonly WorkflowRuntime Runtime; 
+        public readonly WorkflowExecutionContext ExecutionContext; 
         internal WorkflowInstance(Guid instanceId, WorkflowRuntime runtime, WorkflowExecutionContext executionContext) 
-
         { 
-
             CodeContract.Requires(instanceId != Guid.Empty); 
-
             CodeContract.Requires(runtime != null); 
-
             CodeContract.Requires(executionContext != null); 
-
- 
-
- 
-
             InstanceId = instanceId; 
-
             Runtime = runtime; 
-
             ExecutionContext = executionContext; 
-
             ExecutionContext.SetWorkflowInstance(this); 
-
         } 
-
- 
-
- 
-
-
         #region Выполнение потока работ 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Нить выполнения рабочего потока 
-
-        /// </summary> 
-
-        private Thread _executionThread; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Запуск выполнения данного экземпляра потока работ 
-
-        /// </summary> 
-
         public void Start() 
-
         { 
-
-            // запускаем поток выполнения 
-
-            _executionThread = new Thread(new ThreadStart(ExecuteWorkflowMethod));             
-
-            _executionThread.Start(); 
-
+            ThreadUtils.StartBackgroundThread(ExecuteWorkflowMethod); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Прекращение работы экземпляра потока работ 
-
-        /// </summary> 
-
         public void Stop() 
-
         { 
-
-            ExecutionContext.InterruptExecution(); 
-
+            ExecutionContext.StopExecution(); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Аварийное прекращение работы экземпляра потока работ 
-
-        /// </summary> 
-
-        public void Abort() 
-
+        public void GoToActivity(string activityName) 
         { 
-
-            if (_executionThread != null) 
-
-                _executionThread.Abort(); 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Перейти к выполнению действия 
-
-        /// </summary> 
-
-        /// <remarks> 
-
-        /// Текущее выполнение потока работ прерывается и продолжается с заданного действия 
-
-        /// </remarks> 
-
-        /// <param name="activity">действие, выполнять которое нужно начать</param> 
-
-        /// <param name="sync">нужно ли выполнить переключение синхронно</param> 
-
-        public void GoToActivity(string activityName, bool sync) 
-
-        { 
-
             CodeContract.Requires(!string.IsNullOrEmpty(activityName)); 
-
-
- 
- 
-
             if (!ExecutionContext.Scheme.Activities.ContainsKey(activityName)) 
-
                 throw new Exception("Действие не найдено: " + activityName); 
-
- 
-
- 
-
             var activity = ExecutionContext.Scheme.Activities[activityName]; 
-
-            ExecutionContext.ToggleExecutionToActivity(activity, sync); 
-
+            GoToActivity(activity); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Перейти к выполнению действия 
-
-        /// </summary> 
-
-        /// <remarks> 
-
-        /// Текущее выполнение потока работ прерывается и продолжается с заданного действия 
-
-        /// </remarks> 
-
-        /// <param name="activity">действие, выполнять которое нужно начать</param> 
-
-        /// <param name="sync">нужно ли выполнить переключение синхронно</param> 
-
-        public void GoToActivity(Activity activity, bool sync) 
-
+        public void GoToActivity(Activity activity) 
         { 
-
-            ExecutionContext.ToggleExecutionToActivity(activity, sync); 
-
+            ExecutionContext.ToggleExecutionToActivity(activity); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Создает и запускает дочерний экземпляр  
-
-        /// </summary> 
-
-        /// <param name="rootActivity"></param> 
-
-        public WorkflowInstance StartChildWorkflow(Activity rootActivity) 
-
-        { 
-
-            //TODO: сделать 
-
-            return null; 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Метод выполнения потока работ 
-
-        /// </summary> 
-
         private void ExecuteWorkflowMethod() 
-
         { 
-
             Runtime.RaiseWorkflowStarted(this); 
-
             var activityToExecute = ExecutionContext.Scheme.RootActivity; 
-
- 
-
- 
-
+            ExecutionContext.StartExecution(); 
             while (true) 
-
             { 
-
+                var returnActivity = activityToExecute as ReturnActivity; 
+                if (returnActivity != null) 
+                { 
+                    Runtime.RaiseWorkflowCompleted(this, returnActivity.Result); 
+                    return; 
+                } 
                 try 
-
                 { 
-
                     var res = activityToExecute.Execute(ExecutionContext); 
-
-
                     Runtime.RaiseWorkflowCompleted(this, res); 
-
                 } 
-
                 catch (ActivityExecutionInterruptException ex) 
-
                 { 
-
                     try 
-
                     { 
-
                         activityToExecute = ExecutionContext.GetToggledActivity(ex); 
-
                         continue; 
-
                     } 
-
-                    catch 
-
+                    catch (Exception ex2) 
                     { 
-
-                        // если поймали исключение, то значит это прерывание выполнения 
-
-                        // было вызвано остановкой работы потока работ 
-
-                        Runtime.RaiseWorkflowCompleted(this, null); 
-
+                        Runtime.RaiseWorkflowTerminated(this, "GetToggledActivity throw: " + ex2); 
                     } 
-
                 } 
-
-                catch (ThreadAbortException ex) 
-
-                { 
-
-                    Runtime.RaiseWorkflowTerminated(this, 
-
-                        new Exception("Выполнение потока работ неожиданно прервано", ex)); 
-
-                } 
-
                 catch (Exception ex) 
-
                 { 
-
-                    Runtime.RaiseWorkflowTerminated(this, 
-
-                        new Exception("При выполнении потока работ произошла ошибка", ex)); 
-
+                    Runtime.RaiseWorkflowTerminated(this, ex.ToString()); 
                 } 
-
- 
-
- 
-
                 return; 
-
             } 
-
         } 
-
- 
-
- 
-
         #endregion 
-
- 
-
- 
-
         #region Equals & GetHashCode 
-
- 
-
- 
-
         public override bool Equals(object obj) 
-
         { 
-
             if (obj == null) 
-
                 return false; 
-
- 
-
- 
-
             var other = obj as WorkflowInstance; 
-
             if (other == null) 
-
                 return false; 
-
- 
-
- 
-
-
-            return other.InstanceId.Equals(this.InstanceId); 
-
+            return other.InstanceId.Equals(InstanceId); 
         } 
-
- 
-
- 
-
         public override int GetHashCode() 
-
         { 
-
             return InstanceId.GetHashCode(); 
-
         } 
-
- 
-
- 
-
         #endregion 
-
     } 
-
 }
-
-

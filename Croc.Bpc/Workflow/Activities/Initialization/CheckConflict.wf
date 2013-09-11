@@ -1,235 +1,125 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
   xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
-
- 
-
- 
-
   <Include Ref="Activities/Common.wf" /> 
-
- 
-
- 
-
   <CompositeActivity Name="CheckConflictActivity" 
-
                      Class="Croc.Bpc.Workflow.Activities.Initialization.CheckConflictActivity, Croc.Bpc.Workflow"> 
 
- 
 
- 
 
-    <!--Обозначения: 
-
-      ИД_с (StateSD)  - исходные данные состояния. Это текущие ИД, которые или были восстановлены в состоянии или 
-
-                        были обновлены на ИД, загруженные из файла 
-
-      ИД_ф (FileSD)   - исходные данные, загруженные из файла 
-
-    --> 
-
- 
-
- 
-
-    <!--является ли данный сканер Главным?--> 
 
     <ReferenceActivity Name="IsMasterScanner" Execute="Common.IsMasterScanner" 
-
                        k:Yes="IsStateRestored" k:No="WaitForMasterDecision" /> 
 
- 
-
- 
-
-    <!--ждем решение главного сканера--> 
 
     <Activity Name="WaitForMasterDecision" Execute="WaitForMasterDecision" 
-
               k:Yes="DecideToOK" k:No="DecideToConflict" /> 
 
- 
 
- 
+    <Activity Name="IsStateRestored" Execute="IsStateRestored" 
+              k:Yes="IsStateSdEqualsFileSd" k:No="SlaveScannerExistsAndHasRestoredState" /> 
 
-    <!--является ли состояние восстановленным?--> 
 
-    <ReferenceActivity Name="IsStateRestored" Execute="InitializationActivity.IsStateRestored" 
+    <Activity Name="IsStateSdEqualsFileSd" Execute="IsStateSdEqualsFileSd" 
+              k:Yes="SlaveScannerExistsAndHasRestoredState" k:No="IsElectionDayNowInStateSd" /> 
 
-                       k:Yes="IsStateSDEqualsFileSD" k:No="ReplaseStateSDToFileSD" /> 
 
- 
+    <Activity Name="IsElectionDayNowInStateSd" Execute="IsElectionDayNowInStateSd" 
+              k:Yes="SayNoRequiredSd" k:No="RememberToResetSoftOnMaster" /> 
 
- 
 
-    <!--ИД_с совпадают с ИД_ф?--> 
-
-    <Activity Name="IsStateSDEqualsFileSD" Execute="IsStateSDEqualsFileSD" 
-
-              k:Yes="SlaveScannerExistsAndHasRestoredState" k:No="IsElectionDayNowInStateSD" /> 
-
- 
-
- 
-
-    <!--в ИД_с сейчас день выборов?--> 
-
-    <Activity Name="IsElectionDayNowInStateSD" Execute="IsElectionDayNowInStateSD" 
-
-              k:Yes="SayNoRequiredSD" k:No="ResetState" /> 
-
- 
-
- 
-
-    <!--говорим, что нет нужных ИД--> 
-
-    <ReferenceActivity Name="SayNoRequiredSD" Execute="Common.SayPhrase" 
-
+    <ReferenceActivity Name="SayNoRequiredSd" Execute="Common.SayPhrase" 
                        k:Yes="DecideToConflict"/> 
 
- 
 
- 
+    <Activity Name="RememberToResetSoftOnMaster" Execute="RememberToResetSoftOnMaster" 
+                       k:Yes="SlaveScannerExistsAndHasRestoredState"/> 
 
-    <!--сбрасываем состояние в начальное--> 
-
-
-    <ReferenceActivity Name="ResetState" Execute="InitializationActivity.ResetState" 
-
-                       k:Yes="ReplaseStateSDToFileSD"/> 
-
- 
-
- 
-
-    <!--заменяем ИД_с на ИД_ф--> 
-
-    <Activity Name="ReplaseStateSDToFileSD" Execute="ReplaseStateSDToFileSD" 
-
-              k:Yes="SlaveScannerExistsAndHasRestoredState"/> 
-
- 
-
- 
-
-    <!--подчиненный сканер есть и у него состояние восстановлено?--> 
 
     <Activity Name="SlaveScannerExistsAndHasRestoredState" Execute="SlaveScannerExistsAndHasRestoredState" 
+              k:Yes="IsElectionDayNowInFileSd" k:No="NeedToResetSoft"/> 
 
-              k:Yes="IsElectionDayNowInStateSD_2" k:No="DecideToOK"/> 
 
- 
+    <Activity Name="IsElectionDayNowInFileSd" Execute="IsElectionDayNowInFileSd" 
+              k:Yes="IsElectionDayNowInStateSdOnSlaveScanner" k:No="IsElectionDayNowInStateSdOnSlaveScanner_2" /> 
 
- 
 
-    <!--в ИД_с сейчас день выборов?--> 
+    <Activity Name="IsElectionDayNowInStateSdOnSlaveScanner" Execute="IsElectionDayNowInStateSdOnSlaveScanner" 
+              k:Yes="IsSlaveStateSdEqualsFileSd_2" k:No="RememberToResetSoftOnSlave" /> 
 
-    <Activity Name="IsElectionDayNowInStateSD_2" Execute="IsElectionDayNowInStateSD" 
 
-              k:Yes="IsElectionDayNowInStateSDOnSlaveScanner" k:No="IsElectionDayNowInStateSDOnSlaveScanner_2" /> 
+    <Activity Name="IsElectionDayNowInStateSdOnSlaveScanner_2" Execute="IsElectionDayNowInStateSdOnSlaveScanner" 
+              k:Yes="SayNoRequiredSd" k:No="IsSlaveStateSdEqualsFileSd" /> 
 
- 
 
- 
+    <Activity Name="IsSlaveStateSdEqualsFileSd" Execute="IsSlaveStateSdEqualsFileSd" 
+              k:Yes="NeedToResetSoft" k:No="RememberToResetSoftOnSlave" /> 
 
-    <!--в ИД_с на подчиненном сканере сейчас день выборов?--> 
 
-    <Activity Name="IsElectionDayNowInStateSDOnSlaveScanner" Execute="IsElectionDayNowInStateSDOnSlaveScanner" 
 
-              k:Yes="StateSDNotEqualsOnMasterAndSlaveScanners" k:No="ResetStateOnSlaveScanner" /> 
 
- 
+    <Activity Name="RememberToResetSoftOnSlave" Execute="RememberToResetSoftOnSlave" 
+              k:Yes="NeedToResetSoft"/> 
 
- 
 
-    <!--в ИД_с на подчиненном сканере сейчас день выборов?--> 
+    <Activity Name="IsSlaveStateSdEqualsFileSd_2" Execute="IsSlaveStateSdEqualsFileSd" 
+              k:Yes="NeedToResetSoft" k:No="SaySdNotEqualsOnMasterAndSlaveScanners" /> 
 
-    <Activity Name="IsElectionDayNowInStateSDOnSlaveScanner_2" Execute="IsElectionDayNowInStateSDOnSlaveScanner" 
 
-              k:Yes="SayNoRequiredSD" k:No="ResetStateOnSlaveScanner" /> 
-
- 
-
- 
-
-    <!--сбрасываем состояние в начальное на подчиненном сканере--> 
-
-    <Activity Name="ResetStateOnSlaveScanner" Execute="ResetStateOnSlaveScanner" 
-
-                       k:Yes="DecideToOK"/> 
-
- 
-
- 
-
-    <!--На Главном и Подчиненном сканерах не совпадают ИД_с?--> 
-
-    <Activity Name="StateSDNotEqualsOnMasterAndSlaveScanners" Execute="StateSDNotEqualsOnMasterAndSlaveScanners" 
-
-              k:Yes="SaySDNotEqualsOnMasterAndSlaveScanners" k:No="DecideToOK" /> 
-
- 
-
- 
-
-    <!--говорим, что на сканерах не совпадают исходные данные--> 
-
-    <ReferenceActivity Name="SaySDNotEqualsOnMasterAndSlaveScanners" Execute="Common.SayPhrase" 
-
+    <ReferenceActivity Name="SaySdNotEqualsOnMasterAndSlaveScanners" Execute="Common.SayPhrase" 
                        k:Yes="DecideToConflict"/> 
 
- 
 
- 
+    <Activity Name="NeedToResetSoft" Execute="NeedToResetSoft" 
+              k:Yes="SetIndicatorEndPreviousElection" k:No="ReplaseStateSdToFileSd"/> 
 
-    <!--принять решение "ОК" (нет конфликта)--> 
+
+
+
+    <ReferenceActivity Name="SetIndicatorEndPreviousElection" Execute="Common.SayAndWaitTimeout" 
+                       k:Yes="ResetSoft"/> 
+
+
+
+
+    <Activity Name="ResetSoft" Execute="ResetSoft" 
+              k:Yes="DecideToConflict"/> 
+
+
+
+
+    <Activity Name="ReplaseStateSdToFileSd" Execute="ReplaseStateSdToFileSd" 
+              k:Yes="DecideToOK" k:No="SayLoadSourceDataFailed"/> 
+
+
+    <ReferenceActivity Name="SayLoadSourceDataFailed" Execute="Common.ReportError" 
+                       Parameters="ErrorId=LoadSourceDataFailed"/> 
+
 
     <Activity Name="DecideToOK" Execute="TransmitDecisionToSlaveScanner" Parameters="HasConflict=false" 
-
               k:Yes="@@Return(Yes)"/> 
-
- 
-
- 
-
-    <!--принять решение "Обнаружен конфликт"--> 
 
 
     <Activity Name="DecideToConflict" Execute="TransmitDecisionToSlaveScanner" Parameters="HasConflict=true" 
-
               k:Yes="@@Return(No)"/> 
-
- 
-
- 
-
   </CompositeActivity> 
-
- 
-
- 
-
-  <ActivityParametersBinding ActivityName="CheckConflictActivity.SayNoRequiredSD"> 
-
-    <Parameter Name="TextFormat">Нет нужных ИД</Parameter> 
-
-    <Parameter Name="Sounds">no_required_sd</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="CheckConflictActivity.SaySDNotEqualsOnMasterAndSlaveScanners"> 
-
-    <Parameter Name="TextFormat">Не совпадают ИД</Parameter> 
-
-    <Parameter Name="Sounds">sd_not_equals_on_scanners</Parameter> 
-
-  </ActivityParametersBinding> 
-
+  <ActivityParametersBindings CompositeActivityName="CheckConflictActivity"> 
+    <ActivityParametersBinding ActivityName="SayNoRequiredSd"> 
+      <Parameter Name="TextFormat">Нет нужных ИД</Parameter> 
+      <Parameter Name="Sounds">no_required_sd</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SaySdNotEqualsOnMasterAndSlaveScanners"> 
+      <Parameter Name="TextFormat">Не совпадают ИД</Parameter> 
+      <Parameter Name="Sounds">sd_not_equals_on_scanners</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SetIndicatorEndPreviousElection"> 
+      <Parameter Name="TextFormat">Завершение предыдущего цикла выборов...</Parameter> 
+      <Parameter Name="Silent">true</Parameter> 
+      <Parameter Name="Timeout">3000</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayLoadSourceDataFailed"> 
+      <Parameter Name="TextFormat">Ошибка загрузки ИД</Parameter> 
+      <Parameter Name="Sounds">load_source_data_failed</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
 </Workflow>
-
-

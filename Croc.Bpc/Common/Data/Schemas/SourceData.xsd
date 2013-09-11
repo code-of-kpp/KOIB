@@ -1,0 +1,789 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<xs:schema xmlns="http://localhost/Schemas/SIB2003/SourceData" xmlns:xs="http://www.w3.org/2001/XMLSchema"
+argetNamespace="http://localhost/Schemas/SIB2003/SourceData" elementFormDefault="qualified"> 
+    <xs:element name="SourceData" nillable="true"> 
+
+
+        <xs:complexType> 
+            <xs:complexContent> 
+                <xs:extension base="SourceData"/> 
+            </xs:complexContent> 
+        </xs:complexType> 
+    </xs:element> 
+    <xs:complexType name="SourceData"> 
+
+
+        <xs:all> 
+            <xs:element name="Elections" type="ArrayOfElection" minOccurs="0"> 
+
+
+            </xs:element> 
+            <xs:element name="Blanks" type="ArrayOfBlank" minOccurs="0"> 
+
+
+            </xs:element> 
+            <xs:element name="CommitteeMembers" type="ArrayOfMember" minOccurs="0"> 
+
+
+            </xs:element> 
+            <xs:element name="Targets" type="ArrayOfTargetCommittee" minOccurs="0"> 
+
+
+            </xs:element> 
+            <xs:element name="Modes" type="ArrayOfVotingMode" minOccurs="0"> 
+
+
+            </xs:element> 
+            <xs:element name="ModeTimeTable" minOccurs="0"> 
+
+
+                <xs:complexType> 
+                    <xs:sequence> 
+                        <xs:element name="ModeTime" minOccurs="0" maxOccurs="unbounded"> 
+
+
+                            <xs:complexType> 
+                                <xs:attribute name="mode" type="VotingMode" use="required"> 
+
+
+                                </xs:attribute> 
+                                <xs:attribute name="hour" type="xs:int" use="required"> 
+
+
+                                </xs:attribute> 
+                                <xs:attribute name="minute" type="xs:int" use="required"> 
+
+
+                                </xs:attribute> 
+                            </xs:complexType> 
+                        </xs:element> 
+                    </xs:sequence> 
+                </xs:complexType> 
+            </xs:element> 
+        </xs:all> 
+        <xs:attribute name="id" type="xs:string" use="optional"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="version" type="xs:int" use="optional" default="0"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="DateTime" type="xs:date" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="localTimeZone" type="xs:string" use="optional"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="Mode" type="ElectionMode" use="optional"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="FileSuffix" type="xs:string" use="optional"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="TrainingFileSuffix" type="xs:string" use="optional"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="isGasVrn" type="xs:boolean" use="required"> 
+
+
+        </xs:attribute> 
+    </xs:complexType> 
+    <xs:complexType name="ArrayOfElection"> 
+        <xs:sequence> 
+            <xs:element name="Election" nillable="true" minOccurs="0" maxOccurs="unbounded"> 
+
+
+                <xs:complexType> 
+                    <xs:complexContent> 
+                        <xs:extension base="Election"> 
+                            <xs:attribute name="id" type="ObjectId" use="optional"> 
+
+
+                            </xs:attribute> 
+                        </xs:extension> 
+                    </xs:complexContent> 
+                </xs:complexType> 
+            </xs:element> 
+        </xs:sequence> 
+    </xs:complexType> 
+    <xs:complexType name="ArrayOfMember"> 
+        <xs:sequence> 
+            <xs:element name="Member" nillable="true" minOccurs="0" maxOccurs="unbounded"> 
+
+
+                <xs:complexType> 
+                    <xs:complexContent> 
+                        <xs:extension base="Member"/> 
+                    </xs:complexContent> 
+                </xs:complexType> 
+            </xs:element> 
+        </xs:sequence> 
+    </xs:complexType> 
+    <xs:complexType name="ArrayOfVotingMode"> 
+        <xs:sequence> 
+            <xs:element name="Mode" type="VotingMode" nillable="true" minOccurs="0" maxOccurs="unbounded"> 
+
+
+            </xs:element> 
+        </xs:sequence> 
+    </xs:complexType> 
+    <xs:simpleType name="VotingMode"> 
+
+
+        <xs:restriction base="xs:NCName"> 
+            <xs:enumeration value="Ahead"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Main"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Portable"> 
+
+
+            </xs:enumeration> 
+        </xs:restriction> 
+    </xs:simpleType> 
+    <xs:complexType name="Election"> 
+
+
+        <xs:all> 
+            <xs:element name="ParentComittee"> 
+
+
+                <xs:complexType> 
+                    <xs:attribute name="parentid" type="ObjectId" use="required"> 
+
+
+                    </xs:attribute> 
+                    <xs:attribute name="name" type="xs:string" use="required"> 
+
+
+                    </xs:attribute> 
+                    <xs:attribute name="e-mail" type="xs:string" use="optional"> 
+
+
+                    </xs:attribute> 
+                </xs:complexType> 
+            </xs:element> 
+            <xs:element name="StampCommittees"> 
+
+
+                <xs:complexType> 
+                    <xs:sequence> 
+                        <xs:element name="StampCommittee" minOccurs="0" maxOccurs="unbounded"> 
+
+
+                            <xs:complexType> 
+                                <xs:attribute name="num" use="required"> 
+
+
+                                </xs:attribute> 
+                            </xs:complexType> 
+                        </xs:element> 
+                    </xs:sequence> 
+                </xs:complexType> 
+            </xs:element> 
+            <xs:element name="Protocol" type="ProtocolTemplate" minOccurs="0"> 
+
+
+            </xs:element> 
+            <xs:element name="Candidates" type="ArrayOfCandidate" minOccurs="0"> 
+
+
+            </xs:element> 
+            <xs:element name="Modes" type="ArrayOfVotingMode"> 
+
+
+            </xs:element> 
+        </xs:all> 
+        <xs:attribute name="name" type="xs:string"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="maxMarks" type="xs:int" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="num" type="ObjectId" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="disabled" type="xs:boolean" use="optional" default="false"> 
+
+
+        </xs:attribute> 
+    </xs:complexType> 
+    <xs:complexType name="Member"> 
+
+
+        <xs:attribute name="type" type="CommitteeMemberType" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="lastName" type="xs:string" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="firstName" type="xs:string"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="patronymic" type="xs:string"> 
+
+
+        </xs:attribute> 
+    </xs:complexType> 
+    <xs:simpleType name="CommitteeMemberType"> 
+
+
+        <xs:restriction base="xs:string"> 
+            <xs:enumeration value="Chairman"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="ChairmanAssistant"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Secretary"> 
+
+
+            </xs:enumeration> 
+        </xs:restriction> 
+    </xs:simpleType> 
+    <xs:complexType name="ProtocolTemplate"> 
+
+
+        <xs:all> 
+            <xs:element name="Lines" type="ArrayOfLine" minOccurs="0"> 
+
+
+            </xs:element> 
+            <xs:element name="Checks" type="ArrayOfCheck" minOccurs="0"> 
+
+
+            </xs:element> 
+            <xs:element name="Texts" minOccurs="0"> 
+
+
+                <xs:complexType> 
+                    <xs:complexContent> 
+                        <xs:extension base="ProtocolText"> 
+                            <xs:sequence> 
+                                <xs:element name="Text" minOccurs="0" maxOccurs="unbounded"> 
+                                    <xs:complexType> 
+                                        <xs:sequence> 
+                                            <xs:element name="Table" minOccurs="0"> 
+
+
+                                                <xs:complexType> 
+                                                    <xs:sequence> 
+                                                        <xs:element name="VoteLine" minOccurs="0" maxOccurs="unbounded"> 
+                                                            <xs:complexType> 
+                                                                <xs:attribute name="bold" type="xs:boolean" use="optional" default="false"> 
+
+
+                                                                </xs:attribute> 
+                                                                <xs:attribute name="italic" type="xs:boolean" use="optional" default="false"> 
+
+
+                                                                </xs:attribute> 
+                                                                <xs:attribute name="fontSize" type="xs:int" use="optional" default="8"> 
+
+
+                                                                </xs:attribute> 
+                                                                <xs:attribute name="ID" type="ObjectId" use="optional"> 
+
+
+                                                                </xs:attribute> 
+                                                                <xs:attribute name="type" type="VoteLineType" use="required"/> 
+                                                            </xs:complexType> 
+                                                        </xs:element> 
+                                                    </xs:sequence> 
+                                                </xs:complexType> 
+                                            </xs:element> 
+                                            <xs:element name="ProtocolLines" minOccurs="0"> 
+
+
+                                                <xs:complexType> 
+                                                    <xs:sequence> 
+                                                        <xs:element name="ProtocolLine" minOccurs="0" maxOccurs="unbounded"> 
+                                                            <xs:complexType> 
+                                                                <xs:simpleContent> 
+                                                                    <xs:extension base="xs:string"> 
+                                                                        <xs:attribute name="align" type="LineAlign"> 
+
+
+                                                                        </xs:attribute> 
+                                                                        <xs:attribute name="bold" type="xs:boolean"> 
+
+
+                                                                        </xs:attribute> 
+                                                                        <xs:attribute name="section" type="Section"> 
+
+
+                                                                        </xs:attribute> 
+                                                                        <xs:attribute name="italic" type="xs:boolean"> 
+
+
+                                                                        </xs:attribute> 
+                                                                        <xs:attribute name="fontSize" type="xs:int"> 
+
+
+                                                                        </xs:attribute> 
+                                                                    </xs:extension> 
+                                                                </xs:simpleContent> 
+                                                            </xs:complexType> 
+                                                        </xs:element> 
+                                                    </xs:sequence> 
+                                                </xs:complexType> 
+                                            </xs:element> 
+                                        </xs:sequence> 
+                                        <xs:attribute name="final" type="xs:boolean" use="required"> 
+
+
+                                        </xs:attribute> 
+                                    </xs:complexType> 
+                                </xs:element> 
+                            </xs:sequence> 
+                        </xs:extension> 
+                    </xs:complexContent> 
+                </xs:complexType> 
+            </xs:element> 
+            <xs:element name="ExtraChecks" type="ArrayOfLine" minOccurs="0"> 
+
+
+            </xs:element> 
+        </xs:all> 
+        <xs:attribute name="name" type="xs:string"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="numberWidth" type="xs:int" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="nameWidth" type="xs:int" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="valueWidth" type="xs:int" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="textValueWidth" type="xs:int" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="disabledString" type="xs:string"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="font" type="FontType"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="font-size" type="xs:int"> 
+
+
+        </xs:attribute> 
+    </xs:complexType> 
+    <xs:complexType name="ArrayOfLine"> 
+        <xs:sequence> 
+            <xs:element name="Line" nillable="true" minOccurs="0" maxOccurs="unbounded"> 
+
+
+                <xs:complexType> 
+                    <xs:complexContent> 
+                        <xs:extension base="Line"> 
+                            <xs:attribute name="ID" type="ObjectId" use="optional"> 
+
+
+                            </xs:attribute> 
+                        </xs:extension> 
+                    </xs:complexContent> 
+                </xs:complexType> 
+            </xs:element> 
+        </xs:sequence> 
+    </xs:complexType> 
+    <xs:complexType name="Line"> 
+
+
+        <xs:attribute name="expression" type="xs:string"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="name" type="xs:string"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="num" type="xs:int" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="additionalNum" type="xs:string"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="type" type="LineTypes" use="required"> 
+
+
+        </xs:attribute> 
+    </xs:complexType> 
+    <xs:simpleType name="LineTypes"> 
+
+
+        <xs:restriction base="xs:string"> 
+            <xs:enumeration value="DontQueryUser"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Voting"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Blank"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Election"> 
+
+
+            </xs:enumeration> 
+        </xs:restriction> 
+    </xs:simpleType> 
+    <xs:complexType name="ArrayOfCheck"> 
+        <xs:sequence> 
+            <xs:element name="Check" type="Check" nillable="true" minOccurs="0" maxOccurs="unbounded"> 
+
+
+            </xs:element> 
+        </xs:sequence> 
+    </xs:complexType> 
+    <xs:complexType name="Check"> 
+
+
+        <xs:attribute name="expression" type="xs:string"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="enabled" type="xs:boolean" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="mild" type="xs:boolean" use="optional" default="false"> 
+
+
+        </xs:attribute> 
+    </xs:complexType> 
+    <xs:complexType name="ArrayOfCandidate"> 
+        <xs:sequence> 
+            <xs:element name="Candidate" type="Candidate" nillable="true" minOccurs="0" maxOccurs="unbounded"> 
+
+
+            </xs:element> 
+        </xs:sequence> 
+    </xs:complexType> 
+    <xs:complexType name="Candidate"> 
+
+
+        <xs:attribute name="lastName" type="xs:string"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="firstName" type="xs:string"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="patronymic" type="xs:string"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="registered" type="xs:boolean" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="disabled" type="xs:boolean" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="disabledLocally" type="xs:boolean" use="optional"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="id" type="ObjectId" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="num" type="xs:int" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="biography" type="xs:string"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="selfRegistered" type="xs:boolean" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="party" type="xs:string"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="noneAbove" type="xs:boolean" use="required"> 
+
+
+        </xs:attribute> 
+    </xs:complexType> 
+    <xs:complexType name="ArrayOfBlank"> 
+        <xs:sequence> 
+            <xs:element name="Blank" type="Blank" nillable="true" minOccurs="0" maxOccurs="unbounded"> 
+
+
+            </xs:element> 
+        </xs:sequence> 
+    </xs:complexType> 
+    <xs:complexType name="Blank"> 
+
+
+        <xs:all> 
+            <xs:element name="model" type="xs:string"> 
+
+
+            </xs:element> 
+            <xs:element name="Sections" type="ArrayOfObjectIds"> 
+
+
+            </xs:element> 
+        </xs:all> 
+        <xs:attribute name="marker" type="xs:int" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="name" type="xs:string"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="width" type="xs:int" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="height" type="xs:int" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="delta" type="xs:int" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="orientation" type="Orientation" use="required"/> 
+        <xs:attribute name="maxPShift" type="xs:int"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="maxLShift" type="xs:int"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="num" type="ObjectId" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="density" type="xs:int" use="optional"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="markerType" type="MarkerType" use="optional"> 
+
+
+        </xs:attribute> 
+    </xs:complexType> 
+    <xs:complexType name="ArrayOfObjectIds"> 
+        <xs:sequence> 
+            <xs:element name="int" type="ObjectId" minOccurs="0" maxOccurs="unbounded"> 
+
+
+            </xs:element> 
+        </xs:sequence> 
+    </xs:complexType> 
+    <xs:complexType name="ArrayOfTargetCommittee"> 
+        <xs:sequence> 
+            <xs:element name="TargetCommittee" type="TargetCommittee" nillable="true" minOccurs="0" maxOccurs="unbounded"> 
+
+
+            </xs:element> 
+        </xs:sequence> 
+    </xs:complexType> 
+    <xs:complexType name="TargetCommittee"> 
+
+
+        <xs:attribute name="num" type="xs:int" use="required"> 
+
+
+        </xs:attribute> 
+        <xs:attribute name="name" type="xs:string"> 
+
+
+        </xs:attribute> 
+    </xs:complexType> 
+    <xs:simpleType name="Orientation"> 
+
+
+        <xs:restriction base="xs:string"> 
+            <xs:enumeration value="P"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="L"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="PL"> 
+
+
+            </xs:enumeration> 
+        </xs:restriction> 
+    </xs:simpleType> 
+    <xs:simpleType name="ObjectId"> 
+
+
+        <xs:restriction base="xs:string"> 
+            <xs:minLength value="1"/> 
+        </xs:restriction> 
+    </xs:simpleType> 
+    <xs:simpleType name="Section"> 
+
+
+        <xs:restriction base="xs:string"> 
+            <xs:enumeration value="PageHeader"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Header"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Footer"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="PageFooter"> 
+
+
+            </xs:enumeration> 
+        </xs:restriction> 
+    </xs:simpleType> 
+    <xs:simpleType name="LineAlign"> 
+
+
+        <xs:restriction base="xs:string"> 
+            <xs:enumeration value="Left"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Right"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Center"> 
+
+
+            </xs:enumeration> 
+        </xs:restriction> 
+    </xs:simpleType> 
+    <xs:simpleType name="ElectionMode"> 
+
+
+        <xs:restriction base="xs:string"> 
+            <xs:enumeration value="None"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Training"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Real"> 
+
+
+            </xs:enumeration> 
+        </xs:restriction> 
+    </xs:simpleType> 
+    <xs:simpleType name="MarkerType"> 
+
+
+        <xs:restriction base="xs:string"> 
+            <xs:enumeration value="Digital"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="BarCode"> 
+
+
+            </xs:enumeration> 
+        </xs:restriction> 
+    </xs:simpleType> 
+    <xs:simpleType name="ScanType"> 
+
+
+        <xs:restriction base="xs:string"> 
+            <xs:enumeration value="V2005"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="V2003"> 
+
+
+            </xs:enumeration> 
+        </xs:restriction> 
+    </xs:simpleType> 
+    <xs:complexType name="ProtocolText"> 
+
+
+    </xs:complexType> 
+    <xs:simpleType name="VoteLineType"> 
+
+
+        <xs:restriction base="xs:string"> 
+            <xs:enumeration value="Vote"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Line"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Delimiter"> 
+
+
+            </xs:enumeration> 
+        </xs:restriction> 
+    </xs:simpleType> 
+    <xs:simpleType name="FontType"> 
+
+
+        <xs:restriction base="xs:string"> 
+            <xs:enumeration value="Default"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="Verdana"> 
+
+
+            </xs:enumeration> 
+            <xs:enumeration value="ArialNarrow"> 
+
+
+            </xs:enumeration> 
+        </xs:restriction> 
+    </xs:simpleType> 
+</xs:schema>

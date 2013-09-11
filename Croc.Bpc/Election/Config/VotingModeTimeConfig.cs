@@ -1,99 +1,33 @@
 using System; 
-
-using System.Collections.Generic; 
-
-using System.Linq; 
-
-using System.Text; 
-
 using System.Configuration; 
-
-using Croc.Bpc.Election.Voting; 
-
- 
-
- 
-
+using Croc.Bpc.Voting; 
 namespace Croc.Bpc.Election.Config 
-
 { 
-
-    /// <summary> 
-
-	/// Конфиг-элемент времени начала режима голосования 
-
-	/// </summary> 
-
-	public class VotingModeTimeConfig : ConfigurationElement 
-
-	{ 
-
-		/// <summary> 
-
-		/// Режим 
-
-		/// </summary> 
-
-		[ConfigurationProperty("mode", IsRequired = true)] 
-
+    public class VotingModeTimeConfig : ConfigurationElement 
+    { 
+        [ConfigurationProperty("mode", IsRequired = true)] 
         public VotingMode Mode 
-
-		{ 
-
-			get 
-
-			{ 
-
+        { 
+            get 
+            { 
                 return (VotingMode)this["mode"]; 
-
-			} 
-
-			set 
-
-			{ 
-
+            } 
+            set 
+            { 
                 this["mode"] = value; 
-
-			} 
-
-		} 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// Время начала режима 
-
-		/// </summary> 
-
+            } 
+        } 
         [ConfigurationProperty("time", IsRequired = false)] 
-
         public TimeSpan Time 
-
-		{ 
-
-			get 
-
-			{ 
-
+        { 
+            get 
+            { 
                 return (TimeSpan)this["time"]; 
-
-			} 
-
-			set 
-
-			{ 
-
+            } 
+            set 
+            { 
                 this["time"] = value; 
-
-			} 
-
-		} 
-
-	} 
-
+            } 
+        } 
+    } 
 }
-
-

@@ -1,85 +1,38 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
   xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
-
- 
-
- 
-
   <Include Ref="Activities/Common.wf" /> 
 
- 
-
- 
-
-  <!--Контроль печати УИК--> 
 
   <CompositeActivity Name="StampSettingsActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.StampSettingsActivity, Croc.Bpc.Workflow"> 
 
-                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.StampSettingsActivity, Croc.Bpc.Workflow" 
-
-                     Tracking="false"> 
-
- 
-
- 
-
-    <!--проверим включен ликонтроль печати УИК--> 
 
     <Activity Name="IsStampControlEnabled" Execute="IsStampControlEnabled" 
-
               k:Yes="SayShutDownStampControl" k:No="SayTurnOnStampControl"/> 
 
- 
-
- 
-
-    <!--говорим "Отключить контроль печати УИК?"--> 
 
     <ReferenceActivity Name="SayShutDownStampControl" Execute="Common.SayAndWaitYesOrNo" 
-
                        Parameters="Silent=@@True" 
-
                        k:Yes="SwitchStampControl" k:No="@@Return(Yes)"/> 
 
-    <!--говорим "Включить контроль печати УИК?"--> 
 
     <ReferenceActivity Name="SayTurnOnStampControl" Execute="Common.SayAndWaitYesOrNo" 
-
                        Parameters="Silent=@@True" 
-
                        k:Yes="SwitchStampControl" k:No="@@Return(Yes)"/> 
 
- 
-
- 
-
-    <!--меняем свойство контроль печати--> 
 
     <Activity Name="SwitchStampControl" Execute="SwitchStampControl" 
-
               k:Yes="@@Return(Yes)"/> 
 
+
   </CompositeActivity> 
-
- 
-
- 
-
-  <ActivityParametersBinding ActivityName="StampSettingsActivity.SayShutDownStampControl"> 
-
-    <Parameter Name="TextFormat">Отключить контроль печати УИК?</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="StampSettingsActivity.SayTurnOnStampControl"> 
-
-    <Parameter Name="TextFormat">Включить контроль печати УИК?</Parameter> 
-
-  </ActivityParametersBinding> 
-
+  <ActivityParametersBindings CompositeActivityName="StampSettingsActivity"> 
+    <ActivityParametersBinding ActivityName="SayShutDownStampControl"> 
+      <Parameter Name="TextFormat">Отключить контроль печати УИК?</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayTurnOnStampControl"> 
+      <Parameter Name="TextFormat">Включить контроль печати УИК?</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
 </Workflow>
-
-

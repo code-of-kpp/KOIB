@@ -1,2593 +1,760 @@
-namespace Croc.Bpc.Common.Diagnostics 
-
+namespace Croc.Bpc.Diagnostics 
 { 
-
-    /// <summary> 
-
-    /// События приложения 
-
-    /// </summary> 
-
     public enum Message 
-
     { 
-
         #region Общесистемные сообщения 
-
-        /// <summary> 
-
-        /// Необработанное исключение: {0} 
-
-        /// </summary> 
-
         [MessageParameters("Необработанное исключение: {0}")] 
-
-        UnhandledException = 1, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Произошла внутренняя ошибка! Дальнейшая работа программы невозможна. Обратитесь в службу технической поддержки. 
-
-        /// </summary> 
-
+        Common_UnhandledException = 1, 
         [MessageParameters("Произошла внутренняя ошибка! Дальнейшая работа программы невозможна. Обратитесь в службу технической поддержки.")] 
-
-        CriticalException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [Исключение] 
-
-        /// </summary> 
-
+        Common_CriticalException, 
         [MessageParameters("{0}")] 
-
-        Exception, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [Информационное сообщение] 
-
-        /// </summary> 
-
+        Common_Exception, 
         [MessageParameters("{0}")] 
-
-        Information, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [Отладочное сообщение] 
-
-        /// </summary> 
-
+        Common_Information, 
         [MessageParameters("{0}")] 
-
-        Debug, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [Отладочное сообщение дополнительной диагностики] 
-
-        /// </summary> 
-
-        [MessageParameters("{0}")] 
-
-        DebugVerbose, 
-
- 
-
- 
-
-
-        /// <summary> 
-
-        /// LOCK try enter: {0} 
-
-        /// </summary> 
-
+        Common_Debug, 
         [MessageParameters("LOCK try enter: {0}")] 
-
-        LockTryEnter, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// LOCK done: {0} 
-
-        /// </summary> 
-
+        Common_LockTryEnter, 
         [MessageParameters("LOCK done: {0}")] 
-
-        LockDone, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Версия приложения: {0} 
-
-        /// </summary> 
-
+        Common_LockDone, 
+        [MessageParameters("LOCK exit: {0}")] 
+        Common_LockExit, 
         [MessageParameters("Версия приложения: {0}")] 
-
-        ApplicationVersion, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Имя компьютера: {0} 
-
-        /// </summary> 
-
+        Common_ApplicationVersion, 
+        [MessageParameters("Версия приложения: {0} (DEBUG)")] 
+        Common_ApplicationVersionDebug, 
         [MessageParameters("Имя компьютера: {0}")] 
-
-        MachineName, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// IP-адрес: {0} 
-
-        /// </summary> 
-
+        Common_MachineName, 
         [MessageParameters("IP-адрес: {0}")] 
-
-        IPAddress, 
-
- 
-
- 
-
-		/// <summary> 
-
-        /// Получен Unix сигнал: {0} 
-
-		/// </summary> 
-
-		[MessageParameters("Получен Unix сигнал: {0}")] 
-
-		UnixSignalReceived, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [{0},STA] {1} {2} 
-
-        /// </summary> 
-
+        Common_IpAddress, 
+        [MessageParameters("Тихий (быстрый) запуск")] 
+        Common_QuietStart, 
+        [MessageParameters("Получен критичный Unix-сигнал: {0}")] 
+        Common_UnixCriticalSignalReceived, 
+        [MessageParameters("Получен Unix сигнал: {0}")] 
+        Common_UnixSignalReceived, 
         [MessageParameters("[{0},STA] {1} {2}")] 
-
-        ProcessStartInfo, 
-
- 
-
- 
-
-        /// <summary> 
-
-
-        /// [{0},OUT] {1} 
-
-        /// </summary> 
-
+        Common_ProcessStartInfo, 
+        [MessageParameters("{0} {1}: process start failed: {2}")] 
+        Common_ProcessStartFailed, 
+        [MessageParameters("{0} {1}: process execution failed: {2}")] 
+        Common_ProcessExecutionFailed, 
         [MessageParameters("[{0},OUT] {1}")] 
-
-        ProcessStdOutDump, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [{0},ERR] {1} 
-
-        /// </summary> 
-
+        Common_ProcessStdOutDump, 
         [MessageParameters("[{0},ERR] {1}")] 
-
-        ProcessStdErrDump, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [{0},EXI] {1} 
-
-        /// </summary> 
-
+        Common_ProcessStdErrDump, 
         [MessageParameters("[{0},EXI] {1}")] 
-
-        ProcessExitCode, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Результат выполнения команды '{0} {1}' = {2} 
-
-        /// </summary> 
-
+        Common_ProcessExitCode, 
         [MessageParameters("Результат выполнения команды '{0} {1}' = {2}")] 
-
-        ExecCommandResult, 
-
- 
-
- 
-
-        #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец общесистемных сообщений 
-
-        /// </summary> 
-
-        __End_Common = 1000, 
-
- 
-
- 
-
-        #region Сообщения диагностики 
-
-        /// <summary> 
-
-        /// Ошибка в задании формата строки: {0} 
-
-        /// </summary> 
-
+        Common_ExecCommandResult, 
+        [MessageParameters("call")] 
+        Common_DebugCall, 
+        [MessageParameters("return")] 
+        Common_DebugReturn, 
+        [MessageParameters("Вызываем событие {0}")] 
+        Common_SetEvent, 
+        [MessageParameters("Ждем события {0}")] 
+        Common_WaitEvent, 
         [MessageParameters("Ошибка в задании формата строки: {0}")] 
-
-        SingleLineFormatterFormatError, 
-
-        /// <summary> 
-
-        /// Запись в протокол {0} прекращена из-за недостатка свободного места (доступно {1:N} MiB, требуется {2:N} MiB) 
-
-        /// </summary> 
-
+        Common_SingleLineFormatterFormatError, 
         [MessageParameters("Запись в протокол {0} прекращена из-за недостатка свободного места (доступно {1:N} MiB, требуется {2:N} MiB)")] 
-
-        AvailableSpaceFilterNotEnoughSpaceError, 
-
+        Common_AvailableSpaceFilterNotEnoughSpaceError, 
         #endregion 
-
- 
-
- 
-
-
-        /// <summary> 
-
-        /// Конец сообщений диагностики 
-
-        /// </summary> 
-
-        __End_Diagnostics = 2 * __End_Common, 
-
- 
-
- 
-
+        __End_Common = 1000, 
         #region Сообщения менеджера сканеров 
-
-        /// <summary> 
-
-        /// [Исключение] 
-
-        /// </summary> 
-
-        [MessageParameters("{0}")] 
-
-        ScannerManagerException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Получен буфер {0} 
-
-        /// </summary> 
-
-        [MessageParameters("Получен буфер {0}")] 
-
-        ScannerManagerBufferIsReady, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Отладочное сообщение: {0} ({1} байт) 
-
-        /// </summary> 
-
-        [MessageParameters("Отладочное сообщение: {0} ({1} байт)")] 
-
-        ScannerManagerDebugMessage, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка от сканера {0}: {1} 
-
-        /// </summary> 
-
-        [MessageParameters("Ошибка от сканера {0}: {1}")] 
-
-        ScannerManagerError, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [CALL] NextBuffer({0}, {1}) 
-
-        /// </summary> 
-
-        [MessageParameters("[CALL] NextBuffer({0}, {1})")] 
-
-        ScannerManagerNextBufferCall, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [RET] NextBuffer({0}, {1}) 
-
-        /// </summary> 
-
-        [MessageParameters("[RET] NextBuffer({0}, {1})")] 
-
-        ScannerManagerNextBufferReturn, 
-
- 
-
- 
-
-        /// <summary> 
-
-
-        /// [CALL] SheetIsReady({0}, {1}) 
-
-        /// </summary> 
-
-        [MessageParameters("[CALL] SheetIsReady({0}, {1})")] 
-
-        ScannerManagerSheetIsReadyCall, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [RET] SheetIsReady({0}, {1}) 
-
-        /// </summary> 
-
-        [MessageParameters("[RET] SheetIsReady({0}, {1})")] 
-
-        ScannerManagerSheetIsReadyReturn, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Для бланка {0} установлена плотность {1} 
-
-        /// </summary> 
-
-        [MessageParameters("Для бланка {0} установлена плотность {1}")] 
-
-        ScannerManagerDensitySet, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Считано строк больше, чем размер буфера ({0}) 
-
-        /// </summary> 
-
-        [MessageParameters("Считано строк больше, чем размер буфера ({0})")] 
-
-        ScannerManagerSheetIsReadyTooLarge, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Количество считаных строк на сторонах листа различается: {0} != {1} 
-
-        /// </summary> 
-
-        [MessageParameters("Количество считаных строк на сторонах листа различается: {0} != {1}")] 
-
-        ScannerManagerSheetIsReadyDontMatch, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Не удалось подключиться к сканеру [попытка №{0}] 
-
-        /// </summary> 
-
-        [MessageParameters("Не удалось подключиться к сканеру [попытка №{0}]")] 
-
-        ScannerManagerCantConnect, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка при {0} мотора: motorNumber = {1}; direction = {2}; step = {3} 
-
-        /// </summary> 
-
+        #region Исключения 
+        [MessageParameters("Ошибка при отправке первого сообщения")] 
+        ScannerManagerSendingFirstMessageError, 
+        [MessageParameters("Ошибка при отправке сообщения: {0}")] 
+        ScannerManagerSendingMessageError, 
+        [MessageParameters("Ошибка при получении сообщения от удаленного сканера")] 
+        ScannerManagerPollMessageError, 
+        [MessageParameters("Ошибка в методе потока рассылки широковещательных уведомлений")] 
+        ScannerManagerBroadcastError, 
+        [MessageParameters("Ошибка подключения к сканеру")] 
+        ScannerManagerConnectingScannerError, 
+        [MessageParameters("Ошибка при обработке ошибки от сканера")] 
+        ScannerManagerAlertingErrorError, 
+        [MessageParameters("Ошибка при обработке поступления нового листа")] 
+        ScannerManagerNewSheetError, 
+        [MessageParameters("Ошибка при обработке следующего буфера листа")] 
+        ScannerManagerNextBufferError, 
+        [MessageParameters("Ошибка при обработке события сброса листа")] 
+        ScannerManagerSheetDropError, 
+        [MessageParameters("Ошибка при обработке события готовности листа")] 
+        ScannerManagerSheetIsReadyError, 
+        [MessageParameters("Ошибка при обработке события готовности к приему листа")] 
+        ScannerManagerReadyToScanError, 
+        [MessageParameters("Ошибка диагностики оборудования")] 
+        ScannerManagerDiagnosticError, 
+        [MessageParameters("Ошибка при выполнении команды реверса")] 
+        ScannerManagerReverseError, 
         [MessageParameters("Ошибка при {0} мотора: motorNumber = {1}; direction = {2}; step = {3}")] 
-
-        ScannerManagerMotorException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Лист обработан. Результат = {0}; ошибка = {1} 
-
-
-        /// </summary> 
-
-        [MessageParameters("Лист обработан. Результат = {0}; ошибка = {1}")] 
-
-        ScannerManagerSheetProcessed, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Лист сброшен с кодом {0} 
-
-        /// </summary> 
-
-        [MessageParameters("Лист сброшен с кодом {0}")] 
-
-        ScannerManagerDropSheet, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Команда на реверс (код причины = {0}) 
-
-        /// </summary> 
-
-        [MessageParameters("Команда на реверс (код причины = {0})")] 
-
-        ScannerManagerRevers, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Сканер отклонил команду реверса 
-
-        /// </summary> 
-
-        [MessageParameters("Сканер отклонил команду реверса")] 
-
-        ScannerManagerReversRejected, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Лист реверсирован 
-
-        /// </summary> 
-
-        [MessageParameters("Лист реверсирован")] 
-
-        ScannerManagerReversSuccessfull, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Запрошен полутон: Side={0}; X={1}; Y={2}; W={3}; H={4}; ID={5} 
-
-        /// </summary> 
-
-        [MessageParameters("Запрошен полутон: Side={0}; X={1}; Y={2}; W={3}; H={4}; ID={5}")] 
-
-        ScannerManagerGetHalftone, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// {0} {1} буфер стороны {2} сохранен в файл {3} 
-
-        /// </summary> 
-
-        [MessageParameters("{0} {1} буфер стороны {2} сохранен в файл {3}")] 
-
-        ScannerManagerBufferSaved, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// {0} {1} буфер стороны {2} не удалось сохранить в файл {3}: {4} 
-
-        /// </summary> 
-
-
-        [MessageParameters("{0} {1} буфер стороны {2} не удалось сохранить в файл {3}: {4}")] 
-
-        ScannerManagerBufferSaveError, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Режим ламп: {0} 
-
-        /// </summary> 
-
-        [MessageParameters("Режим ламп: {0}")] 
-
-        ScannerManagerLampsRegime, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Сигнализируем об ошибке: {0} ({1}) 
-
-        /// </summary> 
-
-        [MessageParameters("Сигнализируем об ошибке: {0} ({1})")] 
-
-        ScannerManagerAlertError, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Подключение к сканеру установлено 
-
-        /// </summary> 
-
-        [MessageParameters("Подключение к сканеру {0} установлено: {1}")] 
-
-        ScannerManagerConnected, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Рабочий поток сканера прерван 
-
-        /// </summary> 
-
-        [MessageParameters("Рабочий поток сканера прерван")] 
-
-        ScannerManagerScannerWorkThreadAborted, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка в рабочем потоке сканера 
-
-        /// </summary> 
-
+        ScannerManagerMotorError, 
         [MessageParameters("Ошибка в рабочем потоке сканера")] 
-
-        ScannerManagerScannerWorkThreadException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Поток отправки сообщений в сканер прерван 
-
-        /// </summary> 
-
-        [MessageParameters("Поток отправки сообщений в сканер прерван")] 
-
-        ScannerManagerScannerSendEventsThreadAborted, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка потоке отправки сообщений в сканер 
-
-        /// </summary> 
-
+        ScannerManagerScannerWorkThreadError, 
         [MessageParameters("Ошибка потоке отправки сообщений в сканер")] 
-
-
-        ScannerManagerScannerSendEventsThreadException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Найден Gs2Manager {0} ({1}, {2}, {3}, {4}, {5}) 
-
-        /// </summary> 
-
+        ScannerManagerScannerSendEventsThreadError, 
+        #endregion 
+        [MessageParameters("Отправлено сообщение о присутствии сканера в сети")] 
+        ScannerBrodcastMessageSended, 
+        [MessageParameters("Рассылка широковещательных уведомлений о присутствие данного сканера остановлена")] 
+        ScannerBrodcastMessagingStopped, 
+        [MessageParameters("Выполняется реверс...")] 
+        ScannerExecutingRevers, 
+        [MessageParameters("Получен буфер {0}")] 
+        ScannerManagerBufferIsReady, 
+        [MessageParameters("Отладочное сообщение: {0} ({1} байт)")] 
+        ScannerManagerDebugMessage, 
+        [MessageParameters("Ошибка от сканера {0}: {1}")] 
+        ScannerManagerError, 
+        [MessageParameters("NextBuffer({0})")] 
+        ScannerManagerNextBufferCall, 
+        [MessageParameters("Для бланка {0} установлена плотность {1}")] 
+        ScannerManagerDensitySet, 
+        [MessageParameters("Считано строк больше, чем размер буфера ({0})")] 
+        ScannerManagerSheetIsReadyTooLarge, 
+        [MessageParameters("Не удалось подключиться к сканеру [попытка №{0}]")] 
+        ScannerManagerCantConnect, 
+        [MessageParameters("Лист обработан с ошибкой: {0}")] 
+        ScannerManagerSheetProcessedWithError, 
+        [MessageParameters("Лист обработан: результат = {0}; тип сброса = {1}")] 
+        ScannerManagerSheetProcessed, 
+        [MessageParameters("Сбрасываем лист с кодом {0}")] 
+        ScannerManagerDropSheet, 
+        [MessageParameters("Ошибка при сбросе листа с кодом {0}")] 
+        ScannerManagerDropSheetFailed, 
+        [MessageParameters("Команда на реверс (код причины = {0})")] 
+        ScannerManagerRevers, 
+        [MessageParameters("Сканер отклонил команду реверса")] 
+        ScannerManagerReversRejected, 
+        [MessageParameters("Лист реверсирован")] 
+        ScannerManagerReversSuccessfull, 
+        [MessageParameters("Запрошен полутон: Side={0}; X={1}; Y={2}; W={3}; H={4}; ID={5}")] 
+        ScannerManagerGetHalftone, 
+        [MessageParameters("{0} {1} буфер стороны {2} сохранен в файл {3}")] 
+        ScannerManagerBufferSaved, 
+        [MessageParameters("{0} {1} буфер стороны {2} не удалось сохранить в файл {3}: {4}")] 
+        ScannerManagerBufferSaveError, 
+        [MessageParameters("Попытка установить режим ламп, равный текущему режиму: {0}")] 
+        ScannerManagerTrySetEqualsLampsRegime, 
+        [MessageParameters("Установлен новый режим ламп: текущий = {0}; новый = {1}")] 
+        ScannerManagerSetLampsRegime, 
+        [MessageParameters("Запоздалая попытка восстановить прежний режим ламп: текущий = {0}; прежний = {1}")] 
+        ScannerManagerLateTryRestoreLampsRegime, 
+        [MessageParameters("Восстановлен прежний режим ламп: текущий = {0}; новый = {1}")] 
+        ScannerManagerRestoreLampsRegime, 
+        [MessageParameters("Сигнализируем об ошибке (код={0})")] 
+        ScannerManagerAlertError, 
+        [MessageParameters("Подключение к сканеру {0} установлено: {1}")] 
+        ScannerManagerConnected, 
+        [MessageParameters("Рабочий поток сканера прерван")] 
+        ScannerManagerScannerWorkThreadAborted, 
+        [MessageParameters("Поток отправки сообщений в сканер прерван")] 
+        ScannerManagerScannerSendEventsThreadAborted, 
         [MessageParameters("Найден Gs2Manager {0} ({1}, {2}, {3}, {4}, {5})")] 
-
         ScannerManagerDetectedHardware, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Новый лист 
-
-        /// </summary> 
-
         [MessageParameters("Новый лист")] 
-
         ScannerManagerNewSheet, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Команда сброса выполнена: {0} 
-
-        /// </summary> 
-
-        [MessageParameters("Команда сброса выполнена: {0}")] 
-
+        [MessageParameters("Команда сброса выполнена:  marking={0}, result={1}")] 
         ScannerManagerSheetDroped, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Лист отсканирован: {0}, {1} 
-
-        /// </summary> 
-
-        [MessageParameters("Лист отсканирован: {0}, {1}")] 
-
+        [MessageParameters("Результат команды сброса скорректирован: {0}")] 
+        ScannerManagerSheetDropedResultAdjusted, 
+        [MessageParameters("Лист отсканирован: кол-во строк = {0}, тип листа = {1}")] 
         ScannerManagerSheetIsReady, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Готов к приему 
-
-        /// </summary> 
-
         [MessageParameters("Готов к приему")] 
-
         ScannerManagerReadyToScanning, 
-
+        [MessageParameters("Сбой питания: min = {0}, max = {1}, avg = {2}")] 
+        ScannerManagerPowerFailure, 
+        [MessageParameters("Параметры питания: min = {0}, max = {1}, avg = {2}")] 
+        ScannerManagerPowerStatistics, 
+        [MessageParameters("Попытка установить текст остановленному прокрутчику: [{0}]")] 
+        ScannerManagerTryToSetTextToRollWhenStopped, 
+        [MessageParameters("Установлен текст прокрутчика: [{0}]")] 
+        ScannerManagerSetTextToRoll, 
+        [MessageParameters("Открываем новую сессию обработки бюллетеня...")] 
+        ScannerManagerOpenNewSheetProcessingSession, 
+        [MessageParameters("Открыли новую сессию обработки бюллетеня: Id = {0}")] 
+        ScannerManagerOpenNewSheetProcessingSessionDone, 
+        [MessageParameters("Неизвестный код ошибки при закрытии сессии обработки бюллетеня: Id = {0}, errorCode = {1}, driverError = {2}")] 
+        ScannerManagerUnknownErrorOnClosingSheetProcessingSession, 
+        [MessageParameters("Попытка закрыть уже закрытую сессию обработки бюллетеня с ошибкой: Id = {0}, errorCode = {1}, driverError = {2}")] 
+        ScannerManagerTryToCloseAlreadyClosedSheetProcessingSessionWithError, 
+        [MessageParameters("Закрываем сессию обработки бюллетеня с ошибкой: Id = {0}, errorCode = {1}, driverError = {2}")] 
+        ScannerManagerCloseSheetProcessingSessionWithError, 
+        [MessageParameters("Закрываем сессию обработки бюллетеня: Id = {0}")] 
+        ScannerManagerCloseSheetProcessingSession, 
+        [MessageParameters("Попытка закрыть уже закрытую сессию обработки бюллетеня: Id = {0}")] 
+        ScannerManagerTryToCloseAlreadyClosedSheetProcessingSession, 
+        [MessageParameters("Ожидаем закрытия сессии обработки бюллетеня: Id = {0}...")] 
+        ScannerManagerWaitForCloseSheetProcessingSession, 
+        [MessageParameters("Прокрутчик текста остановлен: текущий текст = '{0}'; текст после запуска = '{1}'")] 
+        RollTextMachineStopped, 
+        [MessageParameters("Прокрутчик текста запущен: текущий текст = '{0}'")] 
+        RollTextMachineStarted, 
         #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец сообщений диагностики 
-
-        /// </summary> 
-
-        __End_ScannerManager = 3 * __End_Common, 
-
- 
-
- 
-
+        __End_ScannerManager = 2 * __End_Common, 
         #region Сообщения OCR 
-
-        /// <summary> 
-
-        /// [исключение] 
-
-        /// </summary> 
-
-        [MessageParameters("{0}")] 
-
-
-        RecognizerException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// DpiXTop = {0}, DpiYTop = {1}, DpiXBottom = {2}, DpiYBottom = {3} 
-
-        /// </summary> 
-
+        #region Исключения 
+        [MessageParameters("Ошибка при сбросе состояния распознавалки")] 
+        RecognizerResetError, 
+        [MessageParameters("Ошибка распознавания бюллетеня")] 
+        RecognizerBulletinError, 
+        [MessageParameters("Ошибка при сохранении изображения")] 
+        RecognizerSaveImageError, 
+        [MessageParameters("Ошибка при сохранении копии лога OCR")] 
+        RecognizerSaveOrcLogCopyError, 
+        [MessageParameters("Ошибка при инициализации распознавалки")] 
+        RecognizerInitError, 
+        [MessageParameters("Ошибка при завершении распознавания бюллетеня")] 
+        RecognizerEndBulletinRecognitionError, 
+        [MessageParameters("Ошибка при выключении лонирования OCR")] 
+        RecognizerStopOcrLoggingError, 
+        [MessageParameters("Ошибка при добавлении номера печати вышестоящей комиссии")] 
+        RecognizerSuperiorStampError, 
+        [MessageParameters("Ошибка при удалении лога OCR")] 
+        RecognizerOcrLogDeletingError, 
+        [MessageParameters("Ошибка получения имени файла для сохранения изображения")] 
+        RecognizerGetImageFileNameError, 
+        [MessageParameters("Ошибка получения буфера")] 
+        RecognizerGetBufferError, 
+        [MessageParameters("Ошибка записи в журнал сканирования")] 
+        RecognizerLogError, 
+        #endregion 
+        [MessageParameters("Модель создана")] 
+        RecognizerModelCreated, 
+        [MessageParameters("Call OCR.RunRecognize")] 
+        RecognizerOCRRunRecognizeCall, 
+        [MessageParameters("OCR.RunRecognize return")] 
+        RecognizerOCRRunRecognizeReturn, 
+        [MessageParameters("Lines = {0}")] 
+        RecognizerLinesInfo, 
+        [MessageParameters("NextBuffer...")] 
+        RecognizerBeforeNextBufferCall, 
+        [MessageParameters("EndRecognize...")] 
+        RecognizerBeforeEndRecognizeCall, 
+        [MessageParameters("EndRecognize done")] 
+        RecognizerEndRecognizeReturn, 
+        [MessageParameters("Результат распознавания сохранен")] 
+        RecognizerRecognitionResultSaved, 
+        [MessageParameters("Маркируем лист методом: {0}")] 
+        RecognizerMarkSheet, 
+        [MessageParameters("Бюллетень распознан")] 
+        RecognizerBulletinRecognized, 
+        [MessageParameters("Бюллетень не имеет текущего режима голосования")] 
+        RecognizerWrongModeForBulletin, 
+        [MessageParameters("Сохранение изображения...")] 
+        RecognizerSavingImage, 
         [MessageParameters("DpiXTop = {0}, DpiYTop = {1}, DpiXBottom = {2}, DpiYBottom = {3}")] 
-
         RecognizerSetDpi, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [CALL] ProcessingNextBuffer({0}, {1}) 
-
-        /// </summary> 
-
-        [MessageParameters("[CALL] ProcessingNextBuffer({0}, {1})")] 
-
+        [MessageParameters("ProcessingNextBuffer({0})")] 
         RecognizerNextBufferCall, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [RET] ProcessingNextBuffer({0}, {1}) 
-
-        /// </summary> 
-
-        [MessageParameters("[RET] ProcessingNextBuffer({0}, {1})")] 
-
-        RecognizerNextBufferReturn, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [CALL] OCR.NextBuffer({0}) 
-
-        /// </summary> 
-
-        [MessageParameters("[CALL] OCR.NextBuffer({0})")] 
-
+        [MessageParameters("Call OCR.NextBuffer({0})...")] 
         RecognizerOcrNextBufferCall, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [RET] OCR.NextBuffer({0}, {1}) 
-
-        /// </summary> 
-
-        [MessageParameters("[RET] OCR.NextBuffer({0}) = {1}")] 
-
+        [MessageParameters("OCR.NextBuffer({0}) = {1}")] 
         RecognizerOcrNextBufferReturn, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// GetOnlineMarker => {0} 
-
-        /// </summary> 
-
-        [MessageParameters("GetOnlineMarker => {0}")] 
-
+        [MessageParameters("GetOnlineMarker...")] 
+        RecognizerOnlineBlankIndexCall, 
+        [MessageParameters("GetOnlineMarker: {0}")] 
         RecognizerOnlineBlankIndex, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Маркер не может быть распознан в режиме Online 
-
-        /// </summary> 
-
         [MessageParameters("Маркер не может быть распознан в режиме Online: {0}")] 
-
         RecognizerOnlineFailed, 
-
-
- 
- 
-
-        /// <summary> 
-
-        /// Определен индекс бюллетеня в режиме Online: {0} 
-
-        /// </summary> 
-
         [MessageParameters("Определен индекс бюллетеня в режиме Online: {0}")] 
-
         RecognizerOnlineSuccess, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Бюллетень распознан в режиме Online 
-
-        /// </summary> 
-
         [MessageParameters("Бюллетень распознан в режиме Online")] 
-
         RecognizerOnlineBulletinValid, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка при сохранении результата распознавания 
-
-        /// </summary> 
-
         [MessageParameters("Ошибка при сохранении результата распознавания")] 
-
         RecognizerSaveResultError, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка добавления результата голосования 
-
-        /// </summary> 
-
         [MessageParameters("Ошибка добавления результата голосования")] 
-
         RecognizerAddVotingResultError, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Halftone stamp: {0} [{1}] 
-
-        /// </summary> 
-
         [MessageParameters("Halftone stamp: {0} [{1}]")] 
-
         RecognizerHalftoneStamp, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Binary stamp: {0} 
-
-        /// </summary> 
-
         [MessageParameters("Binary stamp: {0}")] 
-
         RecognizerBinaryStamp, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Число бюл. = {0}, {1} [{2}], №{3}, {4}, {5}, Отметки: {6} 
-
-        /// </summary> 
-
         [MessageParameters("Число бюл. = {0}, {1} [{2}], №{3}, {4}, {5}, Отметки: {6}")] 
-
         RecognitionResult, 
-
- 
-
-
- 
-        /// <summary> 
-
-        /// Запись строки в протокол распознавания 
-
-        /// </summary> 
-
         [MessageParameters("{0}")] 
-
         RecognizerLog, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// {0} бюллетень. Режим {1} 
-
-        /// </summary> 
-
         [MessageParameters("{0} бюллетень. Режим {1}")] 
-
         RecognizerBulletinResult, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [Описание НУФ] 
-
-        /// </summary> 
-
-        [MessageParameters("{0}")] 
-
+        [MessageParameters("НУФ: {0}")] 
         RecognizerNuf, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Номер печати: {0}. Альтернативы: {1}, {2}, {3}, {4} 
-
-        /// </summary> 
-
         [MessageParameters("Номер печати: {0}. Альтернативы: {1}, {2}, {3}, {4}")] 
-
         RecognizerStampNumber, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Проверка альтернатив для номера печати '{0}' 
-
-        /// </summary> 
-
         [MessageParameters("Проверка альтернатив для номера печати '{0}'")] 
-
         RecognizerCheckAlternatives, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [CALL] SaveLastImage({0}, {1}, {2}) 
-
-        /// </summary> 
-
-        [MessageParameters("[CALL] SaveLastImage({0}, {1}, {2})")] 
-
+        [MessageParameters("Call SaveLastImage({0}, {1})")] 
         RecognizerSaveImageCall, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [RET] SaveLastImage({0}, {1}, {2}) 
-
-        /// </summary> 
-
-        [MessageParameters("[RET] SaveLastImage({0}, {1}, {2})")] 
-
-        RecognizerSaveImageReturn, 
-
- 
-
- 
-
-
-        /// <summary> 
-
-        /// Сохранение изображения: нет свободного места на {0} (доступно {1}, требуется {2}) 
-
-        /// </summary> 
-
         [MessageParameters("Сохранение изображения: нет свободного места на {0} (доступно {1}, требуется {2})")] 
-
         RecognizerSaveImageNotEnoughFreeSpace, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Сохранение изображения выполнено за {0} мсек 
-
-        /// </summary> 
-
         [MessageParameters("Сохранение изображения выполнено за {0} мсек")] 
-
         RecognizerSaveImageTiming, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Порог бинаризации для стороны {0} = {1} 
-
-        /// </summary> 
-
         [MessageParameters("Порог бинаризации для стороны {0} = {1}")] 
-
         RecognizerBinarizationThreshold, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// OCR ошибка: [{0}] {1} 
-
-        /// </summary> 
-
         [MessageParameters("OCR ошибка: [{0}] {1}")] 
-
         RecognizerOcrError, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// OCR: {0} 
-
-        /// </summary> 
-
         [MessageParameters("OCR: {0}")] 
-
         RecognizerOcrDebug, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Результат сброса листа: {0} 
-
-        /// </summary> 
-
         [MessageParameters("Результат сброса листа: {0}")] 
-
         RecognizerSheetDroped, 
-
         #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец сообщений OCR 
-
-        /// </summary> 
-
-        __End_Recognizer = 4 * __End_Common, 
-
- 
-
- 
-
+        __End_Recognizer = 3 * __End_Common, 
         #region Сообщения звуковой подсистемы 
-
-
-        /// <summary> 
-
-        /// Ошибка при воспроизведении {0} 
-
-        /// </summary> 
-
         [MessageParameters("Ошибка при воспроизведении {0}")] 
-
-        SoundPlayException, 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// "Не найден звуковой файл {0}" 
-
-		/// </summary> 
-
-		[MessageParameters("Не найден звуковой файл {0}")] 
-
-		SoundFileNotFound, 
-
+        SoundPlayError, 
+        [MessageParameters("Не найден звуковой файл {0}")] 
+        SoundFileNotFound, 
+        [MessageParameters("Начинаем воспроизведение {0}")] 
+        SoundSpeexStartPlay, 
+        [MessageParameters("Ошибка при получении громкости")] 
+        SoundGetVolumeFailed, 
+        [MessageParameters("Установлена громкость: {0}%")] 
+        SoundSetVolume, 
         #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец сообщений звуковой подсистемы 
-
-        /// </summary> 
-
-        __End_Sound = 5 * __End_Common, 
-
- 
-
- 
-
-        #region Сообщения менеджера выборов 
-
-        /// <summary> 
-
-        /// [Исключение] 
-
-        /// </summary> 
-
-        [MessageParameters("{0}")] 
-
-        ElectionException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка при добавлении результата голосования 
-
-        /// </summary> 
-
+        __End_Sound = 4 * __End_Common, 
+        #region Сообщения менеджера результатов голосования 
+        [MessageParameters("Очищены данные о голосах для тестового режима")] 
+        VotingResult_ClearTestData, 
+        [MessageParameters("Попытка установить некорректное значение голосов с ключом {0}: старое значение = {1}, новое значение = {2}; счетчик = {3}")] 
+        VotingResult_TryToSetIncorrectVotesValue, 
+        [MessageParameters("Установлено значение голосов с ключом {0}: старое значение = {1}, новое значение = {2}; счетчик = {3}")] 
+        VotingResult_SetVotesValue, 
+        [MessageParameters("Новое состояния отклонено, т.к. оно = null")] 
+        VotingResult_NewStateRejectedBecauseIsNull, 
+        [MessageParameters("Новое состояния принято в результате слияния")] 
+        VotingResult_NewStateAcceptedByMerge, 
+        [MessageParameters("Новое состояния принято (без слияния)")] 
+        VotingResult_NewStateAccepted, 
+        [MessageParameters("Ошибка принятия нового состояния менеджера выборов")] 
+        VotingResult_NewStateAссeptError, 
         [MessageParameters("Ошибка при добавлении результата голосования")] 
-
-        ElectionAddVotingResultException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Попытка прерывания потока добавления результата голосования 
-
-        /// </summary> 
-
+        VotingResult_AddVotingResultError, 
         [MessageParameters("Попытка прерывания потока добавления результата голосования")] 
-
-        ElectionAddVotingResultAbort, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка поиска файла с ИД в директории {0}: {1} [попытка №{2}] 
-
-        /// </summary> 
-
-        [MessageParameters("Ошибка поиска файла с ИД в директории {0}: {1} [попытка №{2}]")] 
-
-        ElectionFindSourceDataError, 
-
- 
-
- 
-
-
-        /// <summary> 
-
-        /// Найден файл с ИД: {0}; УИК: {1} 
-
-        /// </summary> 
-
-        [MessageParameters("Найден файл с ИД: {0}; УИК: {1}")] 
-
-        ElectionSourceDataFound, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ИД загружены 
-
-        /// </summary> 
-
-        [MessageParameters("ИД загружены")] 
-
-        ElectionSourceDataLoaded, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка загрузки ИД 
-
-        /// </summary> 
-
-        [MessageParameters("Ошибка загрузки ИД")] 
-
-        ElectionSourceDataLoadException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Поиск файла ИД в папке: {0} 
-
-        /// </summary> 
-
-        [MessageParameters("Поиск файла ИД в папке: {0}")] 
-
-        ElectionSearchSourceDataInDir, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Проверка файла ИД: {0} 
-
-        /// </summary> 
-
-        [MessageParameters("Проверка файла ИД: {0}")] 
-
-        ElectionCheckSourceDataFile, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Найден файл ИД: {0} 
-
-        /// </summary> 
-
-        [MessageParameters("Найден файл ИД: {0}")] 
-
-        ElectionSourceDataFileFound, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка при поиске пути к файлу для сохранения протокола с результатами голосования 
-
-        /// </summary> 
-
+        VotingResult_AddVotingResultAbort, 
+        [MessageParameters("Поиск пути к файлу для сохранения протокола с результатами голосования...")] 
+        VotingResult_FindFilePathToSaveVotingResultProtocol, 
+        [MessageParameters("Поиск пути к файлу для сохранения протокола с результатами голосования завершен: {0}")] 
+        VotingResult_FindFilePathToSaveVotingResultProtocolDone, 
         [MessageParameters("Ошибка при поиске пути к файлу для сохранения протокола с результатами голосования")] 
-
-        ElectionFindFilePathToSaveVotingResultProtocolFailed, 
-
- 
-
- 
-
-        /// <summary> 
-
-
-        /// Ошибка при сохранении результатов голосования в локальной директории 
-
-        /// </summary> 
-
-        [MessageParameters("Ошибка при сохранении результатов голосования в локальной директории")] 
-
-        ElectionSaveVotingResultToLocalDirFailed, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка при сохранении результатов голосования на flash-диск 
-
-        /// </summary> 
-
+        VotingResult_FindFilePathToSaveVotingResultProtocolFailed, 
+        [MessageParameters("Файл с результатами голосования успешно сохранен в локальной директории: {0}")] 
+        VotingResult_SaveVotingResultToLocalDirSucceeded, 
+        [MessageParameters("Ошибка при сохранении файла с результатами голосования в локальной директории: {0}")] 
+        VotingResult_SaveVotingResultToLocalDirFailed, 
         [MessageParameters("Ошибка при сохранении результатов голосования на flash-диск")] 
-
-        ElectionSaveVotingResultToFlashFailed, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка при сохранении резервных копий результатов голосования на flash-диск 
-
-        /// </summary> 
-
+        VotingResult_SaveVotingResultToFlashFailed, 
         [MessageParameters("Ошибка при сохранении резервных копий результатов голосования на flash-диск")] 
-
-        ElectionSaveVotingResultReserveCopiesToFlashFailed, 
-
- 
-
- 
-
+        VotingResult_SaveVotingResultReserveCopiesToFlashFailed, 
         #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец сообщений звуковой подсистемы 
-
-        /// </summary> 
-
+        __End_VotingResult = 5 * __End_Common, 
+        #region Сообщения менеджера выборов 
+        [MessageParameters("Ошибка поиска файла с ИД в директории {0}: {1} [попытка №{2}]")] 
+        Election_FindSourceDataError, 
+        [MessageParameters("ИД загружены")] 
+        Election_SourceDataLoaded, 
+        [MessageParameters("Восстановление ИД...")] 
+        Election_SourceDataRepairing, 
+        [MessageParameters("Проверка ИД...")] 
+        Election_SourceDataVerifying, 
+        [MessageParameters("Проверка создания модели...")] 
+        Election_CheckCreateModel, 
+        [MessageParameters("ИД из файла {0} некорректные: {1}")] 
+        Election_SourceDataIncorrect, 
+        [MessageParameters("ИД успешно загружены из файла: {0}")] 
+        Election_SourceDataSuccessfullyLoadedFromFile, 
+        [MessageParameters("Ошибка загрузки ИД из файла {0}")] 
+        Election_SourceDataLoadFromFileFailed, 
+        [MessageParameters("Поиск файла ИД в папке: {0}")] 
+        Election_SearchSourceDataInDir, 
+        [MessageParameters("Проверка файла ИД: {0}")] 
+        Election_CheckSourceDataFile, 
+        [MessageParameters("Найден файл ИД: {0}")] 
+        Election_SourceDataFileFound, 
+        [MessageParameters("Ошибка при установки ИД")] 
+        Election_SetSourceDataFailed, 
+        [MessageParameters("Установлены ИД: УИК={0}; дата голосования={1}; время стационарного голосования=[{2}-{3}]")] 
+        Election_SetSourceDataSucceeded, 
+        [MessageParameters("Новое состояния отклонено, т.к. оно = null")] 
+        Election_NewStateRejectedBecauseIsNull, 
+        [MessageParameters("Новое состояния отклонено, т.к. новые ИД = null")] 
+        Election_NewStateRejectedBecauseNewSourceDataIsNull, 
+        [MessageParameters("Новое состояния принято")] 
+        Election_NewStateAccepted, 
+        [MessageParameters("Ошибка принятия нового состояния")] 
+        Election_NewStateAссeptError, 
+        [MessageParameters("Контрольные соотношения не выполнены: {0}")] 
+        Election_ChecksFailed, 
+        #endregion 
         __End_Election = 6 * __End_Common, 
-
- 
-
- 
-
         #region Сообщения синхронизации 
-
-        /// <summary> 
-
-        /// [Исключение] 
-
-        /// </summary> 
-
-        [MessageParameters("{0}")] 
-
-        SyncException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Не удалось подключиться к удаленному сканеру: {0} 
-
-        /// </summary> 
-
+        [MessageParameters("Ошибка открытия канала для подключения удаленных сканеров")] 
+        SyncOpenInteractionChannelError, 
+        [MessageParameters("Ошибка при подключении к удаленному сканеру")] 
+        SyncConnectRemoteScannerError, 
+        [MessageParameters("Ошибка при обработке события потери связи с удаленным сканером")] 
+        SyncRemoteScannerDisconnectedError, 
+        [MessageParameters("Удаленный сканер подключился")] 
+        SyncRemoteScannerConnected, 
+        [MessageParameters("Удаленный сканер отключился")] 
+        SyncRemoteScannerDisconnected, 
+        [MessageParameters("Удаленный сканер ожидает инициализации")] 
+        SyncRemoteScannerWaitForInitialization, 
+        [MessageParameters("Удаленный сканер вышел из меню")] 
+        SyncRemoteScannerExitFromMenu, 
+        [MessageParameters("Извещаем о подключении удаленного сканера")] 
+        SyncRemoteScannerConnectedEventRaise, 
+        [MessageParameters("Извещаем об отключении удаленного сканера")] 
+        SyncRemoteScannerDisconnectedEventRaise, 
+        [MessageParameters("Извещаем о том, что удаленный сканер ждет инициализации")] 
+        SyncRemoteScannerWaitForInitializationEventRaise, 
+        [MessageParameters("Извещаем о том, что удаленный сканер вышел из меню")] 
+        SyncRemoteScannerExitFromMenuEventRaise, 
+        [MessageParameters("Игнорируем сообщение удаленного сканера о том, что он подключен")] 
+        SyncIgnoreRemoteScannerConnectedEvent, 
+        [MessageParameters("Пробуем установить соединение с удаленным сканером")] 
+        SyncTryOpenConnection, 
+        [MessageParameters("Удаленный сканер запретил подключение")] 
+        SyncRemoteConnectionNotAllow, 
+        [MessageParameters("Получаем коннектор, Uri: {0}")] 
+        SyncGetRemoteConnector, 
+        [MessageParameters("Подключение к удаленному сканеру установлено: SerialNumber = {0}; IP = {1}")] 
+        SyncRemoteConnectionSuccess, 
+        [MessageParameters("Запущен поток отслеживания наличия связи с удаленным сканером")] 
+        SyncMonitorConnectionStarted, 
+        [MessageParameters("Проверка связи включена")] 
+        SyncMonitorConnectionEnabled, 
+        [MessageParameters("Проверка связи вЫключена")] 
+        SyncMonitorConnectionDisabled, 
+        [MessageParameters("Проверка связи...")] 
+        SyncExecMonitorConnection, 
+        [MessageParameters("Подключение к удаленному сканеру потеряно: SerialNumber = {0}; IP = {1}")] 
+        SyncRemoteConnectionLoss, 
+        [MessageParameters("Начинаем синхронизацию")] 
+        SyncStartSynchronization, 
+        [MessageParameters("Ждем завершения текущей синхронизации...")] 
+        SyncWaitForCurrentSynchronizationFinished, 
+        [MessageParameters("Синхронизация выключена или 2-ого сканера нет")] 
+        SyncStopedOrNoSecondScanner, 
+        [MessageParameters("Отправляем на синхронизацию элементы состояния: {0}")] 
+        SyncStateItemsForSync, 
+        [MessageParameters("Изменен элемент состояния '{0}': old = '{1}'; new = '{2}'")] 
+        SyncStateItemUpdated, 
+        [MessageParameters("Синхронизация включена")] 
+        SyncEnabled, 
+        [MessageParameters("Синхронизация вЫключена")] 
+        SyncDisabled, 
+        [MessageParameters("Игнорируем запрос на синхронизацию: синхронизация выключена")] 
+        SyncIgnoreSyncRequestByDisabled, 
+        [MessageParameters("Начинаем обработку запроса на синхронизацию")] 
+        SyncStartRequestExecuting, 
+        [MessageParameters("Синхронизация состояния подсистемы: {0}")] 
+        SyncSubsystemState, 
+        [MessageParameters("Результат принятия нового состояния подсистемой {0}: {1}")] 
+        SyncSubsystemStateResult, 
+        [MessageParameters("Синхронизация не требуется")] 
+        SyncNotNeeded, 
+        [MessageParameters("Запрос на синхронизацию обработан")] 
+        SyncRequestProcessed, 
+        [MessageParameters("Синхронизация завершена: {0}")] 
+        SyncComplete, 
         [MessageParameters("Не удалось подключиться к удаленному сканеру: {0}")] 
-
         SyncCannotConnectToRemoteScanner, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Канал для подключения удаленных сканеров открыт (localIPAddress = {0}) 
-
-        /// </summary> 
-
         [MessageParameters("Канал для подключения удаленных сканеров открыт (localIPAddress = {0})")] 
-
         SyncChannelOpened, 
-
- 
-
-
- 
-        /// <summary> 
-
-        /// Канал для подключения удаленных сканеров закрыт 
-
-        /// </summary> 
-
         [MessageParameters("Канал для подключения удаленных сканеров закрыт")] 
-
         SyncChannelClosed, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Установлена роль сканера: {0} 
-
-        /// </summary> 
-
         [MessageParameters("Установлена роль сканера: {0}")] 
-
         SyncScannerRoleSet, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Запрос на подключение от сканера SerialNumber={0}, IPAddress={1} отклонен 
-
-        /// </summary> 
-
         [MessageParameters("Запрос на подключение от сканера SerialNumber={0}, IPAddress={1} отклонен")] 
-
         SyncConnectRejected, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Запрос на подключение от сканера SerialNumber={0}, IPAddress={1} принят 
-
-        /// </summary> 
-
         [MessageParameters("Запрос на подключение от сканера SerialNumber={0}, IPAddress={1} принят")] 
-
         SyncConnectAccepted, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Связь с удаленным сканером потеряна: {0} 
-
-        /// </summary> 
-
-        [MessageParameters("Связь с удаленным сканером потеряна: {0}")] 
-
+        [MessageParameters("Вызов удаленного метода '{0}' завершился ошибкой: {1}")] 
+        SyncCallRemoteMethodFailed, 
+        [MessageParameters("Пробуем вызвать удаленный метод '{0}' еще раз, попытка №{1}")] 
+        SyncTryCallRemoteMethodAgain, 
+        [MessageParameters("Связь с удаленным сканером потеряна")] 
         SyncDisconnected, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Состояние загружено 
-
-        /// </summary> 
-
+        [MessageParameters("Связь с удаленным сканером потеряна (уже знаем, что связи нет)")] 
+        SyncDisconnectedAlreadyKnown, 
         [MessageParameters("Состояние загружено")] 
-
         SyncStateLoaded, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка загрузки состояния 
-
-        /// </summary> 
-
+        [MessageParameters("Не удалось загрузить состояние")] 
+        SyncStateLoadFailed, 
         [MessageParameters("Ошибка загрузки состояния")] 
-
-        SyncStateLoadException, 
-
- 
-
- 
-
-
-        /// <summary> 
-
-        /// Ошибка сохранения состояния 
-
-        /// </summary> 
-
+        SyncStateLoadError, 
         [MessageParameters("Ошибка сохранения состояния")] 
-
-        SyncStateSaveException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Не удалось сохранить состояние 
-
-        /// </summary> 
-
+        SyncStateSaveError, 
         [MessageParameters("Не удалось сохранить состояние")] 
-
         SyncStateSaveFailed, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка архивации состояния 
-
-        /// </summary> 
-
-        [MessageParameters("Ошибка архивации состояния")] 
-
-        SyncStateArchiveException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Состояние сброшено в начальное 
-
-        /// </summary> 
-
+        [MessageParameters("Ошибка сохранения бекапа текущего состояния")] 
+        SyncBackupCurrentStateFailed, 
         [MessageParameters("Состояние сброшено в начальное")] 
-
-        SyncStateReset, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка при сбросе состояния в начальное 
-
-        /// </summary> 
-
+        SyncResetStateSucceeded, 
         [MessageParameters("Ошибка при сбросе состояния в начальное")] 
-
-        SyncStateResetException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка при синхронизации с удаленным сканером 
-
-        /// </summary> 
-
+        SyncStateResetFailed, 
         [MessageParameters("Ошибка при синхронизации с удаленным сканером")] 
-
-        SyncSynchronizationException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка восстановления состояния подсистемы: {0} 
-
-        /// </summary> 
-
+        SyncSynchronizationError, 
         [MessageParameters("Ошибка восстановления состояния подсистемы: {0}")] 
-
         SyncSubsystemRestoreStateFailed, 
-
- 
-
- 
-
-        /// <summary> 
-
-
-        /// Установлено новое время: {0:dd.MM.yyyy HH:mm:ss} UTC 
-
-        /// </summary> 
-
         [MessageParameters("Установлено новое время: {0:dd.MM.yyyy HH:mm:ss} UTC")] 
-
         SyncSetSystemTime, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Файл состояния не найден, загружаю начальное состояние 
-
-        /// </summary> 
-
+        [MessageParameters("Удаленный сканер вызвал метод '{0}', параметры: {1}")] 
+        SyncRemoteScannerCall, 
         [MessageParameters("Файл состояния не найден, загружаю начальное состояние")] 
-
         SyncInitialState, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Файл состояния имеет нулевой размер 
-
-        /// </summary> 
-
-        [MessageParameters("Файл состояния имеет нулевой размер")] 
-
-        SyncStateHasZeroSize, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// При удалении файла состояния произошла ошибка 
-
-        /// </summary> 
-
-        [MessageParameters("При удалении файла состояния произошла ошибка")] 
-
-        SyncStateDeleteError, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Состояние сохранено 
-
-        /// </summary> 
-
         [MessageParameters("Состояние сохранено")] 
-
         SyncStateSaved, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Синхронизация состояния отклонена, так как идет сканирование 
-
-        /// </summary> 
-
         [MessageParameters("Синхронизация состояния отклонена, так как идет сканирование")] 
-
         SyncStateRejectedByScanning, 
-
+        [MessageParameters("Сброс состояния, причина = '{0}'")] 
+        SyncResetState, 
+        [MessageParameters("Начинается печать на локальном сканере")] 
+        SyncPrintReportStartingOnLocal, 
+        [MessageParameters("Печать на локальном сканере окончена")] 
+        SyncPrintReportFinishedOnLocal, 
+        [MessageParameters("Начинается печать на удаленном сканере")] 
+        SyncPrintReportStartingOnRemote, 
+        [MessageParameters("Печать на удаленном сканере окончена")] 
+        SyncPrintReportFinishedOnRemote, 
+        [MessageParameters("Запускаем процесс переподнятия сети...")] 
+        SyncIfrestartStarting, 
+        [MessageParameters("Процесс переподнятия сети завершен: res = {0}")] 
+        SyncIfrestartDone, 
+        [MessageParameters("Сброс ПО: причина={0}; удаленный инициатор={1}; перезапуск={2}")] 
+        SyncResetSoft, 
         #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец сообщений синхронизации 
-
-        /// </summary> 
-
         __End_Sync = 7 * __End_Common, 
-
- 
-
- 
-
         #region Сообщения конфигурации 
-
-        /// <summary> 
-
-
-        /// [Исключение] 
-
-        /// </summary> 
-
-        [MessageParameters("{0}")] 
-
-        ConfigException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка загрузки рабочей конфигурации 
-
-        /// </summary> 
-
+        [MessageParameters("Ошибка удаления рабочего конфиг-файла")] 
+        ConfigDeleteWorkingError, 
+        [MessageParameters("Ошибка применения конфигурации")] 
+        ConfigApplyError, 
         [MessageParameters("Ошибка загрузки рабочей конфигурации")] 
-
-        ConfigLoadWorkingException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка поиска файла с частной конфигурации по пути: {0} 
-
-        /// </summary> 
-
+        ConfigLoadWorkingError, 
         [MessageParameters("Ошибка поиска файла с частной конфигурации по пути: {0}")] 
-
         ConfigFindPartialError, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка чтения файла частной конфигурации 
-
-        /// </summary> 
-
         [MessageParameters("Ошибка чтения файла частной конфигурации")] 
-
-        ConfigReadPartialException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка загрузки частной конфигурации 
-
-        /// </summary> 
-
+        ConfigReadPartialError, 
         [MessageParameters("Ошибка загрузки частной конфигурации")] 
-
-        ConfigLoadPartialException, 
-
+        ConfigLoadPartialError, 
+        [MessageParameters("Изменен параметр '{0}' подсистемы '{1}': старое значение [{2}]; новое значение [{3}]")] 
+        ConfigSubsystemConfigUpdated, 
         #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец сообщений конфигурации 
-
-        /// </summary> 
-
         __End_Config = 8 * __End_Common, 
-
- 
-
- 
-
         #region Сообщения workflow 
-
-        /// <summary> 
-
-        /// [Исключение] 
-
-        /// </summary> 
-
-        [MessageParameters("{0}")] 
-
-        WorkflowException, 
-
- 
-
- 
-
-        /// <summary> 
-
-
-        /// Во время работы потока произошло исключение 
-
-        /// </summary> 
-
-        [MessageParameters("Во время работы потока произошло исключение")] 
-
-        WorkflowThreadException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Работа потока завершилась{0} 
-
-        /// </summary> 
-
-        [MessageParameters("Работа потока завершилась{0}")] 
-
+        [MessageParameters("Работа потока завершилась")] 
         WorkflowThreadStopped, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// [Текст состояния] 
-
-        /// </summary> 
-
+        [MessageParameters("Работа потока завершилась. Результат: {0}")] 
+        WorkflowThreadStoppedWithResult, 
+        [MessageParameters("Работа потока прервана: {0}")] 
+        WorkflowThreadTerminated, 
         [MessageParameters("{0}")] 
-
         WorkflowText, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Не можем определить наличие конфликта 
-
-        /// </summary> 
-
+        [MessageParameters("Воспроизведение фразы остановлено нажатием кнопки ДА или НЕТ")] 
+        WorkflowSoundPlayingStoppedByYesOrNoPressed, 
+        [MessageParameters("Воспроизведение фразы остановлено в результате переключения выполнения на другое действие")] 
+        WorkflowSoundPlayingStoppedByActivityExecutionInterrupt, 
         [MessageParameters("Не можем определить наличие конфликта")] 
-
         WorkflowCannotDetectConflict, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Главный сканер обнаружил конфликт сканеров 
-
-        /// </summary> 
-
         [MessageParameters("Главный сканер обнаружил конфликт сканеров")] 
-
         WorkflowMasterDetectConflict, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Главный сканер не обнаружил конфликта сканеров 
-
-        /// </summary> 
-
         [MessageParameters("Главный сканер не обнаружил конфликта сканеров")] 
-
         WorkflowMasterDetectNoConflict, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Не можем определить, были ли введены доп. сведения на главном сканере 
-
-        /// </summary> 
-
+        [MessageParameters("Обнаружен конфликт")] 
+        WorkflowHasConflict, 
         [MessageParameters("Не можем определить, были ли введены доп. сведения на главном сканере")] 
-
         WorkflowCannotDetectAddInfoEnteredOnMaster, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Доп. сведения не были введены на главном сканере 
-
-
-        /// </summary> 
-
-        [MessageParameters("Доп. сведения не были введены на главном сканере")] 
-
-        WorkflowAddInfoNotEnteredOnMaster, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Доп. сведения введены на главном сканере 
-
-        /// </summary> 
-
-        [MessageParameters("Доп. сведения введены на главном сканере")] 
-
-        WorkflowAddInfoEnteredOnMaster, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Неизвестный тип бланка: {0} 
-
-        /// </summary> 
-
+        [MessageParameters("Доп. сведения введены для выборов Id={0}")] 
+        WorkflowAddInfoEnteredForElection, 
+        [MessageParameters("Выборы с Id={0}, который получен с главного сканера, не найдены")] 
+        WorkflowElectionWithIdFromMasterNotFound, 
+        [MessageParameters("Ввод доп. сведений завершен")] 
+        WorkflowAddInfoEnteringFinished, 
         [MessageParameters("Неизвестный тип бланка: {0}")] 
-
         WorkflowUnknownBlankType, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ---> {0} 
-
-        /// </summary> 
-
         [MessageParameters("---> {0}")] 
-
         WorkflowActivityExecutionStarting, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// <--- {0} 
-
-        /// </summary> 
-
         [MessageParameters("<--- {0}")] 
-
         WorkflowActivityExecutionFinished, 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// Ошибка при сериализации счетчика ошибок 
-
-		/// </summary> 
-
-		[MessageParameters("Ошибка при сериализации счетчика ошибок")] 
-
-		WorkflowErrorCounterSerializationException, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Не удалось сохранить файл счетчика ошибок 
-
-        /// </summary> 
-
-        [MessageParameters("Не удалось сохранить файл счетчика ошибок")] 
-
-        WorkflowErrorCounterSerializationFailed, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка при десериализации счетчика ошибок 
-
-        /// </summary> 
-
-
-        [MessageParameters("Ошибка при десериализации счетчика ошибок")] 
-
-        WorkflowErrorCounterDeserializationError, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Файл счетчика ошибок имеет нулевой размер 
-
-        /// </summary> 
-
-        [MessageParameters("Файл счетчика ошибок имеет нулевой размер")] 
-
-        WorkflowErrorCounterHasZeroSize, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// При удалении файла счетчика ошибок произошла ошибка 
-
-        /// </summary> 
-
-        [MessageParameters("При удалении файла счетчика ошибок произошла ошибка")] 
-
-        WorkflowErrorCounterDeleteError, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Запущен поток контроля времени начала голосования 
-
-        /// </summary> 
-
-        [MessageParameters("Запущен поток контроля времени начала голосования")] 
-
+        [MessageParameters("Ошибка при сохранении счетчика ошибок")] 
+        WorkflowErrorCounterSaveError, 
+        [MessageParameters("Не удалось сохранить счетчик ошибок")] 
+        WorkflowErrorCounterSaveFailed, 
+        [MessageParameters("Не удалось загрузить счетчик ошибок")] 
+        WorkflowErrorCounterLoadFailed, 
+        [MessageParameters("Ошибка при загрузке счетчика ошибок")] 
+        WorkflowErrorCounterLoadError, 
+        [MessageParameters("Запущен контроль начала голосования: Период={0}, TrainingMinTime={1}, RealMinTime={2}")] 
         WorkflowControlThreadStarted, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Поток контроля времени начала голосования: пора закончить тренировку! 
-
-        /// </summary> 
-
-        [MessageParameters("Поток контроля времени начала голосования: пора закончить тренировку!")] 
-
-        WorkflowControlThreadNeedFinishTraining, 
-
- 
-
- 
-
-        #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец сообщений workflow 
-
-        /// </summary> 
-
-        __End_Workflow = 9 * __End_Common, 
-
- 
-
- 
-
-        #region Сообщения менеджера файловой системы 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка при записи в файл '{0}' 
-
-        /// </summary> 
-
-        [MessageParameters("Ошибка при записи в файл '{0}'")] 
-
-        FileSystemWriteToFileError, 
-
- 
-
-
- 
-        /// <summary> 
-
-        /// Ошибка при определении размера свободного места в '{0}' 
-
-        /// </summary> 
-
-        [MessageParameters("Ошибка при определении размера свободного места в '{0}'")] 
-
-        FileSystemCheckFreeSpaceError, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка при синхронизации файловой системы 
-
-        /// </summary> 
-
-        [MessageParameters("Ошибка при синхронизации файловой системы")] 
-
-        FileSystemSyncError, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Свободное место на диске {0} ({1}) = {2} байт 
-
-        /// </summary> 
-
-        [MessageParameters("Свободное место на диске {0} ({1}) = {2} байт")] 
-
-        FileSystemDiscSpace, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка при выполнении безопасной сериализации {0} на стадии {1} 
-
-        /// </summary> 
-
-        [MessageParameters("Ошибка при выполнении безопасной сериализации {0} на стадии {1}")] 
-
-        FileSystemSafeSerializationFailed, 
-
- 
-
- 
-
-        #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец сообщений менеджера файловой системы 
-
-        /// </summary> 
-
-        __End_FileSystem = 10 * __End_Common, 
-
- 
-
- 
-
-        #region Сообщения менеджера клавиатуры 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Тип клавиатуры: {0} ({1}) 
-
-        /// </summary> 
-
-        [MessageParameters("Тип клавиатуры: {0} ({1})")] 
-
-        KeyboardType, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Нажата клавиша: code = {0}; type = {1}; value = {2}; time = {3} 
-
-
-        /// </summary> 
-
-        [MessageParameters("Нажата клавиша: code = {0}; type = {1}; value = {2}; time = {3}")] 
-
-        KeyboardKeyPressed, 
-
- 
-
- 
-
-        #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец сообщений менеджера клавиатуры 
-
-        /// </summary> 
-
-        __End_Keyboard = 11 * __End_Common, 
-
- 
-
- 
-
-        #region Сообщения менеджера печати 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка загрузки шаблона отчета: {0} 
-
-        /// </summary> 
-
-        [MessageParameters("Ошибка загрузки шаблона отчета: {0}")] 
-
-        PrintingLoadReportTemplateFailed, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Не найден шаблон отчета: {0} 
-
-        /// </summary> 
-
-        [MessageParameters("Не найден шаблон отчета: {0}")] 
-
-        PrintingReportTemplateNotFound, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка валидации шаблона отчета: {0} 
-
-        /// </summary> 
-
-        [MessageParameters("Ошибка валидации шаблона отчета: {0}")] 
-
-        PrintingReportTemplateValidationError, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка формирования PDF-отчета 
-
-        /// </summary> 
-
-        [MessageParameters("Ошибка формирования PDF-отчета")] 
-
-        PrintingPdfBuildFailed, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ошибка при формировании заголовков протокола (сформированы по умолчанию) 
-
-        /// </summary> 
-
-        [MessageParameters("Ошибка при формировании заголовков протокола (сформированы по умолчанию)")] 
-
-        PrintingReportHeadersBuildFailed, 
-
-
- 
- 
-
-        /// <summary> 
-
-        /// Ошибка при формировании содержания протокола (сформированы по умолчанию) 
-
-        /// </summary> 
-
-        [MessageParameters("Ошибка при формировании содержания протокола (сформированы по умолчанию)")] 
-
-        PrintingReportBodyBuildFailed, 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// "Запуцена печать {0} страницы файла {1}" 
-
-		/// </summary> 
-
-		[MessageParameters("Запущена печать {0} страницы файла {1}")] 
-
-		PrintingStartPagePrint, 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// "Ошибка при печати документа" 
-
-		/// </summary> 
-
-		[MessageParameters("Ошибка при печати документа {0}")] 
-
-		PrintingException, 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// "Найден принтер {0}" 
-
-		/// </summary> 
-
-		[MessageParameters("Найден принтер {0}")] 
-
-		PrintingFindPrinter, 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// "Строка результата поиска принтеров: {0}" 
-
-		/// </summary> 
-
-		[MessageParameters("Строка результата поиска принтеров: {0}")] 
-
-		PrintingBackendLine, 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// "Ошибка при разрешении очереди принтера" 
-
-		/// </summary> 
-
-		[MessageParameters("Ошибка при разрешении очереди принтера")] 
-
-		PrinterEnablingError, 
-
- 
-
- 
-
-        #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец сообщений менеджера клавиатуры 
-
-        /// </summary> 
-
-
-        __End_Printing = 12 * __End_Common, 
-
- 
-
- 
-
-        #region Сообщения о действиях пользователя 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// {стате состояние}: {текущее действие} - {клавиша} 
-
-        /// </summary> 
-
-        [MessageParameters("Нажатие клавиш {0}: {1} - {2}")] 
-
-        UserKeyPressed, 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Переход в состояние {0} 
-
-        /// </summary> 
-
-        [MessageParameters("Переход в состояние {0}")] 
-
+        [MessageParameters("Контроль начала голосования: голосование уже идет")] 
+        WorkflowControlThreadVotingAlreadyGoes, 
+        [MessageParameters("Контроль начала голосования: голосование скоро начнется!")] 
+        WorkflowControlThreadVotingWillSoonStart, 
+        [MessageParameters("До начала голосования осталось не более 10 мин")] 
+        WorkflowNotMoreThen10MinToVotingStart, 
+        [MessageParameters("До окончания голосования осталось не более 10 мин")] 
+        WorkflowNotMoreThen10MinToVotingEnd, 
+        [MessageParameters("Причина реверса не определена: DropResult = {0}; VotingResult = {1}")] 
+        WorkflowReverseReasonUndefined, 
+        [MessageParameters("Удаленный сканер принял роль {0}")] 
+        WorkflowRemoteScannerTakeRole, 
+        [MessageParameters("Версии ПО различаются: данный сканер = {0}; удаленный сканер = {1}")] 
+        WorkflowApplicationVersionsDiffer, 
+        [MessageParameters("Ждем решение главного сканера о наличии конфликта...")] 
+        WorkflowWaitForMasterDecision, 
+        [MessageParameters("Главный сканер ждет, когда удаленный определит свою роль...")] 
+        WorkflowMasterWaitForRemoteScannerRoleDefined, 
+        [MessageParameters("Подчиненный сканер ждет, когда удаленный определит свою роль...")] 
+        WorkflowSlaveWaitForRemoteScannerRoleDefined, 
+        [MessageParameters("Начало инициализации: ждем удаленный сканер...")] 
+        WorkflowInitStartWaitForRemoteScanner, 
+        [MessageParameters("Начало инициализации: сообщаем удаленному сканеру, что мы его ждем")] 
+        WorkflowInitStartNoticeRemoteScannerAboutWait, 
+        [MessageParameters("Ждем получение частного конфига с главного сканера...")] 
+        WorkflowWaitForPartialConfigFromMaster, 
+        [MessageParameters("Ждем завершения ввода доп. сведений на главном сканере...")] 
+        WorkflowWaitForAddInfoEnteredOnMaster, 
+        [MessageParameters("Ждем синхронизации с главным сканером...")] 
+        WorkflowWaitForSynchronizationWithMaster, 
+        [MessageParameters("Новое состояние '{0}' отклонено, т.к. его порядковый номер меньше, чем у текущего состояния '{1}'")] 
+        WorkflowNewStateRejectedBecauseOfOrderLess, 
+        [MessageParameters("Новое состояние '{0}' отклонено, т.к. текущее состояние '{1}' Главного сканера с таким же порядковым номером имеет приоритет")] 
+        WorkflowNewStateRejectedBecauseOfMasterStateHasPriority, 
+        [MessageParameters("Принято новое состояние '{0}' (текущее = '{1}')")] 
+        WorkflowNewStateAccepted, 
+        [MessageParameters("Проверка конфликта: сбрасываем состояние на подчиненном")] 
+        WorkflowResetStateOnSlaveScanner, 
+        [MessageParameters("Запускаем синхронизацию...")] 
+        WorkflowStartSynchronization, 
+        [MessageParameters("Переход к действию: {0}")] 
         WorkflowStateChanged, 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// Изменен параметр {0} подсистемы {1}, старое значение {2} новое {3}  
-
-		/// </summary> 
-
-		[MessageParameters("Изменен параметр {0} подсистемы {1}, старое значение {2} новое {3}")] 
-
-		ParameterUpdated, 
-
- 
-
- 
-
+        [MessageParameters("Нажатие клавиш {0}: {1} - {2}")] 
+        WorkflowUserKeyPressed, 
+        [MessageParameters("Сброс ПО на подчиненном сканере в результате обнаружения конфликта")] 
+        WorkflowResetSoftOnSlaveBecauseConflictDetected, 
+        [MessageParameters("Сброс ПО на главном сканере в результате обнаружения конфликта")] 
+        WorkflowResetSoftOnMasterBecauseConflictDetected, 
         #endregion 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конец сообщений менеджера клавиатуры 
-
-        /// </summary> 
-
-        __End_UserAction = 13 * __End_Common, 
-
+        __End_Workflow = 9 * __End_Common, 
+        #region Сообщения менеджера файловой системы 
+        [MessageParameters("Ошибка при записи в файл '{0}'")] 
+        FileSystemWriteToFileError, 
+        [MessageParameters("Ошибка при перемещении директории '{0}' в архив")] 
+        FileSystemMoveToArchiveError, 
+        [MessageParameters("Не удалось удалить архивную директорию")] 
+        FileSystemDeleteArchiveDirectoryError, 
+        [MessageParameters("Не удалось удалить файл {0}")] 
+        FileSystemDeleteFileError, 
+        [MessageParameters("Не удалось выполнить архивацию директории {0}")] 
+        FileSystemArchiveFolderError, 
+        [MessageParameters("Ошибка при определении размера свободного места в '{0}'")] 
+        FileSystemCheckFreeSpaceError, 
+        [MessageParameters("Ошибка при синхронизации файловой системы")] 
+        FileSystemSyncError, 
+        [MessageParameters("Свободное место на диске {0} ({1}) = {2} байт")] 
+        FileSystemDiscSpace, 
+        [MessageParameters("Ошибка при выполнении безопасной сериализации {0} на стадии {1}")] 
+        FileSystemSafeSerializationFailed, 
+        [MessageParameters("Файл {0} имеет нулевой размер")] 
+        FileSystemFileHasZeroSize, 
+        [MessageParameters("При удалении файла {0} произошла ошибка")] 
+        FileSystemFileDeleteError, 
+        [MessageParameters("Ошибка при выполнении безопасной десериализации из файла {0} на стадии {1}")] 
+        FileSystemSafeDeserializationFailed, 
+        #endregion 
+        __End_FileSystem = 10 * __End_Common, 
+        #region Сообщения менеджера клавиатуры 
+        [MessageParameters("Тип клавиатуры: {0} ({1})")] 
+        KeyboardType, 
+        [MessageParameters("Нажата клавиша: code = {0}; type = {1}; value = {2}; time = {3}")] 
+        KeyboardKeyPressed, 
+        [MessageParameters("Создан драйвер клавиатуры ({0})")] 
+        KeyboardDriverCreated, 
+        [MessageParameters("Ошибка создания драйвера клавиатуры ({0}): {1}")] 
+        KeyboardDriverCreationFailed, 
+        [MessageParameters("Ошибка в методе обработки нажатий на клавиши: {0}")] 
+        KeyboardDriverWorkMethodFailed, 
+        #endregion 
+        __End_Keyboard = 11 * __End_Common, 
+        #region Сообщения менеджера печати 
+        [MessageParameters("Ошибка загрузки шаблона отчета: {0}")] 
+        PrintingLoadReportTemplateFailed, 
+        [MessageParameters("Не найден шаблон отчета: {0}")] 
+        PrintingReportTemplateNotFound, 
+        [MessageParameters("Ошибка валидации шаблона отчета: {0}")] 
+        PrintingReportTemplateValidationError, 
+        [MessageParameters("Ошибка формирования PDF-отчета")] 
+        PrintingPdfBuildFailed, 
+        [MessageParameters("Ошибка при формировании заголовков протокола (сформированы по умолчанию)")] 
+        PrintingReportHeadersBuildFailed, 
+        [MessageParameters("Ошибка при формировании содержания протокола (сформированы по умолчанию)")] 
+        PrintingReportBodyBuildFailed, 
+        [MessageParameters("Запущена печать {0} страницы файла {1}, копий: {2}")] 
+        PrintingStartPagePrint, 
+        [MessageParameters("Ошибка при печати документа {0}")] 
+        PrintingError, 
+        [MessageParameters("Найден принтер: '{0}'")] 
+        PrintingFindPrinter, 
+        [MessageParameters("Строка результата поиска принтеров: {0}")] 
+        PrintingBackendLine, 
+        [MessageParameters("Ошибка при разрешении очереди принтера")] 
+        PrintingEnablingError, 
+        [MessageParameters("Начало выполнения: {0}")] 
+        PrintingPdfBuilderStartEvent, 
+        [MessageParameters("Окончание выполнения: {0}")] 
+        PrintingPdfBuilderEndEvent, 
+        [MessageParameters("Формирование отчета: {0}")] 
+        PrintingCreateReport, 
+        [MessageParameters("Печать отчета: {0}")] 
+        PrintingPrintReport, 
+        #endregion 
+        __End_Printing = 12 * __End_Common, 
+        #region Сообщения DummyScannerDriver 
+        [MessageParameters("Начинаем эмуляцию сканирования")] 
+        DummyScannerStartScanning, 
+        [MessageParameters("Читаем следующий буфер")] 
+        DummyScannerReadNextBuffer, 
+        [MessageParameters("Чтение буферов завершено")] 
+        DummyScannerReadBuffersReturn, 
+        [MessageParameters("Эмуляция сканирования завершена")] 
+        DummyScannerEndScanning, 
+        [MessageParameters("Лист реверсирован")] 
+        DummyScannerSheetReversed, 
+        [MessageParameters("SheetIssue = {0}")] 
+        DummyScannerSheetIssue, 
+        [MessageParameters("motor {0}, direction {1}: {2}")] 
+        DummyScannerMotorCall, 
+        [MessageParameters("{0}")] 
+        DummyScannerIndicator, 
+        [MessageParameters("Сообщение на время сканирования = '{0}'")] 
+        DummyScannerSetScanningIndicatorMessage, 
+        [MessageParameters("Red {0}")] 
+        DummyScannerRedLamp, 
+        [MessageParameters("Green {0}")] 
+        DummyScannerGreenLamp, 
+        [MessageParameters("LocalIP = {0}")] 
+        DummyScannerLocalIp, 
+        [MessageParameters("Версия эмулятора сканера не задана/задана некорректно. Установлена версия по умолчанию: V2010")] 
+        DummyScannerWrongVersion, 
+        [MessageParameters("Ошибка во время эмуляции сканирования")] 
+        DummyScannerEmulationError, 
+        [MessageParameters("ScanningEnabled {0}")] 
+        DummyScannerScanningEnabled, 
+        [MessageParameters("DoubleSheetSensorEnabled {0}")] 
+        DummyScannerDoubleSheetSensorEnabled, 
+        #endregion 
+        __End_DummyScannerDriver = 13 * __End_Common, 
+        #region Сообщения жизни КОИБ 
+        [MessageParameters("Включение")] 
+        ApplicationStart, 
+        [MessageParameters("Выключение ({0})")] 
+        ApplicationEnd, 
+        [MessageParameters("'{0}' --> '{1}'. Бюллетеней {2}")] 
+        VotingModeChange, 
+        [MessageParameters("Архив {0}")] 
+        ArchiveFolder, 
+        #endregion 
+        __End_MainLog = 14 * __End_Common, 
     } 
-
 }
-
-

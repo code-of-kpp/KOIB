@@ -1,1141 +1,410 @@
 using System; 
-
 using System.Collections.Generic; 
-
 using System.Data; 
-
-using Croc.Bpc.Common.Diagnostics; 
-
-using Croc.Bpc.Election.Voting; 
-
+using System.IO; 
+using System.Linq; 
+using System.Text; 
+using Croc.Bpc.Diagnostics; 
 using Croc.Bpc.FileSystem; 
-
 using Croc.Bpc.Printing.Reports.Templates; 
-
+using Croc.Bpc.Utils; 
 using Croc.Core.Utils.IO; 
-
 using iTextSharp.text; 
-
 using iTextSharp.text.pdf; 
-
 using Table = iTextSharp.text.Table; 
-
-using Voting = Croc.Bpc.Election.Voting; 
-
- 
-
- 
-
 namespace Croc.Bpc.Printing.Reports 
-
 { 
-
-    /// <summary> 
-
-    /// ??????????? ?????? ? PDF 
-
-    /// </summary> 
-
     public class PdfReportBuilder 
-
     { 
-
-        /// <summary> 
-
-        /// ???????????? ?????????? ??????? 
-
-        /// </summary> 
-
-        private int m_nTotalPagesCount; 
-
- 
-
- 
-
-        /// <summary> 
-
-        ///		??????? ?????? ??????? ??????? 
-
-        /// </summary> 
-
+        private int _totalPagesCount; 
+        private int _currentPageNumber; 
+        private Font _font; 
+        private const float DBL_LEADING_FONT = 1.2f; 
+        private const string FONT_CODEPAGE = "CP1251"; 
+        private const string FONT_FILE_EXTENSION = ".ttf"; 
+        private int _defaultFontSize; 
+        private Document _pdfDocument; 
         public bool PageNumbered = true; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ???????? ?? ????? ? ???????? 
-
-        /// </summary> 
-
-        public bool TableDotted = false; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????????? ? ??????? ????????? 
-
-        ///     ????: ??? ?????? 
-
-        ///     ????????: ????? ?????  
-
-        /// </summary> 
-
-        public Dictionary<Voting.Section, Lines> Headers = new Dictionary<Voting.Section, Lines>(); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????? ?????? 
-
-        /// </summary> 
-
-
-        public DataSet m_data; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????? 
-
-        /// </summary> 
-
-        private Font m_font; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????? ?????? ???????????? ?????? ??????(?? ????????? ????? 1.5) 
-
-        /// </summary> 
-
-        private const double dblLeading_font = 1.2; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????? ??????? ? ???????? 
-
-        /// </summary> 
-
-        private const float ftTableWidth = 5; 
-
-        /// <summary> 
-
-        /// ?????????? ?????? ????? (????????) ?????? ? ????? ??????? 
-
-        /// </summary> 
-
-        private const int cEmptyLines = 1; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????????, ??????? ????? ???????????? ??? ??????? ???????? 
-
-        /// </summary> 
-
-        const string FONT_CODEPAGE = "CP1251"; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????? ?????? ?? ????????? 
-
-        /// </summary> 
-
-        private int m_nDefaultFontSize; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??????? ???????? ?????? ? ?????? 
-
-        /// </summary> 
-
-        public bool ClaspFooter = false; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??????????? ???????? 
-
-        /// </summary> 
-
-        Document pd = null; 
-
- 
-
- 
-
-        /// <summary> 
-
-
-        ///	???????????? PDF 
-
-        /// </summary> 
-
-        /// <param name="reportType">??? ??????</param> 
-
-        /// <returns>???? ? ??????????????? pdf-?????</returns> 
-
-        public PrinterJob Build() 
-
+        public bool TableDotted; 
+        public FontType TemplateFont; 
+        public int FontSize 
         { 
-
+            get { return _defaultFontSize; } 
+            set { _defaultFontSize = value; } 
+        } 
+        public int[] Margins; 
+        public Dictionary<PageSection, Lines> Headers = new Dictionary<PageSection, Lines>(); 
+        public DataSet Data; 
+        public bool ClaspFooter; 
+        private static int Border 
+        { 
+            get 
+            { 
+                var reportConfig = Managers.PrintingManager.ReportConfig; 
+                return reportConfig.DebugMode.Value ? Rectangle.BOX : Rectangle.NO_BORDER; 
+            } 
+        } 
+        public PrinterJob Build(ReportType reportType, int copies) 
+        { 
             var reportConfig = Managers.PrintingManager.ReportConfig; 
-
- 
-
- 
-
-            // ??????? ????? ??????? ???????: 
-
-            m_nTotalPagesCount = 0; 
-
- 
-
- 
-
-            // TODO: ???? ????? ?????????????, ???? ?? ?? ????????? ??????????? ?????????? ??????? PDF,  
-
-            // ??????? ????? ?????????? 
-
- 
-
- 
-
-            // ????????? ????, ? ??????? ????? ?????????? ???????? 
-
-            using (var file = FileUtils.CreateUniqueFileWithDateMark( 
-
+            var logger = Managers.PrintingManager.Logger; 
+            logger.LogVerbose(Message.Common_DebugCall); 
+            _totalPagesCount = 0; 
+            _currentPageNumber = 0; 
+            var fileName = FileUtils.GetUniqueName( 
                 Managers.FileSystemManager.GetDataDirectoryPath(FileType.Report), 
-
-                "PrintJob", 
-
+                String.Format("{0}.{1:yyyyMMdd}.", "PrintJob", DateTime.Now), 
                 "pdf", 
-
-                6)) 
-
+                6); 
+            var filePath = Path.Combine(Managers.FileSystemManager.GetDataDirectoryPath(FileType.Report), fileName); 
+            using (var stream = new MemoryStream()) 
             { 
-
                 try 
-
                 { 
-
-                    // ??????? ????? PDF-???????? 
-
-                    pd = new Document(PageSize.A4); 
-
-                    pd.ClaspFooter = ClaspFooter; 
-
- 
-
- 
-
-                    // ?????????? PDF-??????? ????????? 
-
-                    PdfWriter oWriter = PdfWriter.GetInstance(pd, file); 
-
-                    oWriter.PageEvent = new PdfEventHelper(this); 
-
- 
-
- 
-
-                    // ????????? ??????? 
-
-                    pd.SetMargins( 
-
-                        reportConfig.Margin.Left, reportConfig.Margin.Right, 
-
-                        reportConfig.Margin.Top + 40.0f, reportConfig.Margin.Bottom); 
-
- 
-
- 
-
-                    // ??????? ????? 
-
-                    BaseFont oBaseFnt = BaseFont.CreateFont(reportConfig.Font.Name, FONT_CODEPAGE, true); 
-
-                    // ?????? ?????? ?? ????????? 
-
-                    m_nDefaultFontSize = reportConfig.Font.Size; 
-
-                    // ??????? 
-
-                    m_font = new Font(oBaseFnt, m_nDefaultFontSize, Font.NORMAL); 
-
- 
-
- 
-
-
-                    // ?? ???????? ?????????, ????? ???????????? ???????????? ?????????: 
-
-                    if (Headers.ContainsKey(Voting.Section.PageHeader)) 
-
+                    _pdfDocument = new Document(PageSize.A4); 
+                    _pdfDocument.ClaspFooter = ClaspFooter; 
+                    PdfWriter writer = PdfWriter.GetInstance(_pdfDocument, stream); 
+                    writer.PageEvent = new PdfEventHelper(this); 
+                    _pdfDocument.SetMargins(Margins[0], Margins[1], Margins[2], Margins[3]); 
+                    var fontFileName = Path.Combine(reportConfig.Font.Path, 
+                                                    TemplateFont.ToString().ToLower() + FONT_FILE_EXTENSION); 
+                    BaseFont baseFont = BaseFont.CreateFont(fontFileName, FONT_CODEPAGE, true); 
+                    _font = new Font(baseFont, _defaultFontSize, Font.NORMAL); 
+                    if (Headers.ContainsKey(PageSection.PageHeader) && Headers[PageSection.PageHeader].Count > 0) 
                     { 
-
-                        HeaderFooter head = new HeaderFooter(MakeParagraph(Headers[Voting.Section.PageHeader]), false); 
-
-                        head.Border = Rectangle.NO_BORDER; //????????? ????? 
-
-                        pd.Header = head; 
-
+                        logger.LogVerbose(Message.PrintingPdfBuilderStartEvent, "Создание PageHeader"); 
+                        var head = new HeaderFooter(MakeParagraph(Headers[PageSection.PageHeader]), false); 
+                        head.Border = Border; 
+                        _pdfDocument.Header = head; 
+                        logger.LogVerbose(Message.PrintingPdfBuilderEndEvent, "Создание PageHeader"); 
                     } 
-
- 
-
- 
-
-                    // ?? ???????? ?????????, ????? ???????????? ???????????? ???????: 
-
-                    if (Headers.ContainsKey(Voting.Section.PageFooter)) 
-
+                    if (Headers.ContainsKey(PageSection.PageFooter) && Headers[PageSection.PageFooter].Count > 0) 
                     { 
-
-                        Paragraph footParagraph = MakeParagraph(Headers[Voting.Section.PageFooter]); 
-
- 
-
- 
-
-                        // ????????? ???????????? ?????? ? ????????? 
-
+                        logger.LogVerbose(Message.PrintingPdfBuilderStartEvent, "Создание PageFooter"); 
+                        Paragraph footParagraph = MakeParagraph(Headers[PageSection.PageFooter]); 
                         if (PageNumbered) 
-
                         { 
-
                             footParagraph.Add(new Phrase(Chunk.NEWLINE)); 
-
                             footParagraph.Add(new Phrase(Chunk.NEWLINE)); 
-
                         } 
-
- 
-
- 
-
-                        HeaderFooter foot = new HeaderFooter(footParagraph, false); 
-
-                        foot.Border = Rectangle.NO_BORDER; //????????? ????? 
-
-                        pd.Footer = foot; 
-
+                        var foot = new HeaderFooter(footParagraph, false); 
+                        foot.Border = Border; 
+                        _pdfDocument.Footer = foot; 
+                        logger.LogVerbose(Message.PrintingPdfBuilderEndEvent, "Создание PageFooter"); 
                     } 
-
- 
-
- 
-
-                    // ??????? ???????? 
-
-                    pd.Open(); 
-
- 
-
- 
-
-                    // ?????? ??? ????????? ? ???????? 
-
-                    if (Headers.ContainsKey(Voting.Section.Header)) 
-
+                    try 
                     { 
-
-                        pd.Add(MakeParagraph(Headers[Voting.Section.Header])); 
-
+                        _pdfDocument.Open(); 
                     } 
-
- 
-
- 
-
-                    // ?????? ??? ??????? 
-
-                    for (int i = 0; i < (m_data != null ? m_data.Tables.Count : 0); i++) 
-
+                    catch (Exception ex) 
                     { 
-
-                        string tableName = i.ToString(); 
-
-                        if (m_data.Tables.Contains(tableName) && m_data.Tables[tableName] != null) 
-
+                        throw new Exception("Ошибка формирования PDF", ex); 
+                    } 
+                    if (Headers.ContainsKey(PageSection.Header)) 
+                    { 
+                        logger.LogVerbose(Message.PrintingPdfBuilderStartEvent, "Создание Header"); 
+                        _pdfDocument.Add(MakeParagraph(Headers[PageSection.Header])); 
+                        logger.LogVerbose(Message.PrintingPdfBuilderEndEvent, "Создание Header"); 
+                    } 
+                    if (Data != null) 
+                    { 
+                        int dataTablesCount = Data.Tables.Cast<DataTable>().Count(table => !table.TableName.StartsWith("C")); 
+                        for (int tableIndex = 0; tableIndex < dataTablesCount; tableIndex++) 
                         { 
-
-                            // ?????????? ????? ??????? ? ??????? ? ??????? 
-
-                            int nServiceColumnCount = 0; 
-
-                            for (int j = 0; j < m_data.Tables[tableName].Columns.Count; j++) 
-
+                            float tableFactor = (_pdfDocument.Right - _pdfDocument.Left) / 100; 
+                            string tableName = tableIndex.ToString(); 
+                            logger.LogVerbose(Message.PrintingPdfBuilderStartEvent, "Создание Таблицы " + tableName); 
+                            if (Data.Tables.Contains(tableName) && Data.Tables[tableName] != null) 
                             { 
-
-
-                                if (m_data.Tables[tableName].Columns[j].ColumnName.StartsWith(ServiceTableColumns.SERVICE_COLUMN_PREFIX)) 
-
+                                var currentTable = Data.Tables[tableName]; 
+                                int serviceColumnCount = 
+                                    currentTable.Columns.Cast<DataColumn>().Count( 
+                                        c => c.ColumnName.StartsWith(ServiceTableColumns.SERVICE_COLUMN_PREFIX)); 
+                                int dataColumns = currentTable.Columns.Count - serviceColumnCount; 
+                                if (currentTable.Rows.Count > 0) 
                                 { 
-
-                                    nServiceColumnCount++; 
-
-                                } 
-
-                            } 
-
- 
-
- 
-
-                            // ?????????? ???????? ? ??????? 
-
-                            int nDataColumns = m_data.Tables[tableName].Columns.Count - nServiceColumnCount; 
-
- 
-
- 
-
-                            if (m_data.Tables[tableName].Rows.Count > 0) 
-
-                            { 
-
-                                // ????????? ???????: ????????? ??????????: 
-
-                                Table tbl = MakeTable(nDataColumns, m_data.Tables[tableName].Rows.Count); 
-
- 
-
- 
-
-                                // ??????? ??????????????? ??? ?????? ? ??????? 
-
-                                for (int k = 0; k < m_data.Tables[tableName].Rows.Count; k++) 
-
-                                { 
-
-                                    // ???? ?????? ???????? ???????????? 
-
-                                    if ((bool)m_data.Tables[tableName].Rows[k][ServiceTableColumns.NewPage]) 
-
+                                    Table tbl = MakeTable(dataColumns, currentTable.Rows.Count); 
+                                    foreach (DataRow row in currentTable.Rows) 
                                     { 
-
-                                        // ????????? ??????? ? ???????? 
-
-                                        pd.Add(tbl); 
-
-                                        // ????????? ????? ???????? 
-
-                                        pd.NewPage(); 
-
-                                        // ?????? ????? ??????? 
-
-                                        tbl = MakeTable(nDataColumns, m_data.Tables[tableName].Rows.Count); 
-
-                                    } 
-
- 
-
- 
-
-                                    // ??????? ??????? ??? ???????? ????? ? ????? ??????? 
-
-                                    string[] str = new string[nDataColumns]; 
-
-                                    float[] cw = new float[nDataColumns]; 
-
- 
-
- 
-
-                                    // ?????? ?????? ? ?????? 
-
-                                    int nFontSize = 0; 
-
-                                    // ??????? ??????? ?????? 
-
-                                    bool bBold = false; 
-
-                                    // ??????? ?????????? ?????? 
-
-                                    bool bItalic = false; 
-
- 
-
- 
-
-                                    // ??????? ??? ??????? ? ?????? 
-
-                                    for (int j = 0; j < m_data.Tables[tableName].Columns.Count; j++) 
-
-                                    { 
-
-                                        switch (m_data.Tables[tableName].Columns[j].ColumnName) 
-
+                                        if (((ServiceMode)row[ServiceTableColumns.ServiceMode] & 
+                                             ServiceMode.ResetPageCounter) > 0) 
                                         { 
-
-
-                                            case ServiceTableColumns.FontSize: 
-
-                                                nFontSize = (int)(m_data.Tables[tableName].Rows[k].ItemArray[j]); 
-
-                                                break; 
-
-                                            case ServiceTableColumns.IsBold: 
-
-                                                bBold = (bool)(m_data.Tables[tableName].Rows[k].ItemArray[j]); 
-
-                                                break; 
-
-                                            case ServiceTableColumns.IsItalic: 
-
-                                                bItalic = (bool)(m_data.Tables[tableName].Rows[k].ItemArray[j]); 
-
-                                                break; 
-
-                                            default: 
-
-                                                if (!m_data.Tables[tableName].Columns[j].ColumnName.StartsWith(ServiceTableColumns.SERVICE_COLUMN_PREFIX)) 
-
-                                                { 
-
-                                                    // ????????? ???????? ? ??????? 
-
-                                                    str[j] = m_data.Tables[tableName].Rows[k].ItemArray[j].ToString(); 
-
-                                                    if (m_data.Tables["C" + i] != null) 
-
+                                            _currentPageNumber = 0; 
+                                        } 
+                                        TableDotted = (bool)row[ServiceTableColumns.IsTableDotted]; 
+                                        if (((ServiceMode)row[ServiceTableColumns.ServiceMode] & 
+                                             ServiceMode.PageBreak) > 0) 
+                                        { 
+                                            if (row == currentTable.Rows.Cast<DataRow>().Last() && 
+                                                !Data.Tables.Contains((tableIndex + 1).ToString())) 
+                                                continue; 
+                                            _pdfDocument.Add(tbl); 
+                                            _pdfDocument.NewPage(); 
+                                            tbl = MakeTable(dataColumns, currentTable.Rows.Count); 
+                                        } 
+                                        var colLines = new string[dataColumns]; 
+                                        var colWidths = new float[dataColumns]; 
+                                        var colAligns = new LineAlign?[dataColumns]; 
+                                        int fontSize = _defaultFontSize; 
+                                        bool bold = false; 
+                                        bool italic = false; 
+                                        LineAlign lineAlign = LineAlign.Left; 
+                                        for (int columnIndex = 0; columnIndex < currentTable.Columns.Count; columnIndex++) 
+                                        { 
+                                            switch (currentTable.Columns[columnIndex].ColumnName) 
+                                            { 
+                                                case ServiceTableColumns.FontSize: 
+                                                    fontSize = (int)(row.ItemArray[columnIndex]); 
+                                                    break; 
+                                                case ServiceTableColumns.IsBold: 
+                                                    bold = (bool)(row.ItemArray[columnIndex]); 
+                                                    break; 
+                                                case ServiceTableColumns.IsItalic: 
+                                                    italic = (bool)(row.ItemArray[columnIndex]); 
+                                                    break; 
+                                                case ServiceTableColumns.Align: 
+                                                    lineAlign = (LineAlign)(row.ItemArray[columnIndex]); 
+                                                    break; 
+                                                default: 
+                                                    if (!currentTable.Columns[columnIndex] 
+                                                            .ColumnName.StartsWith(ServiceTableColumns.SERVICE_COLUMN_PREFIX)) 
                                                     { 
-
-                                                        DataRow[] widths = m_data.Tables["C" + i].Select(ServiceTableColumns.Name + " = '" +
-
-m_data.Tables[tableName].Columns[j].ColumnName + "'"); 
-
-                                                        if (widths.Length > 0) 
-
+                                                        colLines[columnIndex] = row.ItemArray[columnIndex].ToString(); 
+                                                        if (Data.Tables["C" + tableIndex] != null) 
                                                         { 
-
-                                                            cw[j] = (int)widths[0][ServiceTableColumns.Width]; 
-
+                                                            DataRow[] columnProps = Data.Tables["C" + tableIndex] 
+                                                                .Select(ServiceTableColumns.Name + " = '" 
+                                                                        + currentTable.Columns[columnIndex].ColumnName + "'"); 
+                                                            if (columnProps.Length > 0) 
+                                                            { 
+                                                                colWidths[columnIndex] = (int)columnProps[0][ServiceTableColumns.Width]; 
+                                                                if (columnProps[0][ServiceTableColumns.Align] != DBNull.Value) 
+                                                                { 
+                                                                    colAligns[columnIndex] = (LineAlign)columnProps[0][ServiceTableColumns.Align]; 
+                                                                } 
+                                                            } 
                                                         } 
-
                                                     } 
-
-                                                } 
-
-                                                break; 
-
+                                                    break; 
+                                            } 
                                         } 
-
-                                    } 
-
- 
-
- 
-
-                                    Font fTempFont = GetFont(nFontSize, bBold, bItalic, oBaseFnt); 
-
- 
-
- 
-
-                                    tbl.Widths = cw; 
-
-                                    for (int j = 0; j < nDataColumns; j++) 
-
-                                    { 
-
-                                        float ftCurentCellWidth = ftTableWidth * cw[j]; 
-
- 
-
- 
-
-                                        if (k != 0 && str[j].Length > 0 && j != nDataColumns - 1 && TableDotted) 
-
+                                        Font tempFont = GetFont(fontSize, bold, italic, baseFont); 
+                                        var cellLeading = (float)Math.Round(tempFont.Size * DBL_LEADING_FONT); 
+                                        tbl.Widths = colWidths; 
+                                        for (int columnIndex = 0; columnIndex < dataColumns; columnIndex++) 
                                         { 
-
-                                            while (oBaseFnt.GetWidthPointKerned(str[j], m_font.Size) < ftCurentCellWidth) 
-
-                                                str[j] += "."; 
-
+                                            float cellWidth = tableFactor * colWidths[columnIndex]; 
+                                            colLines[columnIndex] = TextAlign( 
+                                                colLines[columnIndex], tempFont, colAligns[columnIndex] ?? lineAlign, 
+                                                cellWidth, (row != currentTable.Rows.Cast<DataRow>().First() 
+                                                            && TableDotted) 
+                                                            ? '.' 
+                                                            : ' '); 
+                                            var cell = 
+                                                new Cell(new Phrase(cellLeading, colLines[columnIndex], tempFont)) 
+                                                    { 
+                                                        Border = Border, 
+                                                        Leading = cellLeading, 
+                                                    }; 
+                                            tbl.AddCell(cell); 
                                         } 
-
- 
-
- 
-
-                                        // TODO: ?????? ????? - ???? ??? ?????? ??????, ?? ?????? ?? ???????? 
-
-                                        // TODO: if (str[j] == null || str[j].Trim().Length <= 0) {} 
-
-                                        Cell cell = new Cell(new Phrase((float)Math.Round(fTempFont.Size * dblLeading_font), str[j], fTempFont)); 
-
-                                        cell.Border = Rectangle.NO_BORDER; //??????? ????? 
-
-                                        cell.Leading = (float)(fTempFont.Size * dblLeading_font); 
-
-
-                                        tbl.AddCell(cell); 
-
                                     } 
-
+                                    logger.LogVerbose(Message.PrintingPdfBuilderEndEvent, "Создание Таблицы " + tableName); 
+                                    logger.LogVerbose(Message.PrintingPdfBuilderStartEvent, "Добавление Таблицы " + tableName); 
+                                    _pdfDocument.Add(tbl); 
+                                    logger.LogVerbose(Message.PrintingPdfBuilderEndEvent, "Добавление Таблицы " + tableName); 
                                 } 
-
-                                pd.Add(tbl); 
-
                             } 
-
                         } 
-
                     } 
-
- 
-
- 
-
-                    // ?????? ??? ??????? ? ???????? 
-
-                    if (Headers.ContainsKey(Voting.Section.Footer)) 
-
+                    if (Headers.ContainsKey(PageSection.Footer) && Headers[PageSection.Footer].Count > 0) 
                     { 
-
-                        // ??????? ??????? ??? ??????? 
-
-                        for (int l = 0; l < cEmptyLines; l++) 
-
-                        { 
-
-                            pd.Add(new Phrase(Chunk.NEWLINE)); 
-
-                        } 
-
- 
-
- 
-
-                        pd.Add(MakeParagraph(Headers[Voting.Section.Footer])); 
-
+                        logger.LogVerbose(Message.PrintingPdfBuilderStartEvent, "Создание Footer"); 
+                        _pdfDocument.Add(new Phrase(Chunk.NEWLINE)); 
+                        _pdfDocument.Add(MakeParagraph(Headers[PageSection.Footer])); 
+                        logger.LogVerbose(Message.PrintingPdfBuilderEndEvent, "Создание Footer"); 
                     } 
-
- 
-
- 
-
-                    // ????????? ???? 
-
-                    pd.Close(); 
-
- 
-
- 
-
-					return new PrinterJob(file.Name, m_nTotalPagesCount); 
-
+                    _pdfDocument.Close(); 
+                    var size = (stream.ToArray().Length / FileUtils.BYTES_IN_KB) + 1; 
+                    if (!Managers.FileSystemManager.ReserveDiskSpace(filePath, size)) 
+                    { 
+                        throw new ApplicationException("Недостаточно места на диске для сохранения отчета"); 
+                    } 
+                    File.WriteAllBytes(filePath, stream.ToArray()); 
+                    SystemHelper.SyncFileSystem(); 
+                    logger.LogVerbose(Message.Common_DebugReturn); 
+                    return new PrinterJob(reportType, filePath, _totalPagesCount, copies); 
                 } 
-
                 catch (Exception ex) 
-
                 { 
-
-                    Managers.PrintingManager.Logger.LogException(Message.PrintingPdfBuildFailed, ex); 
-
+                    Managers.PrintingManager.Logger.LogError(Message.PrintingPdfBuildFailed, ex); 
                 } 
-
             } 
-
- 
-
- 
-
             return null; 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????????? ???????? ??? ????????? ??? ??????? 
-
-        /// </summary> 
-
-        /// <param name="lines">????? ?????</param> 
-
-        /// <returns>?????????????? ????????</returns> 
-
         private Paragraph MakeParagraph(Lines lines) 
-
         { 
-
-            Paragraph paragraph = new Paragraph(); 
-
+            var logger = Managers.PrintingManager.Logger; 
+            logger.LogVerbose(Message.Common_DebugCall); 
+            var paragraph = new Paragraph(); 
             paragraph.KeepTogether = true; 
-
-            for (int k = 0; k < lines.Count; k++) 
-
-
+            foreach (IReportElement t in lines) 
             { 
-
-                if (lines[k].IsPrintable) 
-
+                if (!t.IsPrintable) continue; 
+                if (paragraph.Chunks.Count > 0) 
                 { 
-
-                    // ????????? ??????? ? ???????????? ?????????: 
-
-                    if (paragraph.Chunks.Count > 0) 
-
-                    { 
-
-                        //???? ??? ?? ?????? ??????????: 
-
-                        paragraph.Add(new Phrase(Chunk.NEWLINE)); 
-
-                    } 
-
- 
-
- 
-
-                    ReportLine line = (ReportLine)lines[k]; 
-
-                    if (line.FirstLine.Trim().Length > 0) 
-
-                    { 
-
-                        // ???????? ????? 
-
-                        Font fTempFont = GetFont(line, m_font.BaseFont); 
-
- 
-
- 
-
-                        //????????? ???????????? 
-
-                        paragraph.Add(new Phrase((float)Math.Round(fTempFont.Size * dblLeading_font), TextAlign(line.FirstLine, fTempFont, line.Align), fTempFont)); 
-
-                    } 
-
-                    else 
-
-                    { 
-
-                        paragraph.Add(new Phrase(Chunk.NEWLINE)); 
-
-                    } 
-
+                    paragraph.Add(new Phrase(Chunk.NEWLINE)); 
                 } 
-
+                var line = (ReportLine)t; 
+                if (line.FirstLine.Trim().Length > 0) 
+                { 
+                    Font tempFont = GetFont(line, _font.BaseFont); 
+                    paragraph.Add(new Phrase( 
+                                    (float)Math.Round(tempFont.Size * DBL_LEADING_FONT), 
+                                    TextAlign(line.FirstLine, tempFont, line.Align, _pdfDocument.Right - _pdfDocument.Left, ' '), 
+                                    tempFont)); 
+                } 
+                else 
+                { 
+                    paragraph.Add(new Phrase(Chunk.NEWLINE)); 
+                } 
             } 
-
- 
-
- 
-
             paragraph.SpacingAfter = 0.0f; 
-
             paragraph.SpacingBefore = 0.0f; 
-
-            paragraph.Leading = (float)(m_font.Size * dblLeading_font); 
-
- 
-
- 
-
+            paragraph.Leading = (float)Math.Round(_font.Size * DBL_LEADING_FONT); 
+            logger.LogVerbose(Message.Common_DebugReturn); 
             return paragraph; 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??????? ??????? 
-
-        /// </summary> 
-
-        /// <param name="nDataColums">?????????? ????????</param> 
-
-        /// <param name="nRows">?????????? ?????</param> 
-
-        /// <returns>???????</returns> 
-
-        private static Table MakeTable(int nDataColums, int nRows) 
-
+        private static Table MakeTable(int dataColums, int rows) 
         { 
-
-            Table tbl = new Table(nDataColums, nRows); 
-
-            //???????? ???????: 
-
-            tbl.WidthPercentage = 100.0f; //?? ?????? - 100% 
-
-            tbl.Cellpadding = 0.0f; //?????? - 1%. 
-
-
-            tbl.Border = Rectangle.NO_BORDER; //??????? ????? 
-
-            tbl.CellsFitPage = true; //?????? ?? ????????? 
-
-            tbl.SpaceInsideCell = 0.0f; 
-
-            tbl.Spacing = 0.0f; 
-
-            tbl.SpaceInsideCell = 0.0f; 
-
+            var tbl = new Table(dataColums, rows); 
+            tbl.WidthPercentage = 100; 
+            tbl.Cellpadding = 0; 
+            tbl.Border = Border; 
+            tbl.CellsFitPage = true; 
+            tbl.SpaceInsideCell = 0; 
+            tbl.Spacing = 0; 
+            tbl.SpaceInsideCell = 0; 
             return tbl; 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????????? ?????? ????????? ?? ???????????? ?? ??????? ???? 
-
-        /// </summary> 
-
-        /// <param name="sText">????? ??? ????????????</param> 
-
-        /// <param name="font">?????</param> 
-
-        /// <param name="lineAlign">????????????</param> 
-
-        /// <returns>?????? ??????? ?????????</returns> 
-
-        private string TextAlign(string sText, Font font, LineAlign lineAlign) 
-
+        private static string TextAlign(string text, Font font, LineAlign lineAlign, float areaWidth, char fillChar) 
         { 
-
+            var alignedText = new StringBuilder(); 
+            float fillCharWidth = font.BaseFont.GetWidthPoint(fillChar, font.Size); 
+            float lineWidth = fillChar != ' ' ? 
+                font.BaseFont.GetWidthPoint(text, font.Size) : 0; 
             if (lineAlign != LineAlign.Left) 
-
             { 
-
-                // ????????? ??????? ???????? ??????????? ?????? ?? ??????? ??????? 
-
-                float ftPageAlign = pd.Right - pd.Left - pd.LeftMargin - pd.RightMargin; 
-
+                float fillAreaWidth = areaWidth; 
+                if (lineWidth == 0) 
+                { 
+                    lineWidth = font.BaseFont.GetWidthPoint(text, font.Size); 
+                } 
                 if (lineAlign == LineAlign.Center) 
-
                 { 
-
-                    ftPageAlign = (ftPageAlign + font.BaseFont.GetWidthPointKerned(sText, font.Size)) / 2; 
-
+                    fillAreaWidth = (fillAreaWidth + lineWidth) / 2; 
                 } 
-
- 
-
- 
-
-                while (font.BaseFont.GetWidthPointKerned(sText, font.Size) < ftPageAlign) 
-
+                if (lineWidth < fillAreaWidth) 
                 { 
-
-                    sText = " " + sText; 
-
+                    int fillCharCount = (int)((fillAreaWidth - lineWidth) / fillCharWidth); 
+                    if (fillCharCount > 0) 
+                    { 
+                        alignedText.Append(fillChar, fillCharCount); 
+                    } 
+                    lineWidth += fillAreaWidth - lineWidth; 
                 } 
-
+                alignedText.Append(text); 
             } 
-
-            return sText; 
-
+            if (lineWidth > 0 && fillChar != ' ') 
+            { 
+                if (alignedText.Length == 0) 
+                { 
+                    alignedText.Append(text); 
+                } 
+                if (lineWidth < areaWidth) 
+                { 
+                    int fillCharCount = (int)((areaWidth - lineWidth) / fillCharWidth); 
+                    if (fillCharCount > 0) 
+                    { 
+                        alignedText.Append(fillChar, fillCharCount); 
+                    } 
+                } 
+            } 
+            return lineWidth > 0 ? alignedText.ToString() : text; 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????? ????? ??? ?????? ????????? ?? ???????? ?????? 
-
-        /// </summary> 
-
-        /// <param name="oRepLine">?????? ?????????</param> 
-
-        /// <param name="oBaseFont">??????? ?????</param>		 
-
-        /// <returns>?????</returns> 
-
         private Font GetFont(ReportLine oRepLine, BaseFont oBaseFont) 
-
         { 
-
-            return GetFont(oRepLine.FontSize, oRepLine.Bold, oRepLine.Italic, oBaseFont); 
-
+            return GetFont(oRepLine.FontSize(_defaultFontSize), oRepLine.Bold, oRepLine.Italic, oBaseFont); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-
-        /// ?????? ????? ??? ?????? ????????? ?? ???????? ?????? 
-
-        /// </summary> 
-
-        /// <param name="nFontSize">?????? ??????</param> 
-
-        /// <param name="bBold">??????? ??????? ??????</param>		 
-
-        /// <param name="bItalic">??????? ???????</param> 
-
-        /// <param name="oBaseFont">??????? ?????</param> 
-
-        /// <returns>?????</returns> 
-
-        private Font GetFont(int nFontSize, bool bBold, bool bItalic, BaseFont oBaseFont) 
-
+        private Font GetFont(int fontSize, bool bold, bool italic, BaseFont baseFont) 
         { 
-
-            // ?????? ?????? 
-
-            nFontSize = (nFontSize > 0) ? nFontSize : m_nDefaultFontSize; 
-
- 
-
- 
-
-            // ????? ?????? 
-
-            int nFontStyle; 
-
-            if (bBold && bItalic) 
-
-                nFontStyle = Font.BOLDITALIC; 
-
-            else if (bBold && (!bItalic)) 
-
-                nFontStyle = Font.BOLD; 
-
-            else if ((!bBold) && bItalic) 
-
-                nFontStyle = Font.ITALIC; 
-
+            fontSize = (fontSize > 0) ? fontSize : _defaultFontSize; 
+            int fontStyle; 
+            if (bold && italic) 
+                fontStyle = Font.BOLDITALIC; 
+            else if (bold) 
+                fontStyle = Font.BOLD; 
+            else if (italic) 
+                fontStyle = Font.ITALIC; 
             else 
-
-                nFontStyle = Font.NORMAL; 
-
- 
-
- 
-
-            return new Font(oBaseFont, nFontSize, nFontStyle); 
-
+                fontStyle = Font.NORMAL; 
+            return new Font(baseFont, fontSize, fontStyle); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??????????????? ????? ??? ?????? ??????? ??????? 
-
-        /// </summary> 
-
         internal class PdfEventHelper : IPdfPageEvent 
-
         { 
-
-            private PdfReportBuilder reportPrint; 
-
-            public PdfEventHelper(PdfReportBuilder aReportPrint) 
-
+            private PdfReportBuilder _reportPrint; 
+            public PdfEventHelper(PdfReportBuilder reportPrint) 
             { 
-
-                reportPrint = aReportPrint; 
-
+                _reportPrint = reportPrint; 
             } 
-
- 
-
- 
-
             #region IPdfPageEvent Members 
-
- 
-
- 
-
             public void OnOpenDocument(PdfWriter writer, Document document) 
-
             { 
-
             } 
-
- 
-
- 
-
             public void OnCloseDocument(PdfWriter writer, Document document) 
-
-
             { 
-
             } 
-
- 
-
- 
-
             public void OnParagraph(PdfWriter writer, Document document, float paragraphPosition) 
-
             { 
-
             } 
-
- 
-
- 
-
             public void OnEndPage(PdfWriter writer, Document document) 
-
             { 
-
-                if (reportPrint.PageNumbered) 
-
+                if (_reportPrint.PageNumbered) 
                 { 
-
-                    // ????????? ????????? ??????? 
-
-                    int nPageNumber = reportPrint.m_nTotalPagesCount + 1; 
-
-                    PdfContentByte cb = writer.DirectContent; 
-
-                    cb.BeginText(); 
-
-                    cb.SetFontAndSize(reportPrint.m_font.BaseFont, reportPrint.m_font.Size); 
-
-                    cb.SetTextMatrix(document.Left, document.Bottom); 
-
-                    cb.ShowText(reportPrint.TextAlign("???? " + nPageNumber, reportPrint.m_font, LineAlign.Center)); 
-
-                    cb.EndText(); 
-
+                    _reportPrint._currentPageNumber++; 
+                    int pageNumber = _reportPrint._currentPageNumber; 
+                    PdfContentByte contentByte = writer.DirectContent; 
+                    contentByte.BeginText(); 
+                    contentByte.SetFontAndSize(_reportPrint._font.BaseFont, _reportPrint._font.Size); 
+                    contentByte.SetTextMatrix(document.Left, document.Bottom); 
+                    contentByte.ShowText( 
+                        TextAlign("Лист " + pageNumber, _reportPrint._font, LineAlign.Center, document.Right - document.Left, ' ')); 
+                    contentByte.EndText(); 
                 } 
-
-                reportPrint.m_nTotalPagesCount++; 
-
+                _reportPrint._totalPagesCount++; 
             } 
-
- 
-
- 
-
             public void OnSection(PdfWriter writer, Document document, float paragraphPosition, int depth, Paragraph title) 
-
             { 
-
             } 
-
- 
-
- 
-
             public void OnSectionEnd(PdfWriter writer, Document document, float paragraphPosition) 
-
             { 
-
             } 
-
- 
-
- 
-
             public void OnParagraphEnd(PdfWriter writer, Document document, float paragraphPosition) 
-
             { 
-
             } 
-
- 
-
- 
-
             public void OnGenericTag(PdfWriter writer, Document document, Rectangle rect, string text) 
-
             { 
-
             } 
-
- 
-
- 
-
             public void OnChapterEnd(PdfWriter writer, Document document, float paragraphPosition) 
-
             { 
-
             } 
-
- 
-
-
- 
             public void OnChapter(PdfWriter writer, Document document, float paragraphPosition, Paragraph title) 
-
             { 
-
             } 
-
- 
-
- 
-
             public void OnStartPage(PdfWriter writer, Document document) 
-
             { 
-
             } 
-
- 
-
- 
-
             #endregion 
-
         } 
-
     } 
-
 }
-
-

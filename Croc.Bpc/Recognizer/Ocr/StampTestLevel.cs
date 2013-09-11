@@ -1,65 +1,12 @@
 using System; 
-
- 
-
- 
-
 namespace Croc.Bpc.Recognizer.Ocr 
-
 { 
-
-    /// <summary> 
-
-    /// Режимы распознавания печати 
-
-    /// </summary> 
-
-	public enum StampTestLevel 
-
-	{ 
-
-        /// <summary> 
-
-        /// нет контроля печати 
-
-        /// </summary> 
-
-		None = 1, 
-
-        /// <summary> 
-
-        /// тест на наличие печати 
-
-        /// </summary> 
-
-		Found = 2, 
-
-        /// <summary> 
-
-        /// распознавание номера печати 
-
-        /// </summary> 
-
+    public enum StampTestLevel 
+    { 
+        None = 1, 
+        Found = 2, 
         Recognize = 3, 
-
-        /// <summary> 
-
-        /// новое распознавание печати 
-
-        /// </summary> 
-
-		RecognizeNew = 4, 
-
-        /// <summary> 
-
-        /// Полутоновое распознавание печати 
-
-        /// </summary> 
-
+        RecognizeNew = 4, 
         Halftone = 5, 
-
-	}; 
-
+    }; 
 }
-
-

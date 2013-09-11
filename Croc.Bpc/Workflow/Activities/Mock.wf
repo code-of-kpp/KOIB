@@ -1,27 +1,13 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
   xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
-
- 
-
- 
-
   <CompositeActivity Name="MockActivity" 
-
                      Class="Croc.Bpc.Workflow.Activities.MockActivity, Croc.Bpc.Workflow" 
-
                      Tracking="false"> 
+
 
     <Activity Name="Mock" Execute="Mock"/> 
 
+
   </CompositeActivity> 
-
- 
-
- 
-
 </Workflow>
-
-

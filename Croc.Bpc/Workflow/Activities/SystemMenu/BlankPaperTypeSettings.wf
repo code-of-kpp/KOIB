@@ -1,0 +1,69 @@
+<Workflow 
+  xmlns="http://schemas.croc.ru/Workflow" 
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+  <Include Ref="Activities/Common.wf" /> 
+
+
+  <CompositeActivity Name="BlankPaperTypeSettingsActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.BlankPaperTypeSettingsActivity, Croc.Bpc.Workflow"> 
+
+
+    <Activity Name="ResetMarkerEnumerator" Execute="ResetMarkerEnumerator"/> 
+
+
+    <Activity Name="MoveNextMarker" Execute="MoveNextMarker" 
+              k:Yes="SayChangePaperType" k:No="ExitSubMenu"/> 
+
+
+    <Activity Name="MovePreviosMarker" Execute="MovePreviosMarker" 
+              DefaultNextActivity="MoveNextMarker"/> 
+
+
+    <ReferenceActivity Name="SayChangePaperType" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                       Parameters="Silent=@@True;Parameters=@CurrentMarker" 
+                       k:Yes="ResetPaperTypeEnumerator" 
+                       k:Back="MovePreviosMarker" 
+                       k:No="MoveNextMarker"/> 
+
+
+    <Activity Name="ResetPaperTypeEnumerator" Execute="ResetPaperTypeEnumerator"/> 
+
+
+    <ReferenceActivity Name="CasePaperType" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                       Parameters="Silent=@@True;Parameters=[@CurrentMarker,@CurrentPaperTypeStr]" 
+                       k:Yes="UpdatePaperType" 
+                       k:Back="MoveNextMarker" 
+                       k:No="MoveNextPaperType"/> 
+
+
+
+
+    <Activity Name="MoveNextPaperType" Execute="MoveNextPaperType" 
+              DefaultNextActivity="CasePaperType"/> 
+
+
+
+
+    <Activity Name="UpdatePaperType" Execute="UpdatePaperType" 
+              DefaultNextActivity="MoveNextMarker"/> 
+
+
+
+
+    <ReferenceActivity Name="ExitSubMenu" Execute="Common.SayAndWaitYesOrNoOrBack" 
+                       Parameters="Silent=@@True" 
+                       k:No="ResetMarkerEnumerator" k:Back="MovePreviosMarker" 
+                       k:Yes="@@Return(Yes)"/> 
+  </CompositeActivity> 
+  <ActivityParametersBindings CompositeActivityName="BlankPaperTypeSettingsActivity"> 
+    <ActivityParametersBinding ActivityName="SayChangePaperType"> 
+      <Parameter Name="TextFormat">Изменить бумагу для бланка N {p0}</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="CasePaperType"> 
+      <Parameter Name="TextFormat">Бланк {p0}: {p1}</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="ExitSubMenu"> 
+      <Parameter Name="TextFormat">Выйти в главное меню?</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
+</Workflow>

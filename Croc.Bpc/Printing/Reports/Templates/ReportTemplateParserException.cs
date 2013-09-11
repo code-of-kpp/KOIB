@@ -1,132 +1,47 @@
 using System; 
-
-using System.Collections.Generic; 
-
-using System.Linq; 
-
-using System.Text; 
-
- 
-
- 
-
 namespace Croc.Bpc.Printing.Reports.Templates 
-
 { 
-
-    /// <summary> 
-
-    /// Ошибка разбора переменной 
-
-    /// </summary> 
-
     public class ReportTemplateParserException : Exception 
-
     { 
-
-        /// <summary> 
-
-        /// Причина ошибки 
-
-        /// </summary> 
-
-        public enum ExceptionReason 
-
-        { 
-
-            /// <summary> 
-
-            /// Переменная не найдена 
-
-            /// </summary> 
-
-            NotFound, 
-
-            /// <summary> 
-
-            /// Произошло исключение при разборе  
-
-            /// </summary> 
-
-            Failure, 
-
-            /// <summary> 
-
-            /// Повторное определение переменной цикла 
-
-            /// </summary> 
-
-            AmbigiousFor, 
-
-        } 
-
-        private Type m_type; 
-
+        private Type _type; 
         public Type Type 
-
         { 
-
-            get { return m_type; } 
-
+            get { return _type; } 
         } 
-
-        private ExceptionReason m_reason; 
-
-        public ExceptionReason Reason 
-
+        private ParseExceptionReason _reason; 
+        public ParseExceptionReason Reason 
         { 
-
-            get { return m_reason; } 
-
+            get { return _reason; } 
         } 
-
-        private string m_name; 
-
+        private string _name; 
         public string Name 
-
         { 
-
-            get { return m_name; } 
-
+            get { return _name; } 
         } 
+        #region Конструкторы 
 
- 
-
- 
 
         public ReportTemplateParserException() : base() { } 
-
-        public ReportTemplateParserException(ExceptionReason reason, string name, Type type) 
-
-
+        public ReportTemplateParserException(ParseExceptionReason reason, string name, Type type) 
             : base(reason.ToString()) 
-
         { 
-
-            m_reason = reason; 
-
-            m_name = name; 
-
-            m_type = type; 
-
+            _reason = reason; 
+            _name = name; 
+            _type = type; 
         } 
 
-        public ReportTemplateParserException(ExceptionReason reason, string name, Type type, System.Exception innerException) : 
 
-            base(reason.ToString(), innerException) 
-
+        public ReportTemplateParserException( 
+            ParseExceptionReason reason 
+            , string name 
+            , Type type 
+            , System.Exception innerException)  
+            : base(reason.ToString(), innerException) 
         { 
-
-            m_reason = reason; 
-
-            m_name = name; 
-
-            m_type = type; 
-
+            _reason = reason; 
+            _name = name; 
+            _type = type; 
         } 
-
+        #endregion 
     } 
-
 }
-
-

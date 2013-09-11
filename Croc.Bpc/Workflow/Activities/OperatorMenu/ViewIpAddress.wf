@@ -1,0 +1,19 @@
+<Workflow 
+  xmlns="http://schemas.croc.ru/Workflow" 
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+  <Include Ref="Activities/Common.wf" /> 
+
+
+  <CompositeActivity Name="ViewIpAddressActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.OperatorMenu.ViewIpAddressActivity, Croc.Bpc.Workflow"> 
+
+
+    <ReferenceActivity Name="ShowIpAddress" Execute="Common.SayAndWaitYesOrNo" 
+                       Parameters="Silent=@@True;Parameters=@IpAddress"/> 
+  </CompositeActivity> 
+  <ActivityParametersBindings CompositeActivityName="ViewIpAddressActivity"> 
+    <ActivityParametersBinding ActivityName="ShowIpAddress"> 
+      <Parameter Name="TextFormat">{p0}</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
+</Workflow>

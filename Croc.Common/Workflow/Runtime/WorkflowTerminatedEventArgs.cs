@@ -1,49 +1,14 @@
-using System; 
-
- 
-
- 
-
+using Croc.Core; 
 namespace Croc.Workflow.Runtime 
-
 { 
-
     public class WorkflowTerminatedEventArgs : WorkflowEventArgs 
-
     { 
-
-        /// <summary> 
-
-        /// Исключение, которое послужило причиной для прерывания выполнения экземпляра потока работ 
-
-        /// </summary> 
-
-        public Exception Exception 
-
-        { 
-
-            get; 
-
-            private set; 
-
-        } 
-
- 
-
- 
-
-        public WorkflowTerminatedEventArgs(WorkflowInstance wi, Exception ex) 
-
+        public readonly string Reason; 
+        public WorkflowTerminatedEventArgs(WorkflowInstance wi, string reason) 
             : base(wi) 
-
         { 
-
-            Exception = ex; 
-
+            CodeContract.Requires(!string.IsNullOrEmpty(reason)); 
+            Reason = reason; 
         } 
-
     } 
-
 }
-
-

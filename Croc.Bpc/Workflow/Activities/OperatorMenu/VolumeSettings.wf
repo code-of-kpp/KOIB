@@ -1,0 +1,27 @@
+<Workflow 
+  xmlns="http://schemas.croc.ru/Workflow" 
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+  <Include Ref="Activities/Common.wf" /> 
+
+
+  <CompositeActivity Name="VolumeSettingsActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.OperatorMenu.VolumeSettingsActivity, Croc.Bpc.Workflow"> 
+
+
+    <ReferenceActivity Name="ReadVolume" Execute="Common.SayAndReadValue" 
+                       Parameters="Required=@@True;Silent=@@True;Value=@CurrentVolume" 
+                       k:No="@@Return(Yes)"/> 
+
+
+    <Activity Name="SetNewVolume" Execute="SetNewVolume"/> 
+
+
+  </CompositeActivity> 
+  <ActivityParametersBindings CompositeActivityName="VolumeSettingsActivity"> 
+    <ActivityParametersBinding ActivityName="ReadVolume"> 
+      <Parameter Name="TextFormat">Громкость = ___</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
+
+
+</Workflow>

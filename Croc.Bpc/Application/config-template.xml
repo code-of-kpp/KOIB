@@ -1,0 +1,545 @@
+<?xml version="1.0" encoding="utf-8" ?> 
+<configuration> 
+  <configSections> 
+    <section name="croc.application" type="Croc.Core.Configuration.ApplicationConfig, Croc.Core"  /> 
+  </configSections> 
+
+
+  <!--#ifdef ${Debug}--> 
+  <system.diagnostics> 
+    <trace autoflush="true" indentsize="3"> 
+      <listeners> 
+        <clear/> 
+        <add name="myListener" 
+          type="Croc.Core.Diagnostics.Default.FormattedTraceListener, Croc.Core" 
+          initializeData="[{Timestamp}] {MethodName}:\n{Message}" /> 
+      </listeners> 
+    </trace> 
+  </system.diagnostics> 
+  <!--#endif--> 
+
+
+  <!--#ifdef ${Release}--> 
+  <!--<croc.application name="bpc" logFileFolder="WorkData/Log" traceLevel="Info">--> 
+  <!--#else--> 
+  <croc.application name="bpc" logFileFolder="WorkData/Log" traceLevel="Verbose"> 
+  <!--#endif--> 
+    <diagnostics groupBy="Logger"> 
+      <eventFilters> 
+        <filter type="Croc.Bpc.Scanner.BulletinIDLogFilter, Croc.Bpc.Scanner"/> 
+      </eventFilters> 
+      <writers> 
+        <writer type="Croc.Core.Diagnostics.Default.FileWriter"> 
+          <!--#ifdef ${Release}--> 
+          <!--<formatter type="Croc.Bpc.Diagnostics.SingleLineFormatter, Croc.Bpc.Common" raw="true"> 
+            <props> 
+              <add 
+                name="format" 
+                value="{Timestamp:yyMMddHHmmssfff}\t{ThreadId}\t{EventType:d}\t{MessageId}\t[{Params}]\t{BulletinId}\t{Exception}"/> 
+              <add 
+                name="arrayDelimiter" 
+                value="|"/> 
+              <add  
+                name="propsToSaveInSingleFile" 
+                value="Exception"/> 
+            </props> 
+          </formatter>--> 
+          <!--#else--> 
+          <formatter type="Croc.Bpc.Diagnostics.SingleLineFormatter, Croc.Bpc.Common" raw="false"> 
+            <props> 
+              <add 
+                name="format" 
+                value="{Timestamp:dd.MM.yyyy HH:mm:ss.fff}\t[{ThreadId}]\t{EventType:d}\t{MethodName}\t{BulletinId}\t{Message}\t{Exception}"/> 
+              <add 
+                name="arrayDelimiter" 
+                value="|"/> 
+              <add  
+                name="propsToSaveInSingleFile" 
+                value="Exception"/> 
+            </props> 
+          </formatter> 
+          <!--#endif--> 
+          <filters> 
+            <filter type="Croc.Bpc.FileSystem.AvailableSpaceLogFilter, Croc.Bpc.FileSystem"> 
+              <props> 
+                <add name="*" value="1024"/> 
+              </props> 
+            </filter> 
+            <filter type="Croc.Bpc.Diagnostics.MessageDublicatesFilter, Croc.Bpc.Common"> 
+              <props> 
+                <add name="MessageTypes" value="WorkflowText"/> 
+              </props> 
+            </filter> 
+          </filters> 
+        </writer> 
+        <!--#ifdef ${Debug}--> 
+        <writer type="Croc.Core.Diagnostics.Default.SystemTraceWriter" /> 
+        <!--#endif--> 
+      </writers> 
+    </diagnostics> 
+
+
+    <subsystems> 
+      <subsystem type="Croc.Bpc.Printing.PrintingManager, Croc.Bpc.Printing"> 
+        <printByPage value="false"/> 
+        <report> 
+          <font path="./Data/Fonts/"/> 
+          <margin left="20" right="20" top="20" bottom="20"/> 
+          <debugMode value="false"/> 
+        </report> 
+        <printers> 
+          <printer name="HP_LJ_P1102" searchRegExp=".*HP LaserJet Professional P1102.*"/> 
+          <printer name="XEROX_PH3160" searchRegExp=".*Xerox Phaser 3160.*"/> 
+          <printer name="SAMSUNG_ML_1640" searchRegExp=".*Samsung ML-1640.*"/> 
+          <printer name="LEXMARKZ600" searchRegExp=".*Lexmark Z600.*"/> 
+          <printer name="LEXMARKZ640" searchRegExp=".*Lexmark Z640.*"/> 
+          <printer name="LEXMARKZ25" searchRegExp=".*Lexmark Z25.*"/> 
+        </printers> 
+      </subsystem> 
+
+
+      <subsystem type="Croc.Bpc.FileSystem.FileSystemManager, Croc.Bpc.FileSystem"> 
+        <minDiskSpaceToFreeMb value="10"/> 
+        <minFreeSpaceToSaveSerializedObjectKb value="256"/> 
+        <systemReservedSpaceKb value="256"/> 
+        <cleanOrder value="ScanningImage,Report,Log,State"/> 
+        <dataDirectoriesRoot value="./WorkData"/> 
+        <dataDirectories> 
+          <dataDirectory fileType="ScanningImage" path="Images" archive="true"/> 
+          <dataDirectory fileType="RuntimeData" path="Runtime" archive="false"/> 
+          <dataDirectory fileType="VotingResultProtocol" path="Results" archive="true"/> 
+          <dataDirectory fileType="State" path="States" archive="true"/> 
+          <dataDirectory fileType="Report" path="Reports" archive="true"/> 
+        </dataDirectories> 
+      </subsystem> 
+
+
+      <subsystem type="Croc.Bpc.Sound.SoundManager, Croc.Bpc.Sound" traceLevel="Error">        
+        <!--#ifdef ${Arm}--> 
+        <player format="wav" deviceLatency="100000"/> 
+
+
+        <commands> 
+          <beforePlaying command="sibled" params="2 1" sleep="100"/> 
+          <afterPlaying command="sibled" params="2 0"/> 
+        </commands> 
+        <!--#else--> 
+        <player format="wav" deviceLatency="300000"/> 
+        <!--#endif--> 
+      </subsystem> 
+
+
+      <subsystem type="Croc.Bpc.Election.ElectionManager, Croc.Bpc.Election" disposeOrder="4"> 
+        <dataDirectories 
+          sourceDataDirName="mail.box" 
+          votingResultDirName="result"> 
+          <root> 
+            <path rootPath="/var/autofs/removable" wildcard="*"/> 
+            <!--#ifdef ${Debug}--> 
+            <path rootPath="./Data"/> 
+            <!--#endif--> 
+          </root> 
+        </dataDirectories> 
+        <sourceDataFileSearch 
+          maxTryCount="3" 
+          delay="0:0:5"/> 
+        <defaultVotingModeTimes> 
+          <votingModeTime mode="Main" time="8:0:0"/> 
+          <votingModeTime mode="Portable" time="20:0:0"/> 
+        </defaultVotingModeTimes> 
+        <executeCheckExpressions value="true"/> 
+        <canRestoreCandidateCanseledInSd value="false"/> 
+        <electionDayDuration value="2"/> 
+      </subsystem> 
+
+
+      <subsystem type="Croc.Bpc.Election.VotingResultManager, Croc.Bpc.Election" disposeOrder="5"> 
+        <addBadBlankToCounterValue enabled="false"/> 
+        <needSourceDataForSaveResults enabled="true"/> 
+        <includeElectionNumberToResultsFileName enabled="true"/> 
+        <packResults enabled="false"/> 
+        <resultsReserveCopyCount value="5"/> 
+      </subsystem> 
+
+
+      <subsystem type="Croc.Bpc.Workflow.WorkflowManager, Croc.Bpc.Workflow" disposeOrder="0"> 
+        <workflowScheme uri="Activities/Main.wf"> 
+          <xmlSchemaSet> 
+            <xmlSchema 
+              targetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys" 
+              uri="Activities/BpcNextActivityKeys.xsd" /> 
+            <xmlSchema 
+              targetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/VotingTime" 
+              uri="Activities/BpcNextActivityKeys_VotingTime.xsd" /> 
+            <xmlSchema 
+              targetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/RecognitionResult" 
+              uri="Activities/BpcNextActivityKeys_RecognitionResult.xsd" /> 
+            <xmlSchema 
+              targetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/DiagError" 
+              uri="Activities/Initialization/BpcNextActivityKeys_DiagError.xsd" /> 
+            <xmlSchema 
+              targetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/Cancelation" 
+              uri="Activities/Cancelation/BpcNextActivityKeys_Cancelation.xsd" /> 
+          </xmlSchemaSet> 
+        </workflowScheme> 
+      </subsystem> 
+
+
+      <subsystem type="Croc.Bpc.Keyboard.UnionKeyboard, Croc.Bpc.Common" traceLevel="Error"/> 
+      <!--#ifdef ${Intel}--> 
+      <subsystem type="Croc.Bpc.Keyboard.KeyboardManager, Croc.Bpc.Keyboard" name="WinKeyboard" traceLevel="Error"> 
+        <driver type="Croc.Bpc.Keyboard.WinConsoleKeyboard, Croc.Bpc.Keyboard"/> 
+        <keys> 
+          <key code="89" type="Yes"/> 
+          <key code="78" type="No"/> 
+          <key code="72" type="Help"/> 
+          <key code="66" type="GoBack"/> 
+          <key code="77" type="Menu"/> 
+          <key code="48" type="Digit" value="0"/> 
+          <key code="49" type="Digit" value="1"/> 
+          <key code="50" type="Digit" value="2"/> 
+          <key code="51" type="Digit" value="3"/> 
+          <key code="52" type="Digit" value="4"/> 
+          <key code="53" type="Digit" value="5"/> 
+          <key code="54" type="Digit" value="6"/> 
+          <key code="55" type="Digit" value="7"/> 
+          <key code="56" type="Digit" value="8"/> 
+          <key code="57" type="Digit" value="9"/> 
+          <key code="46" type="Delete"/> 
+
+
+          <key code="81" type="Quit"/> 
+          <key code="68" type="Drop"/> 
+          <key code="80" type="PowerOff"/> 
+        </keys> 
+      </subsystem> 
+      <!--#endif--> 
+
+
+      <!--#ifdef ${Arm}--> 
+      <subsystem type="Croc.Bpc.Keyboard.KeyboardManager, Croc.Bpc.Keyboard" name="UnixKeyboard" traceLevel="Error"> 
+        <driver type="Croc.Bpc.Keyboard.UnixConsoleKeyboard, Croc.Bpc.Keyboard"> 
+          <settings> 
+            <add key="KeyboardType" value="Belkin"/> 
+          </settings> 
+        </driver> 
+        <keys> 
+          <key code="96" type="Yes"/> 
+          <key code="78" type="No"/> 
+          <key code="74" type="Help"/> 
+          <key code="98" type="GoBack"/> 
+          <key code="55" type="Menu"/> 
+          <key code="83" type="Delete"/> 
+          <key code="82" type="Digit" value="0"/> 
+          <key code="79" type="Digit" value="1"/> 
+          <key code="80" type="Digit" value="2"/> 
+          <key code="81" type="Digit" value="3"/> 
+          <key code="75" type="Digit" value="4"/> 
+          <key code="76" type="Digit" value="5"/> 
+          <key code="77" type="Digit" value="6"/> 
+          <key code="71" type="Digit" value="7"/> 
+          <key code="72" type="Digit" value="8"/> 
+          <key code="73" type="Digit" value="9"/> 
+
+
+          <key code="16" type="Quit"/> 
+          <key code="32" type="Drop"/> 
+        </keys> 
+      </subsystem> 
+      <!--#endif--> 
+
+
+      <!--#ifdef ${Arm}--> 
+      <subsystem type="Croc.Bpc.Keyboard.KeyboardManager, Croc.Bpc.Keyboard" name="ArmButtonsDevice" traceLevel="Error"> 
+        <driver type="Croc.Bpc.Keyboard.ButtonsDevice, Croc.Bpc.Keyboard"/> 
+        <keys> 
+          <key code="4" type="Yes"/> 
+          <key code="2" type="No"/> 
+          <key code="8" type="Help"/> 
+          <key code="1" type="PowerOff"/> 
+        </keys> 
+      </subsystem> 
+      <!--#endif--> 
+
+
+      <subsystem type="Croc.Bpc.Scanner.ScannerManager, Croc.Bpc.Scanner" disposeOrder="1"> 
+        <!--#ifdef ${Intel}--> 
+        <scannerConnector 
+          type="Croc.Bpc.DummyScannerDriver.ScannerConnector, Croc.Bpc.DummyScannerDriver" 
+          broadcast="192.168.91.255"> 
+          <settings> 
+            <add key="DriverVersion" value="30842" /> 
+            <add key="Status" value="0" /> 
+            <add key="Version" value="V2005" /> 
+            <add key="SaveRequestedSquares" value="false" /> 
+            <add key="ScanBulletinTape" value="false" /> 
+            <add key="SerialNumber" value="" /> 
+          </settings> 
+        </scannerConnector> 
+        <!--#else--> 
+        <scannerConnector 
+          type="Croc.Bpc.GsScannerDriver.ScannerConnector, Croc.Bpc.GsScannerDriver" 
+          broadcast="10.255.255.255"/> 
+        <!--#endif--> 
+
+
+        <driverVersion value="30842"/> 
+        <checkHardware enabled="false"/> 
+
+
+        <scannerParameters> 
+          <version name="V2010"> 
+            <workZone 
+              sideTopX="0" sideTopY="0" 
+              sideBottomX="670" sideBottomY="0"/> 
+            <checkFormat enabled="true"/> 
+            <tuning enabled="true"/> 
+            <blankPaperTypes> 
+              <blankPaperType blankMarker="1" paperType="Normal"/> 
+              <blankPaperType blankMarker="2" paperType="Normal"/> 
+              <blankPaperType blankMarker="3" paperType="Normal"/> 
+              <blankPaperType blankMarker="4" paperType="Normal"/> 
+              <blankPaperType blankMarker="5" paperType="Normal"/> 
+              <blankPaperType blankMarker="6" paperType="Normal"/> 
+              <blankPaperType blankMarker="7" paperType="Normal"/> 
+            </blankPaperTypes> 
+            <doubleSheetSensor 
+              enabled="true" 
+              levelLeft="0" levelRigth="0" 
+              thick="-150" thin="150" /> 
+          </version> 
+          <!--#ifdef ${Intel}--> 
+          <version name="V2005"> 
+            <workZone 
+              sideTopX="0" sideTopY="0" 
+              sideBottomX="336" sideBottomY="0"/> 
+            <checkFormat enabled="false"/> 
+            <tuning enabled="true"/> 
+            <blankPaperTypes> 
+              <blankPaperType blankMarker="1" paperType="Normal"/> 
+              <blankPaperType blankMarker="2" paperType="Normal"/> 
+              <blankPaperType blankMarker="3" paperType="Normal"/> 
+              <blankPaperType blankMarker="4" paperType="Normal"/> 
+              <blankPaperType blankMarker="5" paperType="Normal"/> 
+              <blankPaperType blankMarker="6" paperType="Normal"/> 
+              <blankPaperType blankMarker="7" paperType="Normal"/> 
+            </blankPaperTypes> 
+            <doubleSheetSensor 
+              enabled="true" 
+              levelLeft="0" levelRigth="0" 
+              thick="-150" thin="150" /> 
+          </version> 
+          <version name="V2003"> 
+            <workZone 
+              sideTopX="280" sideTopY="0" 
+              sideBottomX="0" sideBottomY="0"/> 
+            <checkFormat enabled="true"/> 
+            <tuning enabled="true"/> 
+            <blankPaperTypes> 
+              <blankPaperType blankMarker="1" paperType="Normal"/> 
+              <blankPaperType blankMarker="2" paperType="Normal"/> 
+              <blankPaperType blankMarker="3" paperType="Normal"/> 
+              <blankPaperType blankMarker="4" paperType="Normal"/> 
+              <blankPaperType blankMarker="5" paperType="Normal"/> 
+              <blankPaperType blankMarker="6" paperType="Normal"/> 
+              <blankPaperType blankMarker="7" paperType="Normal"/> 
+            </blankPaperTypes>     
+            <doubleSheetSensor 
+              enabled="true" 
+              levelLeft="0" levelRigth="0" 
+              thick="-150" thin="150" /> 
+          </version> 
+          <!--#endif--> 
+        </scannerParameters> 
+
+
+        <alerts enabled="true" limit="10"> 
+          <errors> 
+            <error code="-1" enabled="true" description="Опускайте бюллетень изображением вниз"/> 
+            <error code="-2" enabled="true" description="Бланк оказался двусторонним (возможно слипание)"/> 
+            <error code="-3" enabled="true" description="Нет вертикальных линий"/> 
+            <error code="-4" enabled="true" description="Бюллетень имеет слишком большой перекос"/> 
+            <error code="-5" enabled="true" description="Загрязнение линейки"/> 
+            <error code="-6" enabled="true" description="Загрязнение линейки"/> 
+            <error code="-7" enabled="true" description="Опускайте бюллетень изображением вниз"/> 
+            <error code="-8" enabled="true" description="Нет изображения с линейки"/> 
+            <error code="1" enabled="true" description="Слишком длинный лист"/> 
+            <error code="2" enabled="true" description="Не удается подать лист"/> 
+            <error code="3" enabled="true" description="Слишком короткий лист"/> 
+            <error code="4" enabled="true" description="Неверный формат листа"/> 
+            <error code="5" enabled="false" isReverse="false" description="Не удается реверсировать лист" /> 
+            <error code="6" enabled="true" description="Неверное смещение листа от края тракта"/> 
+            <error code="7" enabled="true" description="Загрязнение линейки"/> 
+            <error code="8" enabled="true" description="Загрязнение линейки"/> 
+            <error code="9" enabled="true" description="Двойной лист"/> 
+            <error code="10" enabled="true" description="Датчик двойного листа не работает"/> 
+            <error code="11" enabled="false" isReverse="false" description="Во время сканирования лист был выдернут"/> 
+            <error code="12" enabled="false" isReverse="false" description="Системная ошибка драйвера"/> 
+            <error code="13" enabled="true" description="Нет изображения с линейки"/> 
+            <error code="14" enabled="true" description="Опускайте бюллетень изображением вниз"/> 
+            <error code="15" enabled="true" isReverse="false" description="Не удалось реверсировать лист"/> 
+            <error code="16" enabled="true" description="Недопустимый уровень питающего напряжения"/> 
+            <error code="17" enabled="true" description="Бюллетень имеет слишком большой перекос"/> 
+            <error code="18" enabled="true"  
+                   description="Опускайте бюллетени по одному, дожидайтесь окончания обработки предыдущего бюллетеня"/> 
+          </errors> 
+        </alerts> 
+      </subsystem> 
+
+
+      <subsystem type="Croc.Bpc.Recognizer.RecognitionManager, Croc.Bpc.Recognizer" disposeOrder="2"> 
+        <GCCollect enabled="false"/> 
+        <superiorStamp enabled="true"/> 
+        <MinFreeSpaceForImageKb value="1024"/> 
+        <debugImageSaving 
+          presave="false" 
+          reverse="false" 
+          nextBuffer="false" 
+          driverReverse="false" 
+          squares="false"/> 
+        <blankProcessing> 
+          <blank 
+            type="Valid" 
+            sheetType="Normal" 
+            marking="DropWithoutMarkNew" 
+            imageSavingType="None" 
+            imageFilePrefix="OK"/> 
+          <blank 
+            type="NoMarks" 
+            sheetType="Normal" 
+            marking="DropAndMarkType1" 
+            imageSavingType="None" 
+            imageFilePrefix="WL"/> 
+          <blank 
+            type="TooManyMarks" 
+            sheetType="Normal" 
+            marking="DropAndMarkType2" 
+            imageSavingType="None" 
+            imageFilePrefix="EL"/> 
+          <blank 
+            type="Valid" 
+            sheetType="Long" 
+            marking="DropLongWithoutMark" 
+            imageSavingType="None" 
+            imageFilePrefix="OKL"/> 
+          <blank 
+            type="NoMarks" 
+            sheetType="Long" 
+            marking="DropLongAndMarkType1" 
+            imageSavingType="None" 
+            imageFilePrefix="WLL"/> 
+          <blank 
+            type="TooManyMarks" 
+            sheetType="Long" 
+            marking="DropLongAndMarkType2" 
+            imageSavingType="None" 
+            imageFilePrefix="ELL"/> 
+
+
+          <blank 
+            type="Bad" 
+            marking="Reverse" 
+            imageSavingType="None" 
+            imageFilePrefix="NUF"/> 
+          <blank 
+            type="BadStamp" 
+            marking="Reverse" 
+            imageSavingType="None" 
+            imageFilePrefix="NUF"/> 
+          <blank 
+            type="BadMode" 
+            marking="Reverse" 
+            imageSavingType="None" 
+            imageFilePrefix="FALSE-MODE"/> 
+          <blank 
+            type="Test" 
+            marking="DropWithoutMark" 
+            imageSavingType="None" 
+            imageFilePrefix="TEST"/> 
+        </blankProcessing> 
+        <ocr> 
+          <marker type="Standard"> 
+            <standard> 
+              <width min="1860" max="2000"/> 
+              <height min="25" max="50"/> 
+              <zone value="450"/> 
+            </standard> 
+            <digital> 
+              <width min="15" max="35"/> 
+              <height min="30" max="50"/> 
+              <rio min="1.5" max="2.5"/> 
+            </digital> 
+          </marker> 
+          <onlineRecognize 
+            enabled="true" 
+            level="Mark"> 
+            <runZone 
+              startAtLine="512" 
+              stopAtLine="512"/> 
+            <blankTestZone 
+              startAtLine="200" 
+              stopAtLine="1100"/> 
+          </onlineRecognize> 
+          <minCheckArea value="40"/> 
+          <maxOnlineSkew value="25"/> 
+          <cutWeakCheck enabled="false"/> 
+          <lookForLostSquare enabled="true"/> 
+          <seekBottomRightLine enabled="false"/> 
+          <grayAnalysis enabled="true"/> 
+          <stamp 
+            testLevel="Halftone" 
+            verticalSize="350" 
+            frameWidth="210" 
+            lowThr="200"> 
+            <digital 
+              minLineWidth="6" 
+              maxLineWidth="12" 
+              xSize="28" 
+              ySize="64" 
+              gap="12" 
+              distBottom="52" 
+              distLeft="35" 
+              distRight="35"/> 
+          </stamp> 
+          <logging enabled="false"/> 
+        </ocr> 
+      </subsystem> 
+
+
+      <subsystem type="Croc.Bpc.Synchronization.SynchronizationManager, Croc.Bpc.Synchronization" disposeOrder="3"> 
+        <remoteScannerCallProperties> 
+          <common 
+            timeout="3000" 
+            maxTryCount="3" 
+            retryDelay="2"/> 
+          <synchronization 
+            timeout="10000" 
+            maxTryCount="3" 
+            retryDelay="2"/> 
+          <printing 
+            timeout="300000" 
+            maxTryCount="0" 
+            retryDelay="0"/> 
+        </remoteScannerCallProperties> 
+
+
+        <pingPeriod value="10"/> 
+      </subsystem> 
+
+
+      <subsystem type="Croc.Bpc.Configuration.ConfigurationManager, Croc.Bpc.Configuration"> 
+        <workingConfigFile value="./Croc.Bpc.Application.working.config"/> 
+        <partialConfigFile includeSourceDataPaths="true" fileName="Croc.Bpc.Application.partial.config"> 
+          <root> 
+            <path value="/D:/mail.box/"/> 
+          </root> 
+        </partialConfigFile> 
+        <privateConfigElements> 
+          <xpath value="/croc.application/subsystems/subsystem/scannerParameters/version/doubleSheetSensor"/> 
+        </privateConfigElements> 
+      </subsystem> 
+
+
+    </subsystems> 
+  </croc.application> 
+</configuration>

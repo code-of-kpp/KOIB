@@ -1,97 +1,39 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
   xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
-
- 
-
- 
-
   <Include Ref="Activities/Common.wf" /> 
 
- 
-
- 
-
-  <!--зачитывание протокола голосования--> 
 
   <CompositeActivity Name="SaveVotingResultsActivity" 
-
                      Class="Croc.Bpc.Workflow.Activities.Summarizing.SaveVotingResultsActivity, Croc.Bpc.Workflow" 
-
                      Tracking="false"> 
 
- 
-
- 
-
-    <!--найдем путь к файлу для сохранения протокола с результатами голосования--> 
 
     <Activity Name="FindFilePathToSaveVotingResultProtocol" Execute="FindFilePathToSaveVotingResultProtocol" 
-
               k:Yes="SaveVotingResultProtocol" k:No="FilePathToSaveVotingResultProtocolNotFound"/> 
 
- 
-
- 
-
-    <!--говорим: вставьте flash-диск и нажмите Да--> 
 
     <ReferenceActivity Name="FilePathToSaveVotingResultProtocolNotFound" Execute="Common.SayAndWaitYes" 
-
                        k:Yes="FindFilePathToSaveVotingResultProtocol"/> 
 
- 
-
- 
-
-    <!--сохраняем протокол с результатами голосования по выборам--> 
 
     <Activity Name="SaveVotingResultProtocol" Execute="SaveVotingResultProtocol" 
-
               k:Yes="@@Return(Yes)" k:No="SaveVotingResultProtocolFailedRetry"/> 
 
- 
 
- 
 
-    <!--говорим: ошибка сохранения. Повторить попытку?--> 
 
-    <ReferenceActivity Name="SaveVotingResultProtocolFailedRetry" Execute="Common.SayAndWaitYesOrNo" 
-
-                       k:Yes="FindFilePathToSaveVotingResultProtocol" k:No="@@Return(Yes)"/> 
-
- 
-
- 
-
+    <ReferenceActivity Name="SaveVotingResultProtocolFailedRetry" Execute="Common.SayAndWaitYes" 
+                       k:Yes="FindFilePathToSaveVotingResultProtocol"/> 
   </CompositeActivity> 
-
- 
-
- 
-
-  <ActivityParametersBinding ActivityName="SaveVotingResultsActivity.FilePathToSaveVotingResultProtocolNotFound"> 
-
-    <Parameter Name="TextFormat">Вставьте Flash</Parameter> 
-
-    <Parameter Name="Sounds">insert_flash_to_save_voting_result_and_press_yes</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="SaveVotingResultsActivity.SaveVotingResultProtocolFailedRetry"> 
-
-    <Parameter Name="TextFormat">Ошибка сохранения результатов. Повторить?</Parameter> 
-
-    <Parameter Name="Sounds">save_voting_result_failed_retry</Parameter> 
-
-  </ActivityParametersBinding> 
-
- 
-
- 
-
+  <ActivityParametersBindings CompositeActivityName="SaveVotingResultsActivity"> 
+    <ActivityParametersBinding ActivityName="FilePathToSaveVotingResultProtocolNotFound"> 
+      <Parameter Name="TextFormat">Вставьте Flash</Parameter> 
+      <Parameter Name="Sounds">insert_flash_to_save_voting_result_and_press_yes</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SaveVotingResultProtocolFailedRetry"> 
+      <Parameter Name="TextFormat">Ошибка сохранения результатов. Попробуйте еще раз</Parameter> 
+      <Parameter Name="Sounds">save_voting_result_failed_retry</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
 </Workflow>
-
-

@@ -1,73 +1,30 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
   xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
-
- 
-
- 
-
   <Include Ref="Activities/Common.wf" /> 
-
   <Include Ref="Activities/Cancelation/SayCanceledCandidatesInElection.wf" /> 
 
- 
-
- 
-
-  <!--Озвучивает, какие кандидаты сняты по всем бюллетеням--> 
 
   <CompositeActivity Name="SayCanceledCandidatesActivity" 
-
                      Class="Croc.Bpc.Workflow.Activities.ElectionEnumeratorActivity, Croc.Bpc.Workflow"> 
 
- 
-
- 
-
-    <!--спрашиваем, хотите прослушать номера снятых позиций по всем выборам--> 
 
     <ReferenceActivity Name="SayWantToListenCanceledCandidates" Execute="Common.SayAndWaitYesOrNo" 
-
                        k:Yes="MoveNextElection" k:No="@@Return(Yes)"/> 
 
- 
-
- 
-
-    <!--перебираем выборы--> 
 
     <Activity Name="MoveNextElection" Execute="MoveNextElection" 
-
               k:Yes="SayCanceledCandidatesInElection" k:No="@@Return(Yes)"/> 
 
- 
-
- 
-
-    <!--говорим, какие кандидаты сняты в текущих выборах--> 
 
     <ReferenceActivity Name="SayCanceledCandidatesInElection" Execute="SayCanceledCandidatesInElectionActivity" 
-
                        Parameters="ElectionIndex=@CurrentElectionIndex" 
-
                        k:Yes="MoveNextElection"/> 
-
   </CompositeActivity> 
-
- 
-
- 
-
-  <ActivityParametersBinding ActivityName="SayCanceledCandidatesActivity.SayWantToListenCanceledCandidates"> 
-
-    <Parameter Name="TextFormat">Перечислить снятые позиции?</Parameter> 
-
-    <Parameter Name="Sounds">want_to_listen_canceled_positions</Parameter> 
-
-  </ActivityParametersBinding> 
-
+  <ActivityParametersBindings CompositeActivityName="SayCanceledCandidatesActivity"> 
+    <ActivityParametersBinding ActivityName="SayWantToListenCanceledCandidates"> 
+      <Parameter Name="TextFormat">Перечислить снятые позиции?</Parameter> 
+      <Parameter Name="Sounds">want_to_listen_canceled_positions</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
 </Workflow>
-
-

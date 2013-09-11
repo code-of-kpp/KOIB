@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<ReportTemplate claspFooter="true" name="TestResults" 
+                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://localhost/Schemas/SIB2003/ReportTemplate"
+si:schemaLocation="http://localhost/Schemas/SIB2003/ReportTemplate ReportTemplate.xsd"> 
+  <Parameters> 
+    <Parameter>test</Parameter> 
+  </Parameters> 
+  <Header> 
+    <Line>Результаты тестирования сканера(ов)</Line> 
+    <Line>Текущие дата и время: {$CurrentDateTime|dd.MM.yyyy HH:mm:ss}</Line> 
+  </Header> 
+  <Body> 
+    <Table dotted="true"> 
+      <Header> 
+
+
+        <Col width="43"/> 
+
+
+        <Col count="ScannersInfo.GetScannerInfos.Count" align="Right"/> 
+
+
+        <Col align="Right"/> 
+      </Header> 
+      <Body> 
+        <Line> 
+          <Cols> 
+            <Col/> 
+            <Col each="Scanner" in="ScannersInfo.GetScannerInfos">Сканер №{$@Scanner.SerialNumber}  ({$@Scanner.IpAddress})</Col> 
+            <Col>Итого</Col> 
+          </Cols> 
+        </Line> 
+        <If condition="VotingResultManager.AddBadBlankToCounterValue"> 
+          <Then> 
+            <Line> 
+              <Cols> 
+                <Col>ПРИНЯТО</Col> 
+                <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+                  <Parts> 
+                    <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;All;Test;$@Scanner.SerialNumber;;;&gt;&gt;}</Part> 
+                    <Part not="true" condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;All;;$@Scanner.SerialNumber;;;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+                <Col> 
+                  <Parts> 
+                    <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;All;Test;;;;&gt;&gt;}</Part> 
+                    <Part not="true" condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;All;;;;;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+              </Cols> 
+            </Line> 
+            <Line> 
+              <Cols> 
+                <Col>{$TAB}НУФ</Col> 
+                <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+                  <Parts> 
+                    <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;Bad;Test;$@Scanner.SerialNumber;;;&gt;&gt;}</Part> 
+                    <Part not="true" condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;Bad;;$@Scanner.SerialNumber;;;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+                <Col> 
+                  <Parts> 
+                    <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;Bad;Test;;;;&gt;&gt;}</Part> 
+                    <Part not="true" condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;Bad;;;;;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+              </Cols> 
+            </Line> 
+          </Then> 
+          <Else> 
+            <Line> 
+              <Cols> 
+                <Col>ПРИНЯТО</Col> 
+                <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+                  <Parts> 
+                    <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;AllButBad;Test;$@Scanner.SerialNumber;;;&gt;&gt;}</Part> 
+                    <Part not="true" condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;AllButBad;;$@Scanner.SerialNumber;;;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+                <Col> 
+                  <Parts> 
+                    <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;AllButBad;Test;;;;&gt;&gt;}</Part> 
+                    <Part not="true" condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;AllButBad;;;;;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+              </Cols> 
+            </Line> 
+          </Else> 
+        </If> 
+        <Line> 
+          <Cols> 
+            <Col>{$TAB}НЕДЕЙСТВИТЕЛЬНЫХ</Col> 
+            <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+              <Parts> 
+                <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NotValid;Test;$@Scanner.SerialNumber;;;&gt;&gt;}</Part> 
+                <Part not="true" condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NotValid;;$@Scanner.SerialNumber;;;&gt;&gt;}</Part> 
+              </Parts> 
+            </Col> 
+            <Col> 
+              <Parts> 
+                <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NotValid;Test;;;;&gt;&gt;}</Part> 
+                <Part not="true" condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NotValid;;;;;&gt;&gt;}</Part> 
+              </Parts> 
+            </Col> 
+          </Cols> 
+        </Line> 
+        <Line> 
+          <Cols> 
+            <Col>{$TAB}{$TAB}БЕЗ МЕТОК</Col> 
+            <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+              <Parts> 
+                <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NoMarks;Test;$@Scanner.SerialNumber;;;&gt;&gt;}</Part> 
+                <Part not="true" condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NoMarks;;$@Scanner.SerialNumber;;;&gt;&gt;}</Part> 
+              </Parts> 
+            </Col> 
+            <Col> 
+              <Parts> 
+                <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NoMarks;Test;;;;&gt;&gt;}</Part> 
+                <Part not="true" condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NoMarks;;;;;&gt;&gt;}</Part> 
+              </Parts> 
+            </Col> 
+          </Cols> 
+        </Line> 
+        <Line> 
+          <Cols> 
+            <Col>{$TAB}{$TAB}ПРЕВЫШЕНИЕ ЧИСЛА МЕТОК</Col> 
+            <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+              <Parts> 
+                <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;TooManyMarks;Test;$@Scanner.SerialNumber;;;&gt;&gt;}</Part> 
+                <Part not="true"
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;TooManyMarks;;$@Scanner.SerialNumber;;;&gt;&gt;}</Part> 
+              </Parts> 
+            </Col> 
+            <Col> 
+              <Parts> 
+                <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;TooManyMarks;Test;;;;&gt;&gt;}</Part> 
+                <Part not="true" condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;TooManyMarks;;;;;&gt;&gt;}</Part> 
+              </Parts> 
+            </Col> 
+          </Cols> 
+        </Line> 
+        <Line> 
+          <Cols> 
+            <Col>{$TAB}ДЕЙСТВИТЕЛЬНЫХ</Col> 
+            <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+              <Parts> 
+                <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;Valid;Test;$@Scanner.SerialNumber;;;&gt;&gt;}</Part> 
+                <Part not="true" condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;Valid;;$@Scanner.SerialNumber;;;&gt;&gt;}</Part> 
+              </Parts> 
+            </Col> 
+            <Col> 
+              <Parts> 
+                <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;Valid;Test;;;;&gt;&gt;}</Part> 
+                <Part not="true" condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;Valid;;;;;&gt;&gt;}</Part> 
+              </Parts> 
+            </Col> 
+          </Cols> 
+        </Line> 
+        <For in="ElectionManager.SourceData.Elections" each="Election"> 
+          <Body> 
+            <Line isLineDotted="0"> 
+              <Cols> 
+                <Col>{$@Election.Name} ({$@Election.MaxMarks})</Col> 
+                <Col each="Scanner" in="ScannersInfo.GetScannerInfos"/> 
+                <Col/> 
+              </Cols> 
+            </Line> 
+            <Line> 
+              <Cols> 
+                <Col>ПРИНЯТО</Col> 
+                <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+                  <Parts> 
+                    <Part
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;AllButBad;Test;$@Scanner.SerialNumber;;;$ElectionManager.SourceData.GetBlankId
+yElectionNumber&lt;$@Election.ElectionId&gt;&gt;&gt;}</Part> 
+                    <Part not="true"
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;AllButBad;;$@Scanner.SerialNumber;;;$ElectionManager.SourceData.GetBlankIdByEl
+ctionNumber&lt;$@Election.ElectionId&gt;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+                <Col> 
+                  <Parts> 
+                    <Part
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;AllButBad;Test;;;;$ElectionManager.SourceData.GetBlankIdByElectionNumber&lt;$@
+lection.ElectionId&gt;&gt;&gt;}</Part> 
+                    <Part not="true"
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;AllButBad;;;;;$ElectionManager.SourceData.GetBlankIdByElectionNumber&lt;$@Electi
+n.ElectionId&gt;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+              </Cols> 
+            </Line> 
+            <Line> 
+              <Cols> 
+                <Col>{$TAB}НЕДЕЙСТВИТЕЛЬНЫХ</Col> 
+                <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+                  <Parts> 
+                    <Part
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NotValid;Test;$@Scanner.SerialNumber;;;$ElectionManager.SourceData.GetBlankIdB
+ElectionNumber&lt;$@Election.ElectionId&gt;&gt;&gt;}</Part> 
+                    <Part not="true"
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NotValid;;$@Scanner.SerialNumber;;;$ElectionManager.SourceData.GetBlankIdByEle
+tionNumber&lt;$@Election.ElectionId&gt;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+                <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+                  <Parts> 
+                    <Part
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NotValid;Test;;;;$ElectionManager.SourceData.GetBlankIdByElectionNumber&lt;$@El
+ction.ElectionId&gt;&gt;&gt;}</Part> 
+                    <Part not="true"
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NotValid;;;;;$ElectionManager.SourceData.GetBlankIdByElectionNumber&lt;$@Electio
+.ElectionId&gt;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+              </Cols> 
+            </Line> 
+            <Line> 
+              <Cols> 
+                <Col>{$TAB}{$TAB}БЕЗ МЕТОК</Col> 
+                <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+                  <Parts> 
+                    <Part
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NoMarks;Test;$@Scanner.SerialNumber;;;$ElectionManager.SourceData.GetBlankId
+yElectionNumber&lt;$@Election.ElectionId&gt;&gt;&gt;}</Part> 
+                    <Part not="true"
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NoMarks;;$@Scanner.SerialNumber;;;$ElectionManager.SourceData.GetBlankIdByEl
+ctionNumber&lt;$@Election.ElectionId&gt;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+                <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+                  <Parts> 
+                    <Part
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NoMarks;Test;;;;$ElectionManager.SourceData.GetBlankIdByElectionNumber&lt;$@El
+ction.ElectionId&gt;&gt;&gt;}</Part> 
+                    <Part not="true"
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;NoMarks;;;;;$ElectionManager.SourceData.GetBlankIdByElectionNumber&lt;$@Electi
+n.ElectionId&gt;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+              </Cols> 
+            </Line> 
+            <Line> 
+              <Cols> 
+                <Col>{$TAB}{$TAB}ПРЕВЫШЕНИЕ ЧИСЛА МЕТОК</Col> 
+                <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+                  <Parts> 
+                    <Part
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;TooManyMarks;Test;$@Scanner.SerialNumber;;;$ElectionManager.SourceData.GetBl
+nkIdByElectionNumber&lt;$@Election.ElectionId&gt;&gt;&gt;}</Part> 
+                    <Part not="true"
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;TooManyMarks;;$@Scanner.SerialNumber;;;$ElectionManager.SourceData.GetBlankI
+ByElectionNumber&lt;$@Election.ElectionId&gt;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+                <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+                  <Parts> 
+                    <Part
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;TooManyMarks;Test;;;;$ElectionManager.SourceData.GetBlankIdByElectionNumber&l
+;$@Election.ElectionId&gt;&gt;&gt;}</Part> 
+                    <Part not="true"
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;TooManyMarks;;;;;$ElectionManager.SourceData.GetBlankIdByElectionNumber&lt;$
+Election.ElectionId&gt;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+              </Cols> 
+            </Line> 
+            <Line> 
+              <Cols> 
+                <Col>{$TAB}ДЕЙСТВИТЕЛЬНЫХ</Col> 
+                <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+                  <Parts> 
+                    <Part
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;Valid;Test;$@Scanner.SerialNumber;;$@Election.ElectionId;&gt;&gt;}</Part> 
+                    <Part not="true"
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;Valid;;$@Scanner.SerialNumber;;$@Election.ElectionId;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+                <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+                  <Parts> 
+                    <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;Valid;Test;;;$@Election.ElectionId;&gt;&gt;}</Part> 
+                    <Part not="true" condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;Valid;;;;$@Election.ElectionId;&gt;&gt;}</Part> 
+                  </Parts> 
+                </Col> 
+              </Cols> 
+            </Line> 
+            <For in="@Election.Candidates" each="Candidate"> 
+              <Body> 
+                <Line> 
+                  <Cols> 
+                    <Col> 
+                      <Parts> 
+                        <Part>{$TAB}{$@Candidate.@Current}. </Part> 
+                        <Part condition="@Candidate.LastName">{$@Candidate.LastName|#u}</Part> 
+                        <Part condition="@Candidate.FirstName"> {$@Candidate.FirstName}</Part> 
+                        <Part condition="@Candidate.Patronymic"> {$@Candidate.Patronymic}</Part> 
+                        <Part condition="@Candidate.DisabledInSourceData"> (снят)</Part> 
+                        <Part condition="@Candidate.DisabledLocally"> (снят на УИК)</Part> 
+                      </Parts> 
+                    </Col> 
+                    <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+                      <Parts> 
+                        <Part
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;;Test;$@Scanner.SerialNumber;$@Candidate.Id;$@Election.ElectionId;&gt;&gt;}</Par
+> 
+                        <Part not="true"
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;;;$@Scanner.SerialNumber;$@Candidate.Id;$@Election.ElectionId;&gt;&gt;}</Part> 
+                      </Parts> 
+                    </Col> 
+                    <Col each="Scanner" in="ScannersInfo.GetScannerInfos"> 
+                      <Parts> 
+                        <Part condition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;;Test;;$@Candidate.Id;$@Election.ElectionId;&gt;&gt;}</Part> 
+                        <Part not="true"
+ondition="@test">{$VotingResultManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;;;;$@Candidate.Id;$@Election.ElectionId;&gt;&gt;}</Part> 
+                      </Parts> 
+                    </Col> 
+                  </Cols> 
+                </Line> 
+              </Body> 
+            </For> 
+          </Body> 
+        </For> 
+      </Body> 
+    </Table> 
+  </Body> 
+  <PageFooter> 
+        <If condition="@test"> 
+            <Then> 
+        <Line align="Left">Председатель участковой избирательной комиссии</Line> 
+        <If not="true" condition="ElectionManager.SourceData.GetCommitteeMemberInitialByType&lt;Chairman&gt;"> 
+          <Then> 
+            <Line align="Right">______________________    _________________________________________</Line> 
+          </Then> 
+          <Else> 
+            <Line align="Right">{$ElectionManager.SourceData.GetCommitteeMemberInitialByType&lt;Chairman&gt;}  _________________________________________</Line> 
+          </Else> 
+        </If> 
+        <Line align="Right">(фамилия, инициалы)                            (подпись либо причина отсутствия,    </Line> 
+        <Line align="Right">                                     отметка об особом мнении)         </Line> 
+        <Line align="Left">Заместитель председателя комиссии</Line> 
+        <If not="true" condition="ElectionManager.SourceData.GetCommitteeMemberInitialByType&lt;ChairmanAssistant&gt;"> 
+          <Then> 
+            <Line align="Right">______________________    _________________________________________</Line> 
+          </Then> 
+          <Else> 
+            <Line align="Right">{$ElectionManager.SourceData.GetCommitteeMemberInitialByType&lt;ChairmanAssistant&gt;}
+________________________________________</Line> 
+          </Else> 
+        </If> 
+        <Line align="Left">Секретарь комиссии</Line> 
+        <If not="true" condition="ElectionManager.SourceData.GetCommitteeMemberInitialByType&lt;Secretary&gt;"> 
+          <Then> 
+            <Line align="Right">______________________    _________________________________________</Line> 
+          </Then> 
+          <Else> 
+            <Line align="Right">{$ElectionManager.SourceData.GetCommitteeMemberInitialByType&lt;Secretary&gt;}  _________________________________________</Line> 
+          </Else> 
+        </If> 
+      </Then> 
+        </If> 
+    </PageFooter> 
+</ReportTemplate>

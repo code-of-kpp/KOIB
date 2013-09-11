@@ -1,279 +1,83 @@
 using System; 
-
-using Croc.Bpc.Election.Voting; 
-
- 
-
- 
-
 namespace Croc.Bpc.Printing.Reports 
-
 { 
-
-    /// <summary> 
-
-    /// ?????? ??????  
-
-    ///     ??? ?????????? ???????? ???? ?????? 
-
-    ///     ??? ?????? ????? ?????, ?? ?????????? ???????? 
-
-    /// </summary> 
-
     public class ReportLine : IReportElement 
-
     { 
-
-        /// <summary> 
-
-        /// ??????? ????, ??? ??????? ????????? ?? ?????? 
-
-        /// </summary> 
-
         public bool IsPrintable 
-
         { 
-
             get { return true; } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ???????? ?????? (??????) 
-
-        /// ???? ??? ?????? Table - ?? ?????? ???????, ????? - ???? ?????? 
-
-        /// </summary> 
-
-        private string[] m_aLines; 
-
- 
-
- 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????? 
-
-        /// </summary> 
-
-        public string FirstLine 
-
-        { 
-
-            get 
-
-            { 
-
-                if (m_aLines == null || m_aLines[0] == null) 
-
-                { 
-
-                    return " "; 
-
-                } 
-
-                else 
-
-                { 
-
-                    return m_aLines[0]; 
-
-                } 
-
-            } 
-
-        } 
-
- 
-
- 
-
-
-        /// <summary> 
-
-        /// ?????? ???? ????? 
-
-        /// </summary> 
-
+        private readonly string[] _lines; 
+        private string _relativeFontSize; 
         public string[] Lines 
-
         { 
-
             get 
-
             { 
-
-                return m_aLines; 
-
+                return _lines; 
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????? ????? 
-
-        /// </summary> 
-
+        public string FirstLine 
+        { 
+            get 
+            { 
+                if (_lines == null || _lines[0] == null) 
+                    return " "; 
+                return _lines[0]; 
+            } 
+        } 
         public bool Bold { get; set; } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????? 
-
-        /// </summary> 
-
         public bool Italic { get; set; } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ?????? ?????? 
-
-        /// </summary> 
-
-        public int FontSize { get; set; } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??????? ?????? ?? ????? ???????? (?????? ??? ??????) 
-
-        /// </summary> 
-
-        public bool NewPage { get; set; } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ???????????? ?????? 
-
-        /// </summary> 
-
-        public LineAlign Align { get; set; } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??????????? 
-
-        /// </summary> 
-
-        /// <param name="lines">????? ????? (?? ?????????? ????????)</param> 
-
-        /// <param name="nAlign">????????????</param> 
-
-        /// <param name="nFontSize">?????? ??????</param> 
-
-        /// <param name="bold">?????? ?????</param> 
-
-        /// <param name="italic">??????</param> 
-
-
-        public ReportLine(string[] lines, LineAlign nAlign, int nFontSize, bool bold, bool italic, bool newPage) 
-
+        public int FontSize(int baseFontSize) 
         { 
-
-            // ?????? 
-
-            m_aLines = lines; 
-
-            // ???????????? 
-
-            Align = nAlign; 
-
-            // ?????? ?????? 
-
-            FontSize = nFontSize; 
-
-            // ?????? ????? 
-
-            Bold = bold; 
-
-            // ?????? 
-
-            Italic = italic; 
-
-            // ??????? ?????? ?? ????? ???????? 
-
-            NewPage = newPage; 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ??????? ????????????? 
-
-        /// </summary> 
-
-        /// <param name="str">??????? ??????</param> 
-
-        /// <returns>????????????????? ??????</returns> 
-
-        public delegate string DoTransform(string str); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// ????????? ????????????????? ????? 
-
-        /// </summary> 
-
-        /// <param name="transform">????? ?????????????</param> 
-
-        public void TransformLine(DoTransform transform) 
-
-        { 
-
-            for (int i = 0; i < m_aLines.Length; i++) 
-
+            int fontSize = baseFontSize; 
+            if (_relativeFontSize != null && _relativeFontSize.Trim().Length > 0) 
             { 
-
-                m_aLines[i] = transform(m_aLines[i]); 
-
+                int size = Convert.ToInt32(_relativeFontSize.Trim()); 
+                if (size < 0 || _relativeFontSize.Trim()[0] == '+') 
+                { 
+                    fontSize += size; 
+                } 
+                else 
+                { 
+                    fontSize = size; 
+                } 
             } 
-
+            return fontSize; 
         } 
-
+        public ServiceMode Mode { get; set; } 
+        public LineAlign Align { get; set; } 
+        public int IsLineDotted { get; set; } 
+        public ReportLine(string[] lines, 
+            LineAlign align, 
+            string fontSize, 
+            bool bold, 
+            bool italic, 
+            bool newPage, 
+            bool resetPageNumber, 
+            int isLineDotted) 
+        { 
+            _lines = lines; 
+            Align = align; 
+            _relativeFontSize = fontSize; 
+            Bold = bold; 
+            Italic = italic; 
+            IsLineDotted = isLineDotted; 
+            if (newPage) 
+            { 
+                Mode |= ServiceMode.PageBreak; 
+            } 
+            if (resetPageNumber) 
+            { 
+                Mode |= ServiceMode.ResetPageCounter; 
+            } 
+        } 
+        public delegate string DoTransform(string str); 
+        public void TransformLine(DoTransform transform) 
+        { 
+            for (var i = 0; i < _lines.Length; i++) 
+            { 
+                _lines[i] = transform(_lines[i]); 
+            } 
+        } 
     } 
-
 }
-
-

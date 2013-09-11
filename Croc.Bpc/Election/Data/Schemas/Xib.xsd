@@ -1,495 +1,155 @@
-<?xml version="1.0" encoding="windows-1251"?> 
-
+<?xml version="1.0" encoding="utf-8"?> 
 <xs:schema targetNamespace="http://localhost/Schemas/xib.xsd" xmlns="http://localhost/Schemas/xib.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema"
+lementFormDefault="qualified" attributeFormDefault="unqualified"> 
 
-elementFormDefault="qualified" attributeFormDefault="unqualified"> 
 
-	<xs:annotation> 
+    <xs:element name="Xib"> 
 
-		<xs:documentation> 
 
-			????? XML ? ?????????? ?? ??? 
+        <xs:complexType> 
+            <xs:sequence> 
+                <xs:element name="Scanner" maxOccurs="unbounded"> 
+                    <xs:complexType> 
+                        <xs:sequence> 
 
-		</xs:documentation> 
 
-	</xs:annotation> 
+                            <xs:element name="Bulletin" minOccurs="0" maxOccurs="unbounded"> 
+                                <xs:complexType> 
 
-	<xs:element name="Xib"> 
 
-		<xs:annotation> 
+                                    <xs:attribute name="n" type="xs:integer" use="required"> 
 
-			<xs:documentation> 
 
-				???????? ??????? ? ?????????? ?? ???? ? ??????????? ?? 
+                                    </xs:attribute> 
+                                    <xs:attribute name="id" type="ObjectId" use="required"> 
 
-			</xs:documentation> 
 
-		</xs:annotation> 
+                                    </xs:attribute> 
+                                    <xs:attribute name="Valid" type="xs:long" use="required"> 
 
-		<xs:complexType> 
 
-			<xs:sequence> 
+                                    </xs:attribute> 
+                                    <xs:attribute name="NoMarks" type="xs:long" use="required"> 
 
-				<xs:element name="Scanner" maxOccurs="unbounded"> 
 
-					<xs:complexType> 
+                                    </xs:attribute> 
+                                    <xs:attribute name="TooManyMarks" type="xs:long" use="required"> 
 
-						<xs:sequence> 
 
-							<xs:annotation> 
+                                    </xs:attribute> 
+                                    <xs:attribute name="BadMode" type="xs:long" use="required"> 
 
-								<xs:documentation>?????????? ?? ??????????? ???????</xs:documentation> 
 
-							</xs:annotation> 
+                                    </xs:attribute> 
+                                </xs:complexType> 
+                            </xs:element> 
+                        </xs:sequence> 
+                        <xs:attribute name="n" type="xs:integer" use="required"> 
 
-							<xs:element name="Bulletin" minOccurs="0" maxOccurs="unbounded"> 
 
-								<xs:complexType> 
+                        </xs:attribute> 
+                        <xs:attribute name="nuf" type="xs:long" use="optional"> 
 
-									<xs:annotation> 
 
-										<xs:documentation> 
+                        </xs:attribute> 
+                    </xs:complexType> 
+                </xs:element> 
+                <xs:element name="Protocol" minOccurs="0" maxOccurs="unbounded"> 
+                    <xs:complexType> 
+                        <xs:sequence> 
 
-											?????????? ?? ??????????? ???? ????????? 
 
-										</xs:documentation> 
+                            <xs:element name="Election" maxOccurs="unbounded"> 
+                                <xs:complexType> 
+                                    <xs:sequence> 
 
-									</xs:annotation> 
 
-									<xs:attribute name="n" type="xs:integer" use="required"> 
+                                        <xs:element name="Line" minOccurs="0" maxOccurs="unbounded"> 
+                                            <xs:complexType> 
 
-										<xs:annotation> 
 
-											<xs:documentation> 
+                                                <xs:simpleContent> 
+                                                    <xs:extension base="xs:string"> 
+                                                        <xs:attribute name="n" type="xs:integer" use="required"> 
 
-												????? ????????? 
 
-											</xs:documentation> 
+                                                        </xs:attribute> 
+                                                        <xs:attribute name="a" type="xs:string" use="optional"> 
 
-										</xs:annotation> 
 
-									</xs:attribute> 
+                                                        </xs:attribute> 
+                                                    </xs:extension> 
+                                                </xs:simpleContent> 
+                                            </xs:complexType> 
+                                        </xs:element> 
+                                        <xs:element name="Candidate" minOccurs="0" maxOccurs="unbounded"> 
 
-									<xs:attribute name="id" type="ObjectId" use="required"> 
 
-										<xs:annotation> 
+                                            <xs:complexType> 
+                                                <xs:simpleContent> 
+                                                    <xs:extension base="xs:string"> 
+                                                        <xs:attribute name="n" type="ObjectId" use="required"> 
 
-											<xs:documentation> 
 
-												????????????? ????????? 
+                                                        </xs:attribute> 
+                                                        <xs:attribute name="disabled" type="xs:boolean" use="optional"> 
 
-											</xs:documentation> 
 
-										</xs:annotation> 
+                                                        </xs:attribute> 
+                                                    </xs:extension> 
+                                                </xs:simpleContent> 
+                                            </xs:complexType> 
+                                        </xs:element> 
+                                    </xs:sequence> 
+                                    <xs:attribute name="n" type="ObjectId"> 
 
-									</xs:attribute> 
 
-									<xs:attribute name="Valid" type="xs:long" use="required"> 
+                                    </xs:attribute> 
+                                    <xs:attribute name="parentid" type="ObjectId" use="required"> 
 
-										<xs:annotation> 
 
-											<xs:documentation> 
+                                    </xs:attribute> 
+                                    <xs:attribute name="e-mail" type="xs:string" use="optional"> 
 
-												?????????? ???????? ?????????????? ?????????? 
 
-											</xs:documentation> 
+                                    </xs:attribute> 
+                                </xs:complexType> 
+                            </xs:element> 
+                        </xs:sequence> 
+                        <xs:attribute name="final" type="xs:boolean" use="required"> 
 
-										</xs:annotation> 
 
-									</xs:attribute> 
+                        </xs:attribute> 
+                    </xs:complexType> 
+                </xs:element> 
+                <xs:element name="Check" type="xs:string"> 
 
 
-									<xs:attribute name="NoMarks" type="xs:long" use="required"> 
+                </xs:element> 
+            </xs:sequence> 
+            <xs:attribute name="uik" type="xs:integer" use="required"> 
 
-										<xs:annotation> 
 
-											<xs:documentation> 
+            </xs:attribute> 
+            <xs:attribute name="isGasVrn" type="xs:boolean" use="required"> 
 
-												?????????? ???????? ?????????? ??? ??????? 
 
-											</xs:documentation> 
+            </xs:attribute> 
+            <xs:attribute name="ts" type="xs:dateTime" use="required"> 
 
-										</xs:annotation> 
 
-									</xs:attribute> 
+            </xs:attribute> 
+            <xs:attribute name="version" type="xs:integer" use="optional"> 
 
-									<xs:attribute name="TooManyMarks" type="xs:long" use="required"> 
 
-										<xs:annotation> 
+            </xs:attribute> 
+        </xs:complexType> 
+    </xs:element> 
+    <xs:simpleType name="ObjectId"> 
 
-											<xs:documentation> 
 
-												?????????? ???????? ?????????? ? ??????????? 
-
-												??????????? ?????????? ??????? 
-
-											</xs:documentation> 
-
-										</xs:annotation> 
-
-									</xs:attribute> 
-
-									<xs:attribute name="BadMode" type="xs:long" use="required"> 
-
-										<xs:annotation> 
-
-											<xs:documentation> 
-
-												?????????? ???????? ?????????? ????????? 
-
-												? ???????? ?????? 
-
-											</xs:documentation> 
-
-										</xs:annotation> 
-
-									</xs:attribute> 
-
-								</xs:complexType> 
-
-							</xs:element> 
-
-						</xs:sequence> 
-
-						<xs:attribute name="n" type="xs:integer" use="required"> 
-
-							<xs:annotation> 
-
-								<xs:documentation> 
-
-									???????? ????? ??????? 
-
-								</xs:documentation> 
-
-							</xs:annotation> 
-
-						</xs:attribute> 
-
-						<xs:attribute name="nuf" type="xs:long" use="optional"> 
-
-							<xs:annotation> 
-
-								<xs:documentation> 
-
-									?????????? ???????? ?????????? ??????????????? ????? 
-
-									(????????? ?????????? ????????? ?? ???????) 
-
-								</xs:documentation> 
-
-							</xs:annotation> 
-
-						</xs:attribute> 
-
-					</xs:complexType> 
-
-				</xs:element> 
-
-				<xs:element name="Protocol" minOccurs="0" maxOccurs="unbounded"> 
-
-					<xs:complexType> 
-
-						<xs:sequence> 
-
-							<xs:annotation> 
-
-								<xs:documentation> 
-
-									??????????????? ???? ???????? ???????? ??????????? 
-
-								</xs:documentation> 
-
-
-							</xs:annotation> 
-
-							<xs:element name="Election" maxOccurs="unbounded"> 
-
-								<xs:complexType> 
-
-									<xs:sequence> 
-
-										<xs:annotation> 
-
-											<xs:documentation> 
-
-												?????????? ? ?????????? ??????? 
-
-											</xs:documentation> 
-
-										</xs:annotation> 
-
-										<xs:element name="Line" minOccurs="0" maxOccurs="unbounded"> 
-
-											<xs:complexType> 
-
-												<xs:annotation> 
-
-													<xs:documentation> 
-
-														?????????? ? ?????? ????????? 
-
-													</xs:documentation> 
-
-												</xs:annotation> 
-
-												<xs:simpleContent> 
-
-													<xs:extension base="xs:string"> 
-
-														<xs:attribute name="n" type="xs:integer" use="required"> 
-
-															<xs:annotation> 
-
-																<xs:documentation> 
-
-																	????????????? ????? ?????? 
-
-																</xs:documentation> 
-
-															</xs:annotation> 
-
-														</xs:attribute> 
-
-														<xs:attribute name="a" type="xs:string" use="optional"> 
-
-															<xs:annotation> 
-
-																<xs:documentation> 
-
-																	????????? ????? ?????? ?????? 
-
-																</xs:documentation> 
-
-															</xs:annotation> 
-
-														</xs:attribute> 
-
-													</xs:extension> 
-
-												</xs:simpleContent> 
-
-											</xs:complexType> 
-
-										</xs:element> 
-
-										<xs:element name="Candidate" minOccurs="0" maxOccurs="unbounded"> 
-
-											<xs:annotation> 
-
-												<xs:documentation>?????????? ? ?????????</xs:documentation> 
-
-											</xs:annotation> 
-
-											<xs:complexType> 
-
-												<xs:simpleContent> 
-
-													<xs:extension base="xs:string"> 
-
-														<xs:attribute name="n" type="ObjectId" use="required"> 
-
-															<xs:annotation> 
-
-																<xs:documentation> 
-
-																	????????????? ?????????, ????????? ? ????????? ??????? 
-
-																</xs:documentation> 
-
-															</xs:annotation> 
-
-														</xs:attribute> 
-
-
-														<xs:attribute name="disabled" type="xs:boolean" use="optional"> 
-
-															<xs:annotation> 
-
-																<xs:documentation> 
-
-																	??????? ?????? ????????? 
-
-																	true - ???????? ????, 
-
-																	??????? ??????????? - ???????? ?? ???? 
-
-																</xs:documentation> 
-
-															</xs:annotation> 
-
-														</xs:attribute> 
-
-													</xs:extension> 
-
-												</xs:simpleContent> 
-
-											</xs:complexType> 
-
-										</xs:element> 
-
-									</xs:sequence> 
-
-									<xs:attribute name="n" type="ObjectId"> 
-
-										<xs:annotation> 
-
-											<xs:documentation> 
-
-												????????????? ???????, ?????????? ???????? ?????? 
-
-											</xs:documentation> 
-
-										</xs:annotation> 
-
-									</xs:attribute> 
-
-									<xs:attribute name="parentid" type="ObjectId" use="required"> 
-
-										<xs:annotation> 
-
-											<xs:documentation>????????????? ??????????? ????????</xs:documentation> 
-
-										</xs:annotation> 
-
-									</xs:attribute> 
-
-									<xs:attribute name="e-mail" type="xs:string" use="optional"> 
-
-										<xs:annotation> 
-
-											<xs:documentation>????? ??????????? ????? ??? ??????????? ????????</xs:documentation> 
-
-										</xs:annotation> 
-
-									</xs:attribute> 
-
-								</xs:complexType> 
-
-							</xs:element> 
-
-						</xs:sequence> 
-
-						<xs:attribute name="final" type="xs:boolean" use="required"> 
-
-							<xs:annotation> 
-
-								<xs:documentation> 
-
-									true - ???????? ???????? 
-
-									false - ??????????????? ???????? 
-
-								</xs:documentation> 
-
-							</xs:annotation> 
-
-						</xs:attribute> 
-
-					</xs:complexType> 
-
-				</xs:element> 
-
-				<xs:element name="Check" type="xs:string"> 
-
-					<xs:annotation> 
-
-						<xs:documentation> 
-
-							??????????? ????? ?????????. ???????? ??. ? ?? 
-
-						</xs:documentation> 
-
-					</xs:annotation> 
-
-
-				</xs:element> 
-
-			</xs:sequence> 
-
-			<xs:attribute name="uik" type="xs:integer" use="required"> 
-
-				<xs:annotation> 
-
-					<xs:documentation> 
-
-						??????? ? ??????? ??????? ????? ???, ?? ???????? ?????? ????????? 
-
-					</xs:documentation> 
-
-				</xs:annotation> 
-
-			</xs:attribute> 
-
-			<xs:attribute name="isGasVrn" type="xs:boolean" use="required"> 
-
-				<xs:annotation> 
-
-					<xs:documentation> 
-
-						??? ??????????????? ????????? ? ???????. 
-
-						true - ? ???????? ??????????????? ???????????? ??? ?? ??? ?????? 
-
-						false - ? ???????? ??????????????? ???????????? ObjectID ?? ???????????????? ?????? 
-
-					</xs:documentation> 
-
-				</xs:annotation> 
-
-			</xs:attribute> 
-
-			<xs:attribute name="ts" type="xs:dateTime" use="required"> 
-
-				<xs:annotation> 
-
-					<xs:documentation> 
-
-						??????? ? ??????? ??????? ???? ? ????? ???????? ????????? 
-
-					</xs:documentation> 
-
-				</xs:annotation> 
-
-			</xs:attribute> 
-
-			<xs:attribute name="version" type="xs:integer" use="optional"> 
-
-				<xs:annotation> 
-
-					<xs:documentation>?????? ?????????</xs:documentation> 
-
-				</xs:annotation> 
-
-			</xs:attribute> 
-
-		</xs:complexType> 
-
-	</xs:element> 
-
-	<xs:simpleType name="ObjectId"> 
-
-		<xs:annotation> 
-
-			<xs:documentation> 
-
-				??? ?????????????? ???????.  
-
-				????? ???? ??? ????? ObjectID ?? ???????????????? ?????? 
-
-				??? ? ??? (22-? ??????? FLOAT) ?? ??? ?????? 
-
-			</xs:documentation> 
-
-		</xs:annotation> 
-
-		<xs:restriction base="xs:string"> 
-
-			<xs:minLength value="1"/> 
-
-		</xs:restriction> 
-
-	</xs:simpleType> 
-
+        <xs:restriction base="xs:string"> 
+            <xs:minLength value="1"/> 
+        </xs:restriction> 
+    </xs:simpleType> 
 </xs:schema>
-
-

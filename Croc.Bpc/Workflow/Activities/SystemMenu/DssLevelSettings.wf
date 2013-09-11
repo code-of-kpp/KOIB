@@ -1,0 +1,36 @@
+<Workflow 
+  xmlns="http://schemas.croc.ru/Workflow" 
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+  <Include Ref="Activities/Common.wf" /> 
+
+
+  <CompositeActivity Name="DssLevelSettingsActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.DssLevelSettingsActivity, Croc.Bpc.Workflow"> 
+
+
+    <ReferenceActivity Name="ReadLeft" Execute="Common.SayAndReadValue" 
+                       Parameters="Required=@@True;Silent=@@True;Value=@CurrentLeftLevel" 
+                       k:No="@@Return(Yes)"/> 
+
+
+    <Activity Name="SaveLeft" Execute="SaveLeft"/> 
+
+
+    <ReferenceActivity Name="ReadRight" Execute="Common.SayAndReadValue" 
+                       Parameters="Required=@@True;Silent=@@True;Value=@CurrentRightLevel" 
+                       k:No="@@Return(Yes)"/> 
+
+
+    <Activity Name="ApplyNewConfig" Execute="ApplyNewConfig"/> 
+
+
+  </CompositeActivity> 
+  <ActivityParametersBindings CompositeActivityName="DssLevelSettingsActivity"> 
+    <ActivityParametersBinding ActivityName="ReadLeft"> 
+      <Parameter Name="TextFormat">Левый = ___</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="ReadRight"> 
+      <Parameter Name="TextFormat">Правый = ___</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
+</Workflow>

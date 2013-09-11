@@ -1,47 +1,38 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
   xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
-
- 
-
- 
-
   <Include Ref="Activities/Common.wf" /> 
 
- 
-
- 
-
-  <!--Системное меню--> 
 
   <CompositeActivity Name="PaperSettingsActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.PaperSettingsActivity, Croc.Bpc.Workflow"> 
 
-                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.PaperSettingsActivity, Croc.Bpc.Workflow" 
 
-                     Tracking="false"> 
+    <ReferenceActivity Name="ReadThick" Execute="Common.SayAndReadValue" 
+                       Parameters="Required=@@True;Silent=@@True;Value=@CurrentThick" 
+                       k:No="@@Return(Yes)"/> 
 
-    <!--индикатор--> 
 
-    <ReferenceActivity Name="Start" Execute="Common.SayAndWaitTimeout" 
+    <Activity Name="SaveThick" Execute="SaveThick"/> 
 
-                       Parameters="Timeout=5000;Silent=@@True" 
 
-                       k:Yes="@@Return(Yes)"/> 
+
+
+    <ReferenceActivity Name="ReadThin" Execute="Common.SayAndReadValue" 
+                       Parameters="Required=@@True;Silent=@@True;Value=@CurrentThick" 
+                       k:No="@@Return(Yes)"/> 
+
+
+    <Activity Name="ApplyNewConfig" Execute="ApplyNewConfig"/> 
+
 
   </CompositeActivity> 
-
- 
-
- 
-
-  <ActivityParametersBinding ActivityName="PaperSettingsActivity.Start"> 
-
-    <Parameter Name="TextFormat">Меню еще не реализовано</Parameter> 
-
-  </ActivityParametersBinding> 
-
+  <ActivityParametersBindings CompositeActivityName="PaperSettingsActivity"> 
+    <ActivityParametersBinding ActivityName="ReadThick"> 
+      <Parameter Name="TextFormat">Толстая = -___</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="ReadThin"> 
+      <Parameter Name="TextFormat">Тонкая = +___</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
 </Workflow>
-
-

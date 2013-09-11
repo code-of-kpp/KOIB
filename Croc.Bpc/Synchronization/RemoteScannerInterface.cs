@@ -1,1006 +1,425 @@
 using System; 
-
 using System.Collections.Generic; 
-
 using System.Collections.Specialized; 
-
 using System.Diagnostics; 
-
 using System.Net.Sockets; 
-
 using System.Runtime.Remoting; 
-
 using System.Threading; 
-
-using Croc.Bpc.Common.Diagnostics; 
-
-using Croc.Bpc.Printing.Reports; 
-
-using Croc.Core.Diagnostics; 
-
-using Croc.Core.Extensions; 
-
+using Croc.Bpc.Diagnostics; 
+using Croc.Bpc.Printing; 
+using Croc.Bpc.Scanner; 
 using Croc.Bpc.Synchronization.Config; 
-
- 
-
- 
-
+using Croc.Bpc.Utils; 
+using Croc.Bpc.Voting; 
+using Croc.Core; 
+using Croc.Core.Diagnostics; 
+using Croc.Core.Extensions; 
+using Croc.Core.Utils; 
+using Croc.Core.Utils.Threading; 
 namespace Croc.Bpc.Synchronization 
-
 { 
-
-    /// <summary> 
-
-    /// Обертка для безопасного обращения к удаленному сканеру 
-
-    /// </summary> 
-
-    internal class RemoteScannerInterface : IScannerInteractionChannel 
-
+    internal class RemoteScannerInterface : IScannerInteractionChannel, IDisposable 
     { 
-
-        /// <summary> 
-
-        /// Логгер 
-
-        /// </summary> 
-
-        private ILogger _logger; 
-
-        /// <summary> 
-
-        /// Канал для доступа к удаленному сканеру 
-
-        /// </summary> 
-
+        private readonly ILogger _logger; 
         private volatile IScannerInteractionChannel _interactionChannel; 
-
-        /// <summary> 
-
-        /// Признак того, что интерфейс работает, т.е. соединение в порядке 
-
-        /// </summary> 
-
-        private volatile bool _alive = false; 
-
-        /// <summary> 
-
-        /// Признак того, что интерфейс работает, т.е. соединение в порядке 
-
-        /// </summary> 
-
-        public bool Alive 
-
-        { 
-
-            get 
-
-            { 
-
-                return _alive; 
-
-            } 
-
-            private set 
-
-            { 
-
-                _alive = value; 
-
- 
-
- 
-
-                // если интерфейс умер 
-
-                if (!value) 
-
-                { 
-
-
-                    // то почистим подписки на события, которые выставляет интерфейс 
-
-                    ScannerRoleChanged.ClearInvocationList(); 
-
-                } 
-
-            } 
-
-        } 
-
-        /// <summary> 
-
-        /// Параметры вызова метода по умолчанию 
-
-        /// </summary> 
-
-        private CallPropertiesConfig _commonCallProperties; 
-
-        /// <summary> 
-
-        /// Параметры вызова метода NeedSynchronizeState 
-
-        /// </summary> 
-
-        private CallPropertiesConfig _synchronizationCallProperties; 
-
-        /// <summary> 
-
-        /// Параметры вызова метода c бесконечным таймаутом (без таймаута) 
-
-        /// </summary> 
-
-        private CallPropertiesConfig _infiniteTimeoutCallProperties; 
-
-        /// <summary> 
-
-        /// Параметры вызова метода RemotePrintReport 
-
-        /// </summary> 
-
-        private CallPropertiesConfig _printingCallProperties; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Конструктор 
-
-        /// </summary> 
-
-        /// <param name="logger"></param> 
-
+        private ScannerInfo _remoteScannerInfo; 
+        private readonly CallPropertiesConfig _commonCallProperties; 
+        private readonly CallPropertiesConfig _synchronizationCallProperties; 
+        private readonly CallPropertiesConfig _printingCallProperties; 
         public RemoteScannerInterface( 
-
-            ILogger logger,  
-
+            ILogger logger, 
             CallPropertiesConfig commonCallProperties, 
-
             CallPropertiesConfig synchronizationCallProperties, 
-
             CallPropertiesConfig printingCallProperties) 
-
         { 
-
             CodeContract.Requires(logger != null); 
-
             CodeContract.Requires(commonCallProperties != null); 
-
             CodeContract.Requires(synchronizationCallProperties != null); 
-
             CodeContract.Requires(printingCallProperties != null); 
-
- 
-
- 
-
             _logger = logger; 
-
- 
-
- 
-
             _commonCallProperties = commonCallProperties; 
-
             _synchronizationCallProperties = synchronizationCallProperties; 
-
             _printingCallProperties = printingCallProperties; 
-
-            _infiniteTimeoutCallProperties = new CallPropertiesConfig() 
-
-            { 
-
-                Timeout = Timeout.Infinite, 
-
-                MaxTryCount = commonCallProperties.MaxTryCount, 
-
-                RetryDelay = commonCallProperties.RetryDelay 
-
-
-            }; 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Установить канал для обращения к удаленному сканеру 
-
-        /// </summary> 
-
-        /// <param name="interactionChannel"></param> 
-
-        public void SetInteractionChannel(IScannerInteractionChannel interactionChannel) 
-
+        public void SetInteractionChannel( 
+            IScannerInteractionChannel interactionChannel, ScannerInfo remoteScannerInfo) 
         { 
-
             CodeContract.Requires(interactionChannel != null); 
-
- 
-
- 
-
-            _interactionChannel = interactionChannel; 
-
-            Alive = true; 
-
+            CodeContract.Requires(remoteScannerInfo != null); 
+            lock (s_aliveSync) 
+            { 
+                _interactionChannel = interactionChannel; 
+                _remoteScannerInfo = remoteScannerInfo; 
+                _alive = true; 
+            } 
         } 
-
- 
-
- 
-
         #region IScannerInteractionChannel Members 
-
- 
-
- 
-
         #region Система 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Неопределенная версия приложения 
-
-        /// </summary> 
-
-        private static Version UNDEFINED_APPLICATION_VERSION = new Version(0, 0, 0, 0); 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Версия приложения 
-
-        /// </summary> 
-
+        private static readonly Version s_undefinedApplicationVersion = new Version(0, 0, 0, 0); 
         public Version ApplicationVersion 
-
         { 
-
             get 
-
             { 
-
-                return SafeCall<Version>( 
-
-                    () => { return _interactionChannel.ApplicationVersion; }, 
-
+                return SafeCall( 
+                    () => _interactionChannel.ApplicationVersion, 
                     _commonCallProperties, 
-
-                    UNDEFINED_APPLICATION_VERSION); 
-
+                    s_undefinedApplicationVersion); 
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Проверка связи 
-
-        /// </summary> 
-
         public void Ping() 
-
         { 
-
-
             SafeCall<object>( 
-
                 () => { _interactionChannel.Ping(); return null; }, 
-
                 _commonCallProperties, 
-
                 null); 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Устанавливает текущую дату и время на сканере 
-
-        /// </summary> 
-
-        /// <param name="utcDateTime"></param> 
-
         public void SetSystemTime(DateTime utcDateTime) 
-
         { 
-
             SafeCall<object>( 
-
                 () => { _interactionChannel.SetSystemTime(utcDateTime); return null; }, 
-
                 _commonCallProperties, 
-
                 null); 
-
         } 
-
- 
-
- 
-
         #endregion 
-
- 
-
- 
-
         #region Исходные данные 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Сейчас день выборов? 
-
-        /// </summary> 
-
-        public bool IsElectionDayNow 
-
+        public ElectionDayСomming IsElectionDay 
         { 
-
             get 
-
             { 
-
-                return SafeCall<bool>( 
-
-                    () => { return _interactionChannel.IsElectionDayNow; }, 
-
+                return SafeCall( 
+                    () => _interactionChannel.IsElectionDay, 
                     _commonCallProperties, 
-
-                    true); 
-
+                    ElectionDayСomming.ItsElectionDay); 
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Идентификатор исходных данных 
-
-        /// </summary> 
-
-        public Guid SourceDataId 
-
+        public string SourceDataHashCode 
         { 
-
             get 
-
             { 
-
-                return SafeCall<Guid>( 
-
-                    () => { return _interactionChannel.SourceDataId; }, 
-
-
+                return SafeCall( 
+                    () => _interactionChannel.SourceDataHashCode, 
                     _commonCallProperties, 
-
-                    Guid.Empty); 
-
+                    string.Empty); 
             } 
-
         } 
-
- 
-
- 
-
+        public bool IsSourceDataCorrect 
+        { 
+            get 
+            { 
+                return SafeCall( 
+                    () => _interactionChannel.IsSourceDataCorrect, 
+                    _commonCallProperties, 
+                    false); 
+            } 
+        } 
         #endregion 
-
- 
-
- 
-
         #region Роль сканера 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Роль сканера изменилась 
-
-        /// </summary> 
-
         public event EventHandler ScannerRoleChanged; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Возбудить событие "Роль сканера изменилась" 
-
-        /// </summary> 
-
         internal void RaiseScannerRoleChanged() 
-
         { 
-
             ScannerRoleChanged.RaiseEvent(this); 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Возбудить событие "Роль сканера изменилась" на удаленном сканере 
-
-        /// </summary> 
-
         public void RaiseRemoteScannerRoleChanged() 
-
         { 
-
             SafeCall<object>( 
-
                 () => { _interactionChannel.RaiseRemoteScannerRoleChanged(); return null; }, 
-
                 _commonCallProperties, 
-
                 null); 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Роль данного сканера 
-
-        /// </summary> 
-
         public ScannerRole ScannerRole 
-
         { 
-
             get 
-
             { 
-
-                return SafeCall<ScannerRole>( 
-
-                    () => { return _interactionChannel.ScannerRole; }, 
-
+                return SafeCall( 
+                    () => _interactionChannel.ScannerRole, 
                     _commonCallProperties, 
-
                     ScannerRole.Undefined); 
-
-
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Ожидает, когда роль сканера будет определена 
-
-        /// </summary> 
-
-        /// <returns>роль, которую принял сканер</returns> 
-
-        public ScannerRole WaitForScannerRoleDefined() 
-
-        { 
-
-            return SafeCall<ScannerRole>( 
-
-                    () => { return _interactionChannel.WaitForScannerRoleDefined(); }, 
-
-                    _infiniteTimeoutCallProperties, 
-
-                    ScannerRole.Undefined); 
-
-        } 
-
- 
-
- 
-
         #endregion 
-
- 
-
- 
-
         #region Передача данных 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Положить данные в таблицу данных, принятых с удаленного сканера 
-
-        /// </summary> 
-
-        /// <param name="name"></param> 
-
-        /// <param name="data"></param> 
-
         public void PutData(string name, object data) 
-
         { 
-
             SafeCall<object>( 
-
                 () => { _interactionChannel.PutData(name, data); return null; }, 
-
                 _commonCallProperties, 
-
                 null); 
-
         } 
-
- 
-
- 
-
+        public void NoticeAboutWaitForInitialization() 
+        { 
+            SafeCall<object>( 
+                () => { _interactionChannel.NoticeAboutWaitForInitialization(); return null; }, 
+                _commonCallProperties, 
+                null); 
+        } 
+        public void NoticeAboutExitFromMenu() 
+        { 
+            SafeCall<object>( 
+                () => { _interactionChannel.NoticeAboutExitFromMenu(); return null; }, 
+                _commonCallProperties, 
+                null); 
+        } 
+        public byte[] GetFileContent(string filePath) 
+        { 
+            return SafeCall( 
+                () => _interactionChannel.GetFileContent(filePath), 
+                _commonCallProperties, 
+                null); 
+        } 
         #endregion 
-
- 
-
- 
-
         #region Состояние 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Текущее состояние - начальное? 
-
-        /// </summary> 
-
-        /// <remarks>начальное - т.е. оно еще не было ниоткуда загружено или  
-
-        /// получено с удаленного сканера или оно было сброшено в начальное состояние</remarks> 
-
         public bool IsStateInitial 
-
         { 
-
-
             get 
-
             { 
-
-                return SafeCall<bool>( 
-
-                    () => { return _interactionChannel.IsStateInitial; }, 
-
-                    _commonCallProperties,  
-
+                return SafeCall( 
+                    () => _interactionChannel.IsStateInitial, 
+                    _commonCallProperties, 
                     true); 
-
             } 
-
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Архивирует текущее состояние и сбрасываеи его в начальное 
-
-        /// </summary> 
-
-        public void ResetState() 
-
+        public void ResetState(string reason) 
         { 
-
             SafeCall<object>( 
-
-                () => { _interactionChannel.ResetState(); return null; }, 
-
-                _commonCallProperties,  
-
-                null); 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Нужно синхронизировать состояния 
-
-        /// </summary> 
-
-        /// <param name="newStateItems">элементы состояния, которые были изменены и  
-
-        /// по которым требуется синхронизация</param> 
-
-        public void NeedSynchronizeState(List<StateItem> newStateItems) 
-
-        { 
-
-            SafeCall<object>( 
-
-                () => { _interactionChannel.NeedSynchronizeState(newStateItems); return null; }, 
-
-                _synchronizationCallProperties,  
-
-                null); 
-
-        } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Синхронизация состояния завершена 
-
-        /// </summary> 
-
-        /// <param name="syncResult">результат синхронизации</param> 
-
-        /// <remarks>этот метод вызывает удаленный сканер с целью сообщить, 
-
-        /// что синхронизация состояния завершена</remarks> 
-
-        public void StateSynchronizationFinished(SynchronizationResult syncResult) 
-
-        { 
-
-            SafeCall<object>( 
-
-                () => { _interactionChannel.StateSynchronizationFinished(syncResult); return null; }, 
-
-                _commonCallProperties,  
-
-                null); 
-
-        } 
-
- 
-
-
- 
-        #endregion 
-
- 
-
- 
-
-		#region Печать 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// Подключен ли принтер к удаленному сканеру сканеру 
-
-		/// </summary> 
-
-		/// <returns>true - подключен/false - нет</returns> 
-
-		public bool FindRemotePrinter() 
-
-		{ 
-
-			return SafeCall<bool>( 
-
-				() => { return _interactionChannel.FindRemotePrinter(); }, 
-
+                () => { _interactionChannel.ResetState(reason); return null; }, 
                 _commonCallProperties, 
-
-				false); 
-
-		} 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// Распечатать отчет на удаленном принтере 
-
-		/// </summary> 
-
-		/// <returns></returns> 
-
-		public bool RemotePrintReport(ReportType reportType, ListDictionary reportParameters) 
-
-		{ 
-
-			return SafeCall<bool>( 
-
-				() => { return _interactionChannel.RemotePrintReport(reportType, reportParameters); }, 
-
-                _printingCallProperties, 
-
-				false); 
-
-		} 
-
- 
-
- 
-
-		#endregion 
-
- 
-
- 
-
-		#region Сброс ПО 
-
- 
-
- 
-
-		/// <summary> 
-
-		/// Сброс По 
-
-		/// </summary> 
-
-		public void ResetSoft() 
-
-		{ 
-
-			SafeCall<object>( 
-
-				() => { _interactionChannel.ResetSoft(); return null; }, 
-
-				_synchronizationCallProperties, 
-
-				null); 
-
-		} 
-
- 
-
-
- 
-		#endregion 
-
- 
-
- 
-
-		#endregion 
-
- 
-
- 
-
-		#region Безопасный вызов методов канала 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Событие "Связь с удаленным сканером потеряна" 
-
-        /// </summary> 
-
-        public event EventHandler Disconnected; 
-
-        /// <summary> 
-
-        /// Возбудить событие "Связь с удаленным сканером потеряна" 
-
-        /// </summary> 
-
-        private void RaiseDisconnected(Exception ex) 
-
-        { 
-
-            _logger.LogInfo(Message.SyncDisconnected, ex.Message); 
-
-            Alive = false; 
-
- 
-
- 
-
-            try 
-
-            { 
-
-                var handler = Disconnected; 
-
-                if (handler != null) 
-
-                    handler(this, EventArgs.Empty); 
-
-            } 
-
-            catch (Exception exc) 
-
-            { 
-
-                _logger.LogException(Message.Exception, exc, 
-
-                    "Ошибка при обработке события потери связи с удаленным сканером"); 
-
-            } 
-
+                null); 
         } 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Безопасный вызов метода, который возвращает значение 
-
-        /// </summary> 
-
-        /// <typeparam name="T"></typeparam> 
-
-        /// <param name="method">делегат метода</param> 
-
-        /// <param name="timeout">максимально допустимое время для выполнения метода.  
-
-        /// Если метод не завершил выполнение в течение этого времени, то выполнится обработка, 
-
-        /// как при потери связи с удаленным сканером</param> 
-
-        /// <param name="returnOnError"> 
-
-        /// значение, которое будет возвращено при возникновении ошибки при вызове метода</param> 
-
-        /// <returns></returns> 
-
-        private T SafeCall<T>(Func<T> method, CallPropertiesConfig callProps, T returnOnError) 
-
-        { 
-
-
-            if (!Alive) 
-
-                return returnOnError; 
-
- 
-
- 
-
-            int tryCount = 0; 
-
-            while (true) 
-
-            { 
-
-                try 
-
-                { 
-
-                    IAsyncResult ar = method.BeginInvoke(null, null); 
-
- 
-
- 
-
-                    if (!ar.AsyncWaitHandle.WaitOne(callProps.Timeout)) 
-
-                    { 
-
-						var methodInfo = (new StackTrace()).GetFrame(1).GetMethod(); 
-
-                        var ex = new TimeoutException("Не дождались завершение выполнения метода: " + methodInfo.Name); 
-
- 
-
- 
-
-                        RaiseDisconnected(ex); 
-
-                        return returnOnError; 
-
-                    } 
-
- 
-
- 
-
-                    return method.EndInvoke(ar); 
-
-                } 
-
-                catch (Exception ex) 
-
-                { 
-
-                    // если  
-
-                    if (// это сетевая ошибка 
-
-                        (ex is SocketException || ex is RemotingException) && 
-
-                        // И кол-во попыток еще не превысило максимальное 
-
-                        ++tryCount < callProps.MaxTryCount) 
-
-                    { 
-
-                        // подождем в надежде, что за время ожидания работа сети восстановится 
-
-                        Thread.Sleep(callProps.RetryDelay); 
-
-                        continue; 
-
-                    } 
-
- 
-
- 
-
-                    RaiseDisconnected(ex); 
-
-                    return returnOnError; 
-
-                } 
-
-            } 
-
-        } 
-
- 
-
- 
-
         #endregion 
-
+        #region Синхронизация состояния 
+        public void NeedSynchronizeState(List<StateItem> newStateItems) 
+        { 
+            SafeCall<object>( 
+                () => { _interactionChannel.NeedSynchronizeState(newStateItems); return null; }, 
+                _synchronizationCallProperties, 
+                null); 
+        } 
+        public void StateSynchronizationFinished(SynchronizationResult syncResult) 
+        { 
+            SafeCall<object>( 
+                () => { _interactionChannel.StateSynchronizationFinished(syncResult); return null; }, 
+                _synchronizationCallProperties, 
+                null); 
+        } 
+        #endregion 
+        #region Печать 
+        public bool FindPrinter() 
+        { 
+            return SafeCall( 
+                () => _interactionChannel.FindPrinter(), 
+                _commonCallProperties, 
+                false); 
+        } 
+        public bool PrintReport(PrinterJob printerJob) 
+        { 
+            return SafeCall( 
+                () => _interactionChannel.PrintReport(printerJob), 
+                _printingCallProperties, 
+                false); 
+        } 
+        public PrinterJob CreateReport(ReportType reportType, ListDictionary reportParameters, int copies) 
+        { 
+            return SafeCall( 
+                () => _interactionChannel.CreateReport(reportType, reportParameters, copies), 
+                _printingCallProperties, 
+                null); 
+        } 
+        public void PrintReportStarting() 
+        { 
+            SafeCall<object>( 
+                () => { _interactionChannel.PrintReportStarting(); return null; }, 
+                _commonCallProperties, 
+                null); 
+        } 
+        public void PrintReportFinished() 
+        { 
+            SafeCall<object>( 
+                () => { _interactionChannel.PrintReportFinished(); return null; }, 
+                _commonCallProperties, 
+                null); 
+        } 
+        #endregion 
+        #region Сброс ПО 
+        public void ResetSoft(ResetSoftReason reason, bool isRemoteScannerInitiator, bool needRestartApp) 
+        { 
+            SafeCall<object>( 
+                () => 
+                    { 
+                        _interactionChannel.ResetSoft(reason, isRemoteScannerInitiator, needRestartApp); 
+                        return null; 
+                    }, 
+                _commonCallProperties, 
+                null); 
+        } 
+        #endregion 
+        #endregion 
+        #region Безопасный вызов методов канала 
+        private static readonly object s_aliveSync = new object(); 
+        private volatile bool _alive; 
+        public bool Alive 
+        { 
+            get 
+            { 
+                return _alive; 
+            } 
+        } 
+        public event EventHandler Disconnected; 
+        private void RaiseDisconnected() 
+        { 
+            lock (s_aliveSync) 
+            { 
+                if (!_alive) 
+                { 
+                    _logger.LogInfo(Message.SyncDisconnectedAlreadyKnown); 
+                    return; 
+                } 
+                _logger.LogInfo(Message.SyncDisconnected); 
+                _alive = false; 
+                ScannerRoleChanged = null; 
+            } 
+            try 
+            { 
+                var handler = Disconnected; 
+                if (handler != null) 
+                    handler(this, EventArgs.Empty); 
+            } 
+            catch (Exception ex) 
+            { 
+                _logger.LogError(Message.SyncRemoteScannerDisconnectedError, ex); 
+            } 
+        } 
+        private static readonly object s_ifrestartSync = new object(); 
+        private readonly ManualResetEvent _ifrestartDoneEvent = new ManualResetEvent(true); 
+        private enum IfrestartResult 
+        { 
+            Ok = 0, 
+            OkAfterRestart = 1, 
+            Failed = 2 
+        } 
+        private T SafeCall<T>(Func<T> method, CallPropertiesConfig callProps, T returnOnError) 
+        { 
+            if (!_alive) 
+                return returnOnError; 
+            var tryCount = 0; 
+            var methodComplete = new AutoResetEvent(false); 
+            while (!_disposed && _alive) 
+            { 
+                try 
+                { 
+                    var result = default(T); 
+                    Exception methodEx = null; 
+                    methodComplete.Reset(); 
+                    var thread = ThreadUtils.StartBackgroundThread( 
+                        () => 
+                            { 
+                                try 
+                                { 
+                                    result = method(); 
+                                } 
+                                catch (Exception ex) 
+                                { 
+                                    methodEx = ex; 
+                                } 
+                                finally 
+                                { 
+                                    methodComplete.Set(); 
+                                } 
+                            }); 
+                    if (!methodComplete.WaitOne(callProps.Timeout)) 
+                    { 
+                        thread.SafeAbort(); 
+                        throw new TimeoutException("Не дождались завершение выполнения метода"); 
+                    } 
+                    if (methodEx != null) 
+                        throw methodEx; 
+                    return result; 
+                } 
+                catch (Exception ex) 
+                { 
+                    _logger.LogVerbose( 
+                        Message.SyncCallRemoteMethodFailed, 
+                        () => 
+                            { 
+                                var methodInfo = (new StackTrace()).GetFrame(3).GetMethod(); 
+                                return new object[] {methodInfo.Name, ex.ToString()}; 
+                            }); 
+                    if ( // ошибка не из-за сети 
+                        ((!(ex is SocketException) && !(ex is RemotingException)) && !(ex is TimeoutException)) || 
+                        ++tryCount >= callProps.MaxTryCount || 
+                        !_alive || 
+                        _disposed) 
+                    { 
+                        RaiseDisconnected(); 
+                        return returnOnError; 
+                    } 
+                    if (!Monitor.TryEnter(s_ifrestartSync)) 
+                    { 
+                        Thread.Sleep(300); 
+                        _ifrestartDoneEvent.WaitOne(TimeSpan.FromMinutes(1)); 
+                        continue; 
+                    } 
+                    try 
+                    { 
+                        _ifrestartDoneEvent.Reset(); 
+                        IfrestartResult res; 
+                        if (PlatformDetector.IsUnix) 
+                        { 
+                            _logger.LogVerbose(Message.SyncIfrestartStarting); 
+                            string lastLine = null; 
+                            ProcessHelper.StartProcessAndWaitForFinished( 
+                                "./ifrestart.sh", 
+                                string.Format("{0} {1}", callProps.RetryDelay, _remoteScannerInfo.IpAddress), 
+                                state => 
+                                    { 
+                                        lastLine = state.Line; 
+                                        return false; 
+                                    }, 
+                                null); 
+                            _logger.LogVerbose(Message.SyncIfrestartDone, lastLine); 
+                            int i; 
+                            res = int.TryParse(lastLine, out i) 
+                                      ? (IfrestartResult) i 
+                                      : IfrestartResult.Failed; 
+                        } 
+                        else 
+                        { 
+                            _logger.LogVerbose(Message.Common_Debug, 
+                                               "Имитируем выполнение команды переподнятия сети"); 
+                            Thread.Sleep(4000 + callProps.RetryDelay * 2 * 1000); 
+                            res = IfrestartResult.OkAfterRestart; 
+                        } 
+                        switch (res) 
+                        { 
+                            case IfrestartResult.OkAfterRestart: 
+                                _logger.LogVerbose(Message.SyncTryCallRemoteMethodAgain, 
+                                    () => 
+                                        { 
+                                            var methodInfo = (new StackTrace()).GetFrame(3).GetMethod(); 
+                                            return new object[] {methodInfo.Name, tryCount + 1}; 
+                                        }); 
+                                continue; 
+                            default: 
+                                RaiseDisconnected(); 
+                                return returnOnError; 
+                        } 
+                    } 
+                    finally 
+                    { 
+                        Monitor.Exit(s_ifrestartSync); 
+                        _ifrestartDoneEvent.Set(); 
+                    } 
+                } 
+            } 
+            return returnOnError; 
+        } 
+        #endregion 
+        #region IDisposable Members 
+        private bool _disposed; 
+        public void Dispose() 
+        { 
+            _disposed = true; 
+            _alive = false; 
+        } 
+        #endregion 
     } 
-
 }
-
-

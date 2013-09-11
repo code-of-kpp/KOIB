@@ -1,0 +1,44 @@
+<Workflow 
+  xmlns="http://schemas.croc.ru/Workflow" 
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+  <Include Ref="Activities/Common.wf" /> 
+  <Include Ref="Activities/Printing.wf" /> 
+  <Include Ref="Activities/Summarizing/SaveVotingResults.wf" /> 
+
+
+  <CompositeActivity Name="PreliminarySummarizingActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.Summarizing.PreliminarySummarizingActivity, Croc.Bpc.Workflow" 
+                     Tracking="false"> 
+
+
+    <Activity Name="SetVotingModeToResults" Execute="SetVotingModeToResults"/> 
+
+
+
+
+    <Activity Name="GeneratePreliminaryVotingResultProtocol" Execute="GeneratePreliminaryVotingResultProtocol"/> 
+
+
+    <ReferenceActivity Name="IsMasterScanner" Execute="Common.IsMasterScanner" 
+                       k:Yes="SavePreliminaryVotingResults" k:No="@@Return(Yes)"/> 
+
+
+    <ReferenceActivity Name="SavePreliminaryVotingResults" Execute="SaveVotingResultsActivity"/> 
+
+
+    <ReferenceActivity Name="PrintPreliminaryElectionProtocol" Execute="PrintingActivity" 
+                       Parameters=" 
+                          ReportType=PreliminaryElectionProtocol; 
+                          ReportParameters=@PreliminaryElectionProtocolParameters; 
+                          ImplicitPrint=@@True"/> 
+
+
+    <ReferenceActivity Name="SayConnectKeyboardToScanner" Execute="Common.SayPhrase"/> 
+  </CompositeActivity> 
+  <ActivityParametersBindings CompositeActivityName="PreliminarySummarizingActivity"> 
+    <ActivityParametersBinding ActivityName="SayConnectKeyboardToScanner"> 
+      <Parameter Name="TextFormat">Подключите клавиатуру</Parameter> 
+      <Parameter Name="Sounds">connect_keyboard_to_main_scanner</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
+</Workflow>

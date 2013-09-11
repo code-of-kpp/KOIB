@@ -1,81 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?> 
-
 <xs:schema xmlns="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/RecognitionResult" xmlns:xs="http://www.w3.org/2001/XMLSchema"
+argetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/RecognitionResult" elementFormDefault="qualified" attributeFormDefault="unqualified"
+d="BpcNextActivityKeys_RecognitionResult"> 
+    <xs:attribute name="ValidBulletin"> 
 
-targetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/RecognitionResult" elementFormDefault="qualified" attributeFormDefault="unqualified"
 
-id="BpcNextActivityKeys_RecognitionResult"> 
+    </xs:attribute> 
+    <xs:attribute name="NoMarksBulletin"> 
 
-	<xs:attribute name="ValidBulletin"> 
 
-		<xs:annotation> 
+    </xs:attribute> 
+    <xs:attribute name="TooManyMarksBulletin"> 
 
-			<xs:documentation>Бюллетень распознан как правильный</xs:documentation> 
 
-		</xs:annotation> 
+    </xs:attribute> 
+    <xs:attribute name="BadBulletin"> 
 
-	</xs:attribute> 
 
-	<xs:attribute name="NoMarksBulletin"> 
+    </xs:attribute> 
+    <xs:attribute name="BulletinReversed"> 
 
-		<xs:annotation> 
 
-			<xs:documentation>Бюллетень распознан как некорректный: нет отметок</xs:documentation> 
-
-		</xs:annotation> 
-
-	</xs:attribute> 
-
-	<xs:attribute name="TooManyMarksBulletin"> 
-
-		<xs:annotation> 
-
-			<xs:documentation>Бюллетень распознан как некорректный: превышение отметок</xs:documentation> 
-
-		</xs:annotation> 
-
-	</xs:attribute> 
-
-	<xs:attribute name="BadBulletin"> 
-
-		<xs:annotation> 
-
-			<xs:documentation>Бюллетень распознан как некорректный: НУФ</xs:documentation> 
-
-		</xs:annotation> 
-
-	</xs:attribute> 
-
-	<xs:attribute name="BulletinReversed"> 
-
-		<xs:annotation> 
-
-			<xs:documentation>Бюллетень был реверсирован</xs:documentation> 
-
-		</xs:annotation> 
-
-	</xs:attribute> 
-
+    </xs:attribute> 
   <xs:attribute name="BulletinReceivingForbidden"> 
 
-    <xs:annotation> 
-
-      <xs:documentation>Принятие бюллетеня запрещено</xs:documentation> 
-
-    </xs:annotation> 
 
   </xs:attribute> 
+  <xs:attribute name="PowerFailure"> 
 
+
+  </xs:attribute> 
   <xs:attribute name="Error"> 
 
-    <xs:annotation> 
-
-      <xs:documentation>Ошибка обработки бюллетеня</xs:documentation> 
-
-    </xs:annotation> 
 
   </xs:attribute> 
+  <xs:attribute name="ProbablyDropped"> 
 
+
+  </xs:attribute> 
 </xs:schema>
-
-

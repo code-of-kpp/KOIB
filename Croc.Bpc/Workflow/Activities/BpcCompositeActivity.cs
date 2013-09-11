@@ -1,225 +1,99 @@
 using System; 
-
-using System.Collections.Generic; 
-
-using System.Linq; 
-
-using System.Text; 
-
-using Croc.Workflow.ComponentModel; 
-
-using Croc.Core.Diagnostics; 
-
-using Croc.Bpc.Scanner; 
-
-using Croc.Bpc.Election; 
-
-using Croc.Bpc.Synchronization; 
-
+using System.Threading; 
 using Croc.Bpc.Configuration; 
-
-using Croc.Bpc.Sound; 
-
 using Croc.Bpc.FileSystem; 
-
-using Croc.Bpc.Printing; 
-
-using Croc.Core; 
-
 using Croc.Bpc.Keyboard; 
-
+using Croc.Bpc.Printing; 
 using Croc.Bpc.Recognizer; 
-
- 
-
- 
-
+using Croc.Bpc.Scanner; 
+using Croc.Bpc.Sound; 
+using Croc.Bpc.Synchronization; 
+using Croc.Bpc.Voting; 
+using Croc.Core; 
+using Croc.Core.Diagnostics; 
+using Croc.Workflow.ComponentModel; 
 namespace Croc.Bpc.Workflow.Activities 
-
 { 
-
-    /// <summary> 
-
-    /// Базовый класс для всех составных действий приложения 
-
-    /// </summary> 
-
-    /// <remarks> 
-
-    /// создан с целью централизованного хранения ссылок на все необходимые подсистемы и логгер 
-
-    /// </remarks> 
-
     [Serializable] 
-
     public abstract class BpcCompositeActivity : CompositeActivity 
-
     { 
-
-        /// <summary> 
-
-        /// Логгер 
-
-        /// </summary> 
-
-        [NonSerialized] 
-
-        protected ILogger _logger; 
-
-        /// <summary> 
-
-        /// Менеджер потока работ 
-
-        /// </summary> 
-
-        [NonSerialized] 
-
-        protected IWorkflowManager _workflowManager; 
-
-        /// <summary> 
-
-        /// Менеджер сканера 
-
-        /// </summary> 
-
-        [NonSerialized] 
-
-        protected IScannerManager _scannerManager; 
-
-        /// <summary> 
-
-        /// Менеджер выборов 
-
-        /// </summary> 
-
-        [NonSerialized] 
-
-        protected IElectionManager _electionManager; 
-
-        /// <summary> 
-
-
-        /// Менеджер синхронизации сканеров 
-
-        /// </summary> 
-
-        [NonSerialized] 
-
-        protected ISynchronizationManager _syncManager; 
-
-        /// <summary> 
-
-        /// Менеджер звуков 
-
-        /// </summary> 
-
-        [NonSerialized] 
-
-        protected ISoundManager _soundManager; 
-
-        /// <summary> 
-
-        /// Менеджер клавиатуры 
-
-        /// </summary> 
-
-        [NonSerialized] 
-
-        protected IKeyboard _keyboard; 
-
-        /// <summary> 
-
-        /// Менеджер конфигурации 
-
-        /// </summary> 
-
-        [NonSerialized] 
-
-        protected IConfigurationManager _configManager; 
-
-        /// <summary> 
-
-        /// Менеджер файловой системы 
-
-        /// </summary> 
-
-        [NonSerialized] 
-
-        protected IFileSystemManager _fileSystemManager; 
-
-        /// <summary> 
-
-        /// Менеджер печати 
-
-        /// </summary> 
-
-        [NonSerialized] 
-
-        protected IPrintingManager _printingManager; 
-
-		/// <summary> 
-
-		/// Менеджер распознавания 
-
-		/// </summary> 
-
-		[NonSerialized] 
-
-		protected IRecognitionManager _recognitionManager; 
-
- 
-
- 
-
-        /// <summary> 
-
-        /// Инициализация 
-
-        /// </summary> 
-
-        /// <param name="context"></param> 
-
-        protected override void Initialize(WorkflowExecutionContext context) 
-
+        public int Order 
         { 
-
-            // получаем ссылки на подсистемы 
-
-            var app = CoreApplication.Instance; 
-
-            _workflowManager = app.GetSubsystemOrThrow<IWorkflowManager>(); 
-
-            _scannerManager = app.GetSubsystemOrThrow<IScannerManager>(); 
-
-            _electionManager = app.GetSubsystemOrThrow<IElectionManager>(); 
-
-            _syncManager = app.GetSubsystemOrThrow<ISynchronizationManager>(); 
-
-            _soundManager = app.GetSubsystemOrThrow<ISoundManager>(); 
-
-            _keyboard = (IKeyboard)app.GetSubsystemOrThrow<UnionKeyboard>(); 
-
-
-            _configManager = app.GetSubsystemOrThrow<IConfigurationManager>(); 
-
-            _fileSystemManager = app.GetSubsystemOrThrow<IFileSystemManager>(); 
-
-            _printingManager = app.GetSubsystemOrThrow<IPrintingManager>(); 
-
-			_recognitionManager = app.GetSubsystemOrThrow<IRecognitionManager>(); 
-
- 
-
- 
-
-            // используем логгер подсистемы потока работ 
-
-            _logger = _workflowManager.Logger; 
-
+            get; 
+            set; 
         } 
-
+        [NonSerialized] 
+        protected ILogger _logger; 
+        [NonSerialized] 
+        protected IWorkflowManager _workflowManager; 
+        [NonSerialized] 
+        protected IScannerManager _scannerManager; 
+        [NonSerialized] 
+        protected IElectionManager _electionManager; 
+        [NonSerialized] 
+        protected IVotingResultManager _votingResultManager; 
+        [NonSerialized] 
+        protected ISynchronizationManager _syncManager; 
+        [NonSerialized] 
+        protected ISoundManager _soundManager; 
+        [NonSerialized] 
+        protected IKeyboardManager _keyboard; 
+        [NonSerialized] 
+        protected IConfigurationManager _configManager; 
+        [NonSerialized] 
+        protected IFileSystemManager _fileSystemManager; 
+        [NonSerialized] 
+        protected IPrintingManager _printingManager; 
+        [NonSerialized] 
+        protected IRecognitionManager _recognitionManager; 
+        protected override void Initialize(WorkflowExecutionContext context) 
+        { 
+            base.Initialize(context); 
+            var app = CoreApplication.Instance; 
+            _workflowManager = app.GetSubsystemOrThrow<IWorkflowManager>(); 
+            _scannerManager = app.GetSubsystemOrThrow<IScannerManager>(); 
+            _electionManager = app.GetSubsystemOrThrow<IElectionManager>(); 
+            _votingResultManager = app.GetSubsystemOrThrow<IVotingResultManager>(); 
+            _syncManager = app.GetSubsystemOrThrow<ISynchronizationManager>(); 
+            _soundManager = app.GetSubsystemOrThrow<ISoundManager>(); 
+            _keyboard = app.GetSubsystemOrThrow<UnionKeyboard>(); 
+            _configManager = app.GetSubsystemOrThrow<IConfigurationManager>(); 
+            _fileSystemManager = app.GetSubsystemOrThrow<IFileSystemManager>(); 
+            _printingManager = app.GetSubsystemOrThrow<IPrintingManager>(); 
+            _recognitionManager = app.GetSubsystemOrThrow<IRecognitionManager>(); 
+            _logger = _workflowManager.Logger; 
+        } 
+        #region Св-ва для получения событий нажатия различных комбинаций кнопок 
+        public WaitHandle YesPressed 
+        { 
+            get { return KeyPressedWaitHandle.YesPressed; } 
+        } 
+        public WaitHandle NoPressed 
+        { 
+            get { return KeyPressedWaitHandle.NoPressed; } 
+        } 
+        public WaitHandle GoBackPressed 
+        { 
+            get { return KeyPressedWaitHandle.GoBackPressed; } 
+        } 
+        public WaitHandle HelpPressed 
+        { 
+            get { return KeyPressedWaitHandle.HelpPressed; } 
+        } 
+        public WaitHandle YesAndNoPressed 
+        { 
+            get { return KeyPressedWaitHandle.YesAndNoAtOncePressed; } 
+        } 
+        public WaitHandle HelpAndNoPressed 
+        { 
+            get { return KeyPressedWaitHandle.HelpAndNoAtOncePressed; } 
+        } 
+        #endregion 
+        #region Вспомогательные методы 
+        protected bool IsIsElectionDayOrExtra(ElectionDayСomming edc) 
+        { 
+            return edc == ElectionDayСomming.ItsElectionDay || edc == ElectionDayСomming.ItsExtraElectionDay; 
+        } 
+        #endregion 
     } 
-
 }
-
-

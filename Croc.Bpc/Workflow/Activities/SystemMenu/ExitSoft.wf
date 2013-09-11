@@ -1,0 +1,29 @@
+<Workflow 
+  xmlns="http://schemas.croc.ru/Workflow" 
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+  <Include Ref="Activities/Common.wf" /> 
+
+
+  <CompositeActivity Name="ExitSoftActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.ExitSoftActivity, Croc.Bpc.Workflow"> 
+
+
+
+
+    <ReferenceActivity Name="AskWantToExitSoft" Execute="Common.SayAndWaitYesOrNo" 
+                       Parameters="Silent=@@True" 
+                       k:Yes="ExitSoft" k:No="@@Return(Yes)"/> 
+
+
+
+
+    <Activity Name="ExitSoft" Execute="ExitSoft"/> 
+
+
+  </CompositeActivity> 
+  <ActivityParametersBindings CompositeActivityName="ExitSoftActivity"> 
+    <ActivityParametersBinding ActivityName="AskWantToExitSoft"> 
+      <Parameter Name="TextFormat">Завершить работу ПО?</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
+</Workflow>

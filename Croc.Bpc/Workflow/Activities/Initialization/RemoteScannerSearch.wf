@@ -1,0 +1,99 @@
+<Workflow 
+  xmlns="http://schemas.croc.ru/Workflow" 
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+  <Include Ref="Activities/Common.wf" /> 
+  <CompositeActivity Name="RemoteScannerSearchActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.Initialization.RemoteScannerSearchActivity, Croc.Bpc.Workflow"> 
+    <Region Note="Поиск второго сканера"> 
+
+
+      <Activity Name="IsSecondScannerAlreadyConnected" Execute="IsSecondScannerAlreadyConnected" 
+                k:Yes="StopLampsBlinking" 
+                k:No="OpenIncomingInteractionChannel"/> 
+
+
+
+
+      <Activity Name="OpenIncomingInteractionChannel" Execute="OpenIncomingInteractionChannel"/> 
+
+
+      <ReferenceActivity Name="SetIndicatorSearchSecondScanner" Execute="Common.SayAndWaitTimeout" 
+                         Parameters="Timeout=@SearchSecondScannerTimeout"/> 
+
+
+      <Activity Name="StartLampsBlinking" Execute="StartLampsBlinking"/> 
+
+
+      <ReferenceActivity Name="SaySecondScannerNotFoundYesToCancel" Execute="Common.SayAndWaitYes"/> 
+
+
+      <Activity Name="StopLampsBlinking" Execute="StopLampsBlinking" 
+                k:Yes="@@Return(Yes)"/> 
+    </Region> 
+    <Region Note="Обработка события '2-ой сканер найден'"> 
+
+
+      <Activity Name="OnSecondScannerFound" 
+                Initialize="ResetScannerRoleToUndefined" 
+                Execute="CheckApplicationVersions" 
+                k:Yes="CheckSerialNumbersEquals" k:No="SayApplicationVersionsDiffer"/> 
+
+
+      <ReferenceActivity Name="SayApplicationVersionsDiffer" Execute="Common.ReportError" 
+                         Parameters="ErrorId=ApplicationVersionsDiffer;MaxRestartCount=0;SecondMaxRestartCount=0"/> 
+
+
+      <Activity Name="CheckSerialNumbersEquals" Execute="CheckSerialNumbersEquals" 
+                k:Yes="SaySerialNumbersEquals" k:No="StopLampsBlinkingAfterSecondScannerFound"/> 
+
+
+      <ReferenceActivity Name="SaySerialNumbersEquals" Execute="Common.ReportError" 
+                         Parameters="ErrorId=SerialNumbersEquals;MaxRestartCount=0;SecondMaxRestartCount=0"/> 
+
+
+      <Activity Name="StopLampsBlinkingAfterSecondScannerFound" Execute="StopLampsBlinking"/> 
+
+
+      <ReferenceActivity Name="SaySecondScannerFound" Execute="Common.SayPhrase" Priority="4" 
+                         k:Yes="@@Return(Yes)"/> 
+    </Region> 
+    <Region Note="Обработка события '2-ой сканер потерян'"> 
+
+
+      <Activity Name="OnSecondScannerLost" 
+                Initialize="ResetScannerRoleToUndefined" 
+                Execute="StartLampsBlinking"/> 
+
+
+      <ReferenceActivity Name="SaySecondScannerLost" Priority="4" Execute="Common.SayPhrase" 
+                         k:Yes="SetIndicatorSearchSecondScanner"/> 
+    </Region> 
+  </CompositeActivity> 
+  <ActivityParametersBindings CompositeActivityName="RemoteScannerSearchActivity"> 
+    <ActivityParametersBinding ActivityName="SetIndicatorSearchSecondScanner"> 
+      <Parameter Name="TextFormat">Поиск...</Parameter> 
+      <Parameter Name="Silent">true</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SaySecondScannerNotFoundYesToCancel"> 
+      <Parameter Name="TextFormat">Второй сканер не найден. Прекратить поиск?</Parameter> 
+      <Parameter Name="Sounds">second_scanner_not_found_cancel</Parameter> 
+      <Parameter Name="HelpSounds">check_second_scanner_loaded</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayApplicationVersionsDiffer"> 
+      <Parameter Name="TextFormat">Различ. версии</Parameter> 
+      <Parameter Name="Sounds">application_versions_differ</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SaySerialNumbersEquals"> 
+      <Parameter Name="TextFormat">Совпадают серийные номера сканеров</Parameter> 
+      <Parameter Name="Sounds">serial_numbers_equals</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SaySecondScannerFound"> 
+      <Parameter Name="TextFormat">Соединение со вторым сканером установлено</Parameter> 
+      <Parameter Name="Sounds">second_scanner_found</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SaySecondScannerLost"> 
+      <Parameter Name="TextFormat">Потерян второй сканер</Parameter> 
+      <Parameter Name="Sounds">second_scanner_lost</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
+</Workflow>

@@ -1,73 +1,35 @@
 using System; 
-
-using System.Collections.Generic; 
-
-using System.Linq; 
-
-using System.Text; 
-
 using System.Configuration; 
-
-using Croc.Bpc.Election.Voting; 
-
- 
-
- 
-
+using Croc.Bpc.Voting; 
 namespace Croc.Bpc.Election.Config 
-
 { 
-
-    /// <summary> 
-
-    /// Коллекция времен начала режимов голосования 
-
-    /// </summary> 
-
     public class VotingModeTimeConfigCollection : ConfigurationElementCollection 
-
     { 
-
         protected override ConfigurationElement CreateNewElement() 
-
         { 
-
             return new VotingModeTimeConfig(); 
-
         } 
-
- 
-
- 
-
         protected override Object GetElementKey(ConfigurationElement element) 
-
         { 
-
             return ((VotingModeTimeConfig)element).Mode; 
-
         } 
-
- 
-
- 
-
-        public new VotingModeTimeConfig this[VotingMode mode] 
-
+        public VotingModeTimeConfig this[VotingMode mode] 
         { 
-
             get 
-
             { 
-
                 return (VotingModeTimeConfig)BaseGet(mode); 
-
             } 
-
         } 
-
+        public ModeTime GetModeTime(VotingMode mode) 
+        { 
+            var modeTimeConfig = this[mode]; 
+            var time = (modeTimeConfig == null ? TimeSpan.Zero : modeTimeConfig.Time); 
+            return new ModeTime 
+                       { 
+                           mode = mode, 
+                           hour = time.Hours, 
+                           minute = time.Minutes 
+                       }; 
+        } 
     } 
-
 }
-
-

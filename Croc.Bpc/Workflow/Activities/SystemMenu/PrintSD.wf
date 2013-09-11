@@ -1,0 +1,42 @@
+<Workflow 
+  xmlns="http://schemas.croc.ru/Workflow" 
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+  <Include Ref="Activities/Common.wf" /> 
+  <Include Ref="Activities/Printing.wf" /> 
+
+
+  <CompositeActivity Name="PrintSDActivity" 
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.PrintSDActivity, Croc.Bpc.Workflow"> 
+
+
+    <ReferenceActivity Name="IsSourceDataLoaded" Execute="Common.IsSourceDataLoaded" 
+                       k:Yes="AskWantToPrintSd" k:No="SaySdNotLoaded"/> 
+
+
+    <ReferenceActivity Name="SaySdNotLoaded" Execute="Common.SayAndWaitTimeout" 
+                       Parameters="Timeout=3000;Silent=@@True" 
+                       DefaultNextActivity="@@Return(Yes)"/> 
+
+
+    <ReferenceActivity Name="AskWantToPrintSd" Execute="Common.SayAndWaitYesOrNo" 
+                       Parameters="Silent=@@True" 
+                       k:Yes="PrintSd" k:No="@@Return(Yes)"/> 
+
+
+    <ReferenceActivity Name="PrintSd" Execute="PrintingActivity" 
+                       Parameters=" 
+                             ReportType=SourceData; 
+                             ReportParameters=@SourceDataReportParameters; 
+                             ImplicitPrint=@@True; 
+                             NeedCopiesCountNumber=@@True" 
+                       DefaultNextActivity="@@Return(Yes)"/> 
+  </CompositeActivity> 
+  <ActivityParametersBindings CompositeActivityName="PrintSDActivity"> 
+    <ActivityParametersBinding ActivityName="SaySdNotLoaded"> 
+      <Parameter Name="TextFormat">ИД не загружены!</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="AskWantToPrintSd"> 
+      <Parameter Name="TextFormat">Распечатать ИД?</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
+</Workflow>

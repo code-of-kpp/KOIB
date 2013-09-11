@@ -1,632 +1,315 @@
 <Workflow 
-
   xmlns="http://schemas.croc.ru/Workflow" 
-
   xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys" 
-
   RootActivity="MainActivity" 
-
   DefaultNextActivityKey="Yes"> 
-
- 
-
- 
-
   <Include Ref="Activities/Common.wf" /> 
-
   <Include Ref="Activities/Initialization/ConnectToScanner.wf" /> 
-
+  <Include Ref="Activities/Initialization/RemoteScannerSearch.wf" /> 
   <Include Ref="Activities/Initialization/Initialization.wf" /> 
-
   <Include Ref="Activities/Initialization/ControlVotingStart.wf" /> 
-
   <Include Ref="Activities/Cancelation/Cancelation.wf" /> 
-
   <Include Ref="Activities/Testing/Testing.wf" /> 
-
   <Include Ref="Activities/Testing/ReadTestingReport.wf" /> 
-
   <Include Ref="Activities/Voting/MainVoting.wf" /> 
-
   <Include Ref="Activities/Voting/PortableVoting.wf" /> 
-
+  <Include Ref="Activities/Summarizing/PreliminarySummarizing.wf" /> 
   <Include Ref="Activities/Summarizing/Summarizing.wf" /> 
-
   <Include Ref="Activities/SystemMenu/SystemMenu.wf" /> 
-
   <Include Ref="Activities/OperatorMenu/OperatorMenu.wf" /> 
 
- 
 
- 
 
-  <!--Основная схема--> 
-
-  <!--Замечание: 
-
-        Контрольные действия, которые отображены на схеме (в Visio) конфигурируются как дейсвия, 
-
-        у которых Tracking="true" (специально не указывается, т.к. =true по умолчанию). 
-
-        Порядковый номер контрольных действий задается в имени действия: N_ИмяДействия,  
-
-        где N - порядковый номер в 16-ричном формате. 
-
-        Общий принципы включения трекинга: 
-
-        - для всех дочерних составных действий трекинг ВЫключен 
-
-        - трекинг включен только в данной Основной схеме для ReferenceActivity-действий,  
-
-          которые соответствуют Контрольным действиям 
-
-  --> 
 
   <CompositeActivity Name="MainActivity" 
-
                      Class="Croc.Bpc.Workflow.Activities.MainActivity, Croc.Bpc.Workflow"> 
+    <Region Note="Подписка на события"> 
 
- 
 
- 
+      <SubscribeToEvent Name="SubscribeToUnexpectedErrorEvent" 
+                        Event="@UnexpectedErrorOccurred" 
+                        Handler="OnUnexpectedError"/> 
 
-    <!--подпишемся на событие о неожиданных ошибках--> 
 
-    <SubscribeToEvent Name="SubscribeToUnexpectedErrorEvent" 
+      <SubscribeToEvent Name="SubscribeToSystemMenuEnteringEvent" 
+                        Event="@SystemMenuEntering" 
+                        Handler="OnSystemMenuEntering"/> 
 
-                      Event="@UnexpectedErrorOccurred" Handler="OnUnexpectedError"/> 
 
-    <!--подпишемся на событие о подключении удаленного сканера--> 
+      <SubscribeToEvent Name="SubscribeToOperatorMenuEnteringEvent" 
+                        Event="@OperatorMenuEntering" 
+                        Handler="OnOperatorMenuEntering"/> 
 
-    <SubscribeToEvent Name="SubscribeToRemoteScannerConnectedEvent" 
 
-                      Event="@RemoteScannerConnected" Handler="CheckApplicationVersions"/> 
+      <SubscribeToEvent Name="SubscribeToRemoteScannerExitFromMenu" 
+                        Event="@RemoteScannerExitFromMenu" 
+                        Handler="OnRemoteScannerExitFromMenu"/> 
 
-    <!--подпишемся на событие о потери связи с удаленным сканером--> 
 
-    <SubscribeToEvent Name="SubscribeToRemoteScannerDisconnectedEvent" 
 
-                      Event="@RemoteScannerDisconnected" Handler="SaySecondScannerLost"/> 
 
-    <!--подпишемся на событие входа в системное меню (нажатие клавиши "Меню 2-ды")--> 
+      <SubscribeToEvent Name="SubscribeToRemoteScannerConnectedEvent" 
+                        Event="@RemoteScannerConnected" 
+                        Handler="OnRemoteScannerConnected"/> 
 
-    <SubscribeToEvent Name="SubscribeToSystemMenuEnteringEvent" 
 
-                      Event="@SystemMenuEntering" Handler="OnSystemMenuEntering"/> 
+      <SubscribeToEvent Name="SubscribeToRemoteScannerDisconnectedEvent" 
+                        Event="@RemoteScannerDisconnected" 
+                        Handler="OnRemoteScannerDisconnected"/> 
 
-    <!--подпишемся на событие входа в меню оператора (нажатие клавиши "Меню")--> 
 
-    <SubscribeToEvent Name="SubscribeToOperatorMenuEnteringEvent" 
+      <SubscribeToEvent Name="SubscribeToRemoteScannerWaitForInitializationEvent" 
+                        Event="@RemoteScannerWaitForInitialization" 
+                        Handler="RemoteScannerSearch"/> 
 
 
-                      Event="@OperatorMenuEntering" Handler="OnOperatorMenuEntering"/> 
+      <SubscribeToEvent Name="SubscribeToNeedFinishTraining" 
+                        Event="@ControlVotingStartActivity.VotingWillSoonStart" 
+                        Handler="OnVotingWillSoonStart"/> 
+    </Region> 
 
-    <!--подпишемся на событие "Пора закончить тренировку"--> 
 
-    <SubscribeToEvent Name="SubscribeToNeedFinishTraining" 
+    <Region Note="Инициализация"> 
 
-                      Event="@ControlVotingStartActivity.NeedFinishTraining" Handler="SayWereSomeTimeToVotingStartNFT"/> 
 
- 
+      <ReferenceActivity Name="ConnectToScanner" Execute="ConnectToScannerActivity" Tracking="false"/> 
 
- 
 
-    <!--=============================================================================================================--> 
+      <ReferenceActivity Name="RemoteScannerSearch" Execute="RemoteScannerSearchActivity" Tracking="false"/> 
 
- 
 
- 
+      <ReferenceActivity Name="Initialization" Execute="InitializationActivity" Tracking="false" 
+                         k:Yes="SayYesForTestingNoForCancelation"/> 
 
-    <!--установим соединение со сканером и выполним диагностику--> 
 
-    <ReferenceActivity Name="ConnectToScanner" Execute="ConnectToScannerActivity" Tracking="false"/> 
+      <ReferenceActivity Name="InitializationSynchronize" Tracking="false" 
+                         Execute="InitializationActivity" Parameters="StartActivity=Synchronize"/> 
+    </Region> 
+    <Region Note="Тестирование и снятие позиций"> 
 
- 
 
- 
+      <ReferenceActivity Name="SayYesForTestingNoForCancelation" Execute="Common.SayAndWaitYesOrNo" 
+                         Parameters="Order=1" 
+                         k:Yes="Testing" k:No="Cancelation"/> 
 
-    <!--=============================================================================================================--> 
 
-    <!--Поиск 2-ого сканера--> 
+      <ReferenceActivity Name="Cancelation" Execute="CancelationActivity" Priority="4" Tracking="false"/> 
 
- 
 
- 
+      <ReferenceActivity Name="Testing" Execute="TestingActivity" 
+                         Parameters="Order=2"/> 
 
-    <!--выведем на индикатор "Поиск..."--> 
 
-    <ReferenceActivity Name="SetIndicatorSearchSecondScanner" Execute="Common.SetIndicator" Tracking="false"/> 
+      <ReferenceActivity Name="IsMasterScanner" Execute="Common.IsMasterScanner" Priority="4" 
+                         Parameters="Order=3" 
+                         k:Yes="ReadTestingReport" k:No="SyncWorkflowWithMasterScanner"/> 
 
-    <!-- открываем канал для подключения удаленных сканеров--> 
 
-    <Activity Name="OpenIncomingInteractionChannel" Execute="OpenIncomingInteractionChannel" Tracking="false"/> 
+      <ReferenceActivity Name="ReadTestingReport" Execute="ReadTestingReportActivity" Priority="4" Tracking="false"/> 
 
-    <!--говорим: второй сканер не найден, для отмены нажмите ДА--> 
 
-    <ReferenceActivity Name="SaySecondScannerNotFoundYesToCancel" Execute="Common.SayAndWaitYes" Tracking="false" 
+      <ReferenceActivity Name="SayYesForVotingNoForBackToInitialization" Execute="Common.SayAndWaitYesOrNo" 
+                         Parameters="Order=4" 
+                         k:Yes="CanGoToMainVotingMode" k:No="HasSourceDataChanged"/> 
 
-                       k:Yes="Initialization"/> 
 
- 
+      <Activity Name="CanGoToMainVotingMode" Execute="CanGoToMainVotingMode" Tracking="false" 
+                k:Yes="MainVoting" k:No="SayGoToMainVotingModeForbidden"/> 
 
- 
 
-    <!--проверяем, что версии ПО на обоих сканерах совпадают--> 
+      <ReferenceActivity Name="SayGoToMainVotingModeForbidden" Execute="Common.SayPhrase" Tracking="false" 
+                         Parameters="Parameters=@MainVotingModeStartTime" 
+                         k:Yes="SayYesForVotingNoForBackToInitialization"/> 
 
-    <Activity Name="CheckApplicationVersions" Execute="CheckApplicationVersions" Tracking="false" 
 
-              k:Yes="SaySecondScannerFound" k:No="SayApplicationVersionsDiffer"/> 
 
- 
 
- 
+      <ReferenceActivity Name="HasSourceDataChanged" Execute="Common.HasSourceDataChanged"  Tracking="false" 
+                         k:Yes="SaySdChangedYesForContinueNoForCancel" k:No="ResetState"/> 
 
-    <!--говорим: версии ПО различные и зависаем--> 
 
-    <ReferenceActivity Name="SayApplicationVersionsDiffer" Execute="Common.ReportError" Tracking="false" 
+      <ReferenceActivity Name="SaySdChangedYesForContinueNoForCancel" Execute="Common.SayAndWaitYesOrNo" 
+                         Tracking="false" 
+                         k:Yes="ResetState" k:No="SayYesForVotingNoForBackToInitialization"/> 
 
-                       Parameters="ErrorId=ApplicationVersionsDiffer;MaxRestartCount=0;SecondMaxRestartCount=0"/> 
 
-    <!--говорим: найден второй сканер--> 
 
-    <ReferenceActivity Name="SaySecondScannerFound" Execute="Common.SayPhrase" Tracking="false" 
 
-                       k:Yes="Initialization"/> 
+      <Activity Name="ResetState" Execute="ResetState"  
+                Parameters="Order=5" 
+                k:Yes="RemoteScannerSearch"/> 
+    </Region> 
+    <Region Note="Голосование"> 
 
- 
 
- 
+      <ReferenceActivity Name="MainVoting" Execute="MainVotingActivity" 
+                         Parameters="Order=6"/> 
 
-    <!--говорим: потерян второй сканер--> 
 
-    <ReferenceActivity Name="SaySecondScannerLost" Execute="Common.SayPhrase" Tracking="false" 
+      <ReferenceActivity Name="NeedPortableVoting" Execute="Common.NeedPortableVoting" Tracking="false" 
+                         k:Yes="PortableVoting" k:No="SayYesForSummarizingNoForBackToMainVoting"/> 
 
-                       k:Yes="Initialization"/> 
 
- 
+      <ReferenceActivity Name="SayYesForSummarizingNoForBackToMainVoting" Execute="Common.SayAndWaitYesOrNo" 
+                         Parameters="Order=6" 
+                         k:Yes="PreliminarySummarizing" k:No="MainVoting"/> 
 
- 
 
-    <!--=============================================================================================================--> 
+      <ReferenceActivity Name="PortableVoting" Execute="PortableVotingActivity" 
+                         Parameters="Order=7"/> 
 
- 
 
- 
+      <ReferenceActivity Name="SayYesForSummarizingNoForBackToPortableVoting" Execute="Common.SayAndWaitYesOrNo" 
+                         Parameters="Order=7" 
+                         k:Yes="PreliminarySummarizing" k:No="PortableVoting"/> 
+    </Region> 
+    <Region Note="Подведение итогов"> 
 
-    <!--инициализация--> 
 
-    <ReferenceActivity Name="Initialization" Execute="InitializationActivity" Tracking="false"/> 
+      <ReferenceActivity Name="PreliminarySummarizing" Execute="PreliminarySummarizingActivity" Priority="4" 
+                         Parameters="Order=8"/> 
 
- 
 
 
- 
-    <!--говорим: нажмите Да для перехода в тестирование, Нет - в снятие позиций--> 
 
-    <ReferenceActivity Name="1_SayYesForTestingNoForCancelation" Execute="Common.SayAndWaitYesOrNo" 
+      <ReferenceActivity Name="Summarizing" Execute="SummarizingActivity" Priority="4" 
+                         Parameters="Order=9"/> 
 
-                       k:Yes="2_Testing" k:No="Cancelation"/> 
 
- 
+      <ReferenceActivity Name="IsMasterScanner2" Execute="Common.IsMasterScanner" Priority="4" 
+                         Parameters="Order=9" 
+                         k:Yes="SayYesForBackToSummarizingNoForEndElection" k:No="SyncWorkflowWithMasterScanner"/> 
 
- 
 
-    <!--снятие позиций--> 
+      <ReferenceActivity Name="SayYesForBackToSummarizingNoForEndElection" Execute="Common.SayAndWaitYesOrNo" 
+                         Tracking="false" 
+                         k:Yes="Summarizing" k:No="IsElectionDayAndRealElectionMode"/> 
 
-    <ReferenceActivity Name="Cancelation" Execute="CancelationActivity" Priority="4" Tracking="false"/> 
 
- 
+      <Activity Name="IsElectionDayAndRealElectionMode" Execute="IsElectionDayAndRealElectionMode" 
+                Tracking="false" 
+                k:Yes="SayStartNewElectionForbidden" k:No="SayYesForNewElectionNoForBackToSummarizing"/> 
 
- 
 
-    <!--=============================================================================================================--> 
+      <ReferenceActivity Name="SayStartNewElectionForbidden" Execute="Common.SayPhrase" Tracking="false" 
+                         k:Yes="SayYesForBackToSummarizingNoForEndElection"/> 
 
- 
 
- 
 
-    <!--тестирование--> 
 
-    <ReferenceActivity Name="2_Testing" Execute="TestingActivity"/> 
+      <ReferenceActivity Name="SayYesForNewElectionNoForBackToSummarizing" Execute="Common.SayAndWaitYesOrNo" 
+                         Tracking="false" 
+                         k:Yes="ResetUik" k:No="Summarizing"/> 
 
- 
 
- 
+      <Activity Name="ResetUik" Execute="ResetUik"  
+                Tracking="false" 
+                k:Yes="@@Return(Yes)"/> 
+    </Region> 
 
-    <!--говорим: зачитать протокол тестирования?--> 
 
-    <ReferenceActivity Name="3_SayReadTestingReport" Execute="Common.SayAndWaitYesOrNo" 
+    <Activity Name="SyncWorkflowWithMasterScanner" Execute="SyncWorkflowWithMasterScanner" 
+              Tracking="false"/> 
+    <Region Note="Обработка событий"> 
 
-                       k:Yes="ReadTestingReport" k:No="4_SayYesForVotingNoForBackToInitialization"/> 
 
- 
+      <ReferenceActivity Name="OnUnexpectedError" Tracking="false" 
+                         Execute="Common.ReportError" 
+                         Parameters="ErrorId=UnexpectedError"/> 
+      <Region Note="Вход в меню"> 
 
- 
 
-    <!--зачитываем протокол тестирования--> 
+        <ReferenceActivity Name="OnSystemMenuEntering" Tracking="false" Priority="4" 
+                           Execute="SystemMenuActivity" 
+                           k:Yes="NoticeRemoteScannerAboutExitFromMenu"/> 
 
-    <ReferenceActivity Name="ReadTestingReport" Execute="ReadTestingReportActivity" Priority="4" Tracking="false"/> 
 
- 
+        <ReferenceActivity Name="OnOperatorMenuEntering" Tracking="false" Priority="4" 
+                           Execute="OperatorMenuActivity"  
+                           k:Yes="NoticeRemoteScannerAboutExitFromMenu"/> 
 
- 
 
-    <!--говорим: нажмите Да для перехода к голосованию, Нет - для возврата к получению ИД--> 
+        <Activity Name="NoticeRemoteScannerAboutExitFromMenu" Tracking="false" 
+                  Execute="NoticeRemoteScannerAboutExitFromMenu" 
+                  k:Yes="OnRemoteScannerExitFromMenu"/> 
 
-    <ReferenceActivity Name="4_SayYesForVotingNoForBackToInitialization" Execute="Common.SayAndWaitYesOrNo" 
 
-                       k:Yes="CanGoToMainVotingMode" k:No="5_ResetState"/> 
+        <Activity Name="OnRemoteScannerExitFromMenu" Tracking="false" Priority="4" 
+                  Execute="DoNothing" 
+                  k:Yes="RemoteScannerSearch"/> 
+      </Region> 
 
- 
 
- 
 
-    <!--сбросим состояние в начальное положение--> 
 
-    <Activity Name="5_ResetState" Execute="ResetState" 
+      <ReferenceActivity Name="OnRemoteScannerConnected" Tracking="false" 
+                         Execute="RemoteScannerSearchActivity" Parameters="StartActivity=OnSecondScannerFound" 
+                         k:Yes="Initialization"/> 
 
-              k:Yes="Initialization"/> 
 
- 
+      <ReferenceActivity Name="OnRemoteScannerDisconnected" Tracking="false" 
+                         Execute="RemoteScannerSearchActivity" Parameters="StartActivity=OnSecondScannerLost" 
+                         k:Yes="Initialization"/> 
 
- 
 
-    <!--проверим: Можно ли перейти в стац. режим голосования?--> 
-
-    <Activity Name="CanGoToMainVotingMode" Execute="CanGoToMainVotingMode" Tracking="false" 
-
-              k:Yes="6_MainVoting" k:No="SayGoToMainVotingModeForbidden"/> 
-
- 
-
- 
-
-    <!--говорим: переход в Стационарный режим запрещен до ЧЧ:ММ--> 
-
-    <ReferenceActivity Name="SayGoToMainVotingModeForbidden" Execute="Common.SayPhrase" Tracking="false" 
-
-                       Parameters="Parameters=@MainVotingModeStartTime" 
-
-                       k:Yes="4_SayYesForVotingNoForBackToInitialization"/> 
-
- 
-
- 
-
-    <!--=============================================================================================================--> 
-
- 
-
- 
-
-
-    <!--стационарное голосование--> 
-
-    <ReferenceActivity Name="6_MainVoting" Execute="MainVotingActivity"/> 
-
- 
-
- 
-
-    <!--нужен ли переносной режим--> 
-
-    <ReferenceActivity Name="NeedPortableVoting" Execute="Common.NeedPortableVoting" Tracking="false" 
-
-                       k:Yes="7_PortableVoting" k:No="8_SayYesForSummarizingNoForBackToVoting"/> 
-
- 
-
- 
-
-    <!--переносное голосование--> 
-
-    <ReferenceActivity Name="7_PortableVoting" Execute="PortableVotingActivity"/> 
-
- 
-
- 
-
-    <!--говорим: нажмите Да для перехода к подведению итогов, Нет - для возврата к голосованию--> 
-
-    <ReferenceActivity Name="8_SayYesForSummarizingNoForBackToVoting" Execute="Common.SayAndWaitYesOrNo" 
-
-                       k:Yes="9_Summarizing" k:No="GoBackToVoting"/> 
-
- 
-
- 
-
-    <!--в зависимости от наличия переносного режима возвращаемся либо к Main либо к Portble--> 
-
-    <ReferenceActivity Name="GoBackToVoting" Execute="Common.NeedPortableVoting" Tracking="false" 
-
-                       k:Yes="7_PortableVoting" k:No="6_MainVoting"/> 
-
- 
-
- 
-
-    <!--=============================================================================================================--> 
-
- 
-
- 
-
-    <!--подведение итогов голосования--> 
-
-    <ReferenceActivity Name="9_Summarizing" Execute="SummarizingActivity" Priority="4"/> 
-
- 
-
- 
-
-    <!--проверим, данный сканер Главный?--> 
-
-    <ReferenceActivity Name="IsMasterScanner" Execute="Common.IsMasterScanner"  
-
-                       Priority="4" Tracking="false" 
-
-                       k:Yes="SayYesForBackToSummarizingNoForEndElection" k:No="SyncWorkflowWithMasterScanner"/> 
-
- 
-
- 
-
-    <!--говорим: нажмите Да для возврата к подведению итогов, Нет - для завершения выборов--> 
-
-    <ReferenceActivity Name="SayYesForBackToSummarizingNoForEndElection" Execute="Common.SayAndWaitYesOrNo" 
-
-                       Priority="4" Tracking="false" 
-
-                       k:Yes="9_Summarizing" k:No="SayYesForNewElectionNoForBackToSummarizing"/> 
-
- 
-
- 
-
-    <!--говорим: нажмите Да для начала новых выборов, Нет - для возврата к подведению итогов--> 
-
-    <ReferenceActivity Name="SayYesForNewElectionNoForBackToSummarizing" Execute="Common.SayAndWaitYesOrNo"  
-
-                       Priority="4" Tracking="false" 
-
-                       k:Yes="A_ResetElectionAndExit" k:No="9_Summarizing"/> 
-
- 
-
- 
-
-    <!--сбрасываем выборы в начальное состояние и перезапускаем приложение--> 
-
-    <Activity Name="A_ResetElectionAndExit" Execute="ResetElectionAndExit" Priority="4" 
-
-
-              k:Yes="@@Return(Yes)"/> 
-
- 
-
- 
-
-    <!--синхронизируем поток работ подчиненного сканера с главным--> 
-
-    <Activity Name="SyncWorkflowWithMasterScanner" Execute="SyncWorkflowWithMasterScanner"/> 
-
- 
-
- 
-
-    <!--=============================================================================================================--> 
-
- 
-
- 
-
-    <!--обработка необработанного исключения--> 
-
-    <ReferenceActivity Name="OnUnexpectedError" Execute="Common.ReportError" Tracking="false" 
-
-                       Parameters="ErrorId=UnexpectedError"/> 
-
- 
-
- 
-
-    <!--=============================================================================================================--> 
-
- 
-
- 
-
-    <!--вход в системное меню--> 
-
-    <ReferenceActivity Name="OnSystemMenuEntering" Execute="SystemMenuActivity" Tracking="false" Priority="4" 
-
-                       k:Yes="Initialization"/> 
-
-    <!--вход в меню оператора--> 
-
-    <ReferenceActivity Name="OnOperatorMenuEntering" Execute="OperatorMenuActivity" Tracking="false" Priority="4" 
-
-                       k:Yes="Initialization"/> 
-
- 
-
- 
-
-    <!--=============================================================================================================--> 
-
-    <!--Обработка события "Пора закончить тренировку"--> 
-
- 
-
- 
-
-    <!--говорим сколько осталось времени до начала голосования--> 
-
-    <ReferenceActivity Name="SayWereSomeTimeToVotingStartNFT" Execute="Common.SayPhrase" Priority="4" 
-
-                       Parameters="Parameters=@ControlVotingStartActivity.VotingStartRemainingTime"/> 
-
- 
-
- 
-
-    <!--сбросим УИК--> 
-
-    <ReferenceActivity Name="ResetUIK" Execute="ResetUIKActivity.ResetUIK" 
-
-                       k:Yes="@@Return(Yes)"/> 
-
- 
-
- 
-
+      <ReferenceActivity Name="OnVotingWillSoonStart" Tracking="false" Priority="4" 
+                         Execute="ControlVotingStartActivity" Parameters="StartActivity=HasVotingStarted" 
+                         k:Yes="InitializationSynchronize"/> 
+    </Region> 
   </CompositeActivity> 
-
- 
-
- 
-
-  <ActivityParametersBinding ActivityName="MainActivity.SetIndicatorSearchSecondScanner"> 
-
-    <Parameter Name="TextFormat">Поиск...</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="MainActivity.SaySecondScannerNotFoundYesToCancel"> 
-
-    <Parameter Name="TextFormat">Второй сканер не найден. Прекратить поиск?</Parameter> 
-
-    <Parameter Name="Sounds">second_scanner_not_found_cancel</Parameter> 
-
-    <Parameter Name="SayFirstTime">false</Parameter> 
-
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="MainActivity.SayApplicationVersionsDiffer"> 
-
-    <Parameter Name="TextFormat">Различ. версии</Parameter> 
-
-    <Parameter Name="Sounds">application_versions_differ</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="MainActivity.SaySecondScannerFound"> 
-
-    <Parameter Name="TextFormat">Найден второй сканер</Parameter> 
-
-    <Parameter Name="Sounds">second_scanner_found</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="MainActivity.SaySecondScannerLost"> 
-
-    <Parameter Name="TextFormat">Потерян второй сканер</Parameter> 
-
-    <Parameter Name="Sounds">second_scanner_lost</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="MainActivity.1_SayYesForTestingNoForCancelation"> 
-
-    <Parameter Name="TextFormat">Для перехода в режим тестирования нажмите ДА. Для снятия позиций нажмите НЕТ</Parameter> 
-
-    <Parameter Name="Sounds">yes_for_testing_no_for_cand_cancel</Parameter> 
-
-    <Parameter Name="SilentOnSlave">true</Parameter> 
-
-    <Parameter Name="IgnoreButtonsOnSlave">true</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="MainActivity.3_SayReadTestingReport"> 
-
-    <Parameter Name="TextFormat">Зачитать протокол тестирования?</Parameter> 
-
-    <Parameter Name="Sounds">read_testing_report</Parameter> 
-
-    <Parameter Name="SilentOnSlave">true</Parameter> 
-
-    <Parameter Name="IgnoreButtonsOnSlave">true</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="MainActivity.4_SayYesForVotingNoForBackToInitialization"> 
-
-    <Parameter Name="TextFormat">Для перехода в стационарный режим голосования нажмите ДА. Для возврата к получению исходных данных и тестированию
-
-нажмите НЕТ</Parameter> 
-
-    <Parameter Name="Sounds">yes_for_voting_no_for_back_to_testing</Parameter> 
-
-    <Parameter Name="SilentOnSlave">true</Parameter> 
-
-    <Parameter Name="IgnoreButtonsOnSlave">true</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="MainActivity.SayGoToMainVotingModeForbidden"> 
-
-    <Parameter Name="TextFormat">Запрещено до {p0:hhmm}</Parameter> 
-
-    <Parameter Name="PhraseFormat">{s0}{p0:hhmm}{s1}</Parameter> 
-
-    <Parameter Name="Sounds">[go_to_main_before,forbidden]</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="MainActivity.8_SayYesForSummarizingNoForBackToVoting"> 
-
-    <Parameter Name="TextFormat">Для перехода к подведению итогов голосования нажмите ДА. Для возврата к голосованию нажмите НЕТ</Parameter> 
-
-    <Parameter Name="Sounds">yes_for_summarizing_no_for_back_to_voting</Parameter> 
-
-    <Parameter Name="SilentOnSlave">true</Parameter> 
-
-    <Parameter Name="IgnoreButtonsOnSlave">true</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="MainActivity.SayYesForBackToSummarizingNoForEndElection"> 
-
-    <Parameter Name="TextFormat">Для возврата к подведению итогов нажмите ДА. Для завершения цикла голосования и начала нового цикла выборов
-
-нажмите НЕТ</Parameter> 
-
-    <Parameter Name="Sounds">yes_for_back_to_summarizing_no_for_end_election</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="MainActivity.SayYesForNewElectionNoForBackToSummarizing"> 
-
-    <Parameter Name="TextFormat">Для перехода к инициализации нового цикла выборов нажмите ДА. Для возврата к подведению итогов нажмите
-
-
-НЕТ</Parameter> 
-
-    <Parameter Name="Sounds">yes_for_new_election_no_for_back_to_summarizing</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="MainActivity.OnUnexpectedError"> 
-
-    <Parameter Name="TextFormat">Во время работы приложения произошла ошибка!</Parameter> 
-
-    <Parameter Name="Sounds">application_critical_error</Parameter> 
-
-  </ActivityParametersBinding> 
-
-  <ActivityParametersBinding ActivityName="MainActivity.SayWereSomeTimeToVotingStartNFT"> 
-
-    <Parameter Name="TextFormat">{p0:hhmm} до голосования!</Parameter> 
-
-    <Parameter Name="PhraseFormat">{p0:hhmm}{s0}</Parameter> 
-
-    <Parameter Name="Sounds">to_voting_start_remains</Parameter> 
-
-  </ActivityParametersBinding> 
-
+  <ActivityParametersBindings CompositeActivityName="MainActivity"> 
+    <ActivityParametersBinding ActivityName="SayYesForTestingNoForCancelation"> 
+      <Parameter Name="TextFormat">Для перехода в режим тестирования нажмите ДА. Для снятия позиций нажмите НЕТ</Parameter> 
+      <Parameter Name="Sounds">yes_for_testing_no_for_cand_cancel</Parameter> 
+      <Parameter Name="SilentOnSlave">true</Parameter> 
+      <Parameter Name="IgnoreButtonsOnSlave">true</Parameter> 
+      <Parameter Name="HelpSounds">start_training_or_cancel_candidates_help_message</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayYesForVotingNoForBackToInitialization"> 
+      <Parameter Name="TextFormat">Для перехода в стационарный режим голосования нажмите ДА. Для возврата к получению исходных данных и тестированию
+�ажмите НЕТ</Parameter> 
+      <Parameter Name="Sounds">yes_for_voting_no_for_back_to_testing</Parameter> 
+      <Parameter Name="SilentOnSlave">true</Parameter> 
+      <Parameter Name="IgnoreButtonsOnSlave">true</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayGoToMainVotingModeForbidden"> 
+      <Parameter Name="TextFormat">Запрещено до {p0:hhmm}</Parameter> 
+      <Parameter Name="PhraseFormat">{s0}{p0:hhimmi}{s1}</Parameter> 
+      <Parameter Name="Sounds">[go_to_main_before,forbidden]</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SaySdChangedYesForContinueNoForCancel"> 
+      <Parameter Name="TextFormat">Все изменения будут потеряны. Для продолжения нажмите ДА. Для отмены нажмите НЕТ</Parameter> 
+      <Parameter Name="Sounds">sd_changed_yes_for_continue_no_for_cancel</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayYesForSummarizingNoForBackToMainVoting"> 
+      <Parameter Name="TextFormat">Для перехода к подведению итогов голосования нажмите ДА. Для возврата к голосованию нажмите НЕТ</Parameter> 
+      <Parameter Name="Sounds">yes_for_summarizing_no_for_back_to_voting</Parameter> 
+      <Parameter Name="SilentOnSlave">true</Parameter> 
+      <Parameter Name="IgnoreButtonsOnSlave">true</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayYesForSummarizingNoForBackToPortableVoting"> 
+      <Parameter Name="TextFormat">Для перехода к подведению итогов голосования нажмите ДА. Для возврата к голосованию нажмите НЕТ</Parameter> 
+      <Parameter Name="Sounds">yes_for_summarizing_no_for_back_to_voting</Parameter> 
+      <Parameter Name="SilentOnSlave">true</Parameter> 
+      <Parameter Name="IgnoreButtonsOnSlave">true</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayYesForBackToSummarizingNoForEndElection"> 
+      <Parameter Name="TextFormat">Для возврата к подведению итогов нажмите ДА. Для завершения цикла голосования и начала нового цикла выборов нажмите
+�ЕТ</Parameter> 
+      <Parameter Name="Sounds">yes_for_back_to_summarizing_no_for_end_election</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayStartNewElectionForbidden"> 
+      <Parameter Name="TextFormat">Начало нового цикла выборов запрещено</Parameter> 
+      <Parameter Name="Sounds">start_new_election_forbidden</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="SayYesForNewElectionNoForBackToSummarizing"> 
+      <Parameter Name="TextFormat">Для начала нового цикла выборов нажмите ДА. Для возврата к подведению итогов нажмите НЕТ. 
+      </Parameter> 
+      <Parameter Name="Sounds">yes_for_new_election_no_for_back_to_summarizing</Parameter> 
+    </ActivityParametersBinding> 
+    <ActivityParametersBinding ActivityName="OnUnexpectedError"> 
+      <Parameter Name="TextFormat">Сканер неисправен. Обратитесь в службу технической поддержки</Parameter> 
+      <Parameter Name="Sounds">scanner_faulty</Parameter> 
+    </ActivityParametersBinding> 
+  </ActivityParametersBindings> 
 </Workflow>
-
-

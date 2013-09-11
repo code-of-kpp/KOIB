@@ -1,0 +1,334 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+  <Include Ref="Activities/Printing.wf" /> 
+
+ 
+
+ 
+
+    <!--Зачитывание исходных данных--> 
+
+    <CompositeActivity Name="ReadSourceDataActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.Initialization.ReadSourceDataActivity, Croc.Bpc.Workflow"> 
+
+ 
+
+ 
+
+    <!--печатаем ИД--> 
+
+    <ReferenceActivity Name="PrintSourceData" Execute="PrintingActivity" 
+
+                       Parameters="ReportType=SourceData;ReportParameters=@SourceDataReportParameters"/> 
+
+ 
+
+ 
+
+    <!--говорим номер УИК--> 
+
+    <ReferenceActivity Name="SaySDForUik" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@UIK"/> 
+
+ 
+
+ 
+
+    <!--говорим дату выборов--> 
+
+    <ReferenceActivity Name="SayElectionDate" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@ElectionDate"/> 
+
+ 
+
+ 
+
+    <!--говорим кол-во бюллетеней--> 
+
+    <ReferenceActivity Name="SayBulletinCount" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@BulletinCount"/> 
+
+ 
+
+ 
+
+    <!--говорим время начала голосования--> 
+
+    <ReferenceActivity Name="SayVotingStartTime" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@MainVotingStartTime"/> 
+
+ 
+
+ 
+
+    <!--говорим время окончания голосования--> 
+
+    <ReferenceActivity Name="SayVotingEndTime" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@MainVotingEndTime"/> 
+
+ 
+
+ 
+
+ 
+
+ 
+
+    <!--перебираем выборы--> 
+
+    <Activity Name="MoveNextElection" Execute="MoveNextElection"  
+
+              k:Yes="SayBulletinNumber" k:No="@@Return(Yes)"/> 
+
+ 
+
+
+ 
+    <!--говорим номер бюллетеня (выборов)--> 
+
+    <ReferenceActivity Name="SayBulletinNumber" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@CurrentElectionNumber"/> 
+
+ 
+
+ 
+
+    <!--проверим, есть ли вышестоящие комиссии--> 
+
+    <Activity Name="StampCommitteesExists" Execute="StampCommitteesExists" 
+
+              k:Yes="SayStampCommittees" k:No="MaxMarksMoreThenOne"/> 
+
+ 
+
+ 
+
+    <!--говорим номера вышестойщих комиссий--> 
+
+    <ReferenceActivity Name="SayStampCommittees" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@StampCommittees"/> 
+
+ 
+
+ 
+
+    <!--проверим, максимальное кол-во отметок (мандатов) > 1?--> 
+
+    <Activity Name="MaxMarksMoreThenOne" Execute="MaxMarksMoreThenOne" 
+
+              k:Yes="SayMandateCount" k:No="SayCandidateCount"/> 
+
+ 
+
+ 
+
+    <!--говорим кол-во мандатов для текущего бюллетеня--> 
+
+    <ReferenceActivity Name="SayMandateCount" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@CurrentBulletinMandateCount"/> 
+
+ 
+
+ 
+
+    <!--говорим кол-во кандидатов (позиций) для текущего бюллетеня--> 
+
+    <ReferenceActivity Name="SayCandidateCount" Execute="Common.SayPhrase"  
+
+                       Parameters="Parameters=@CurrentBulletinCandidateCount"/> 
+
+ 
+
+ 
+
+    <!--проверим, есть снятые позиции?--> 
+
+    <Activity Name="DisabledCandidatesExists" Execute="DisabledCandidatesExists" 
+
+              k:Yes="SayDisabledCandidateNumbers" k:No="NoneAboveExists"/> 
+
+ 
+
+ 
+
+    <!--говорим номера снятых позиций--> 
+
+    <ReferenceActivity Name="SayDisabledCandidateNumbers" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@DisabledCandidateNumbers"/> 
+
+ 
+
+ 
+
+    <!--проверим, существует ли позиция "Против всех"?--> 
+
+    <Activity Name="NoneAboveExists" Execute="NoneAboveExists" 
+
+              k:Yes="SayNoneAboveExists" k:No="SayNoneAboveNotExists"/> 
+
+ 
+
+ 
+
+    <!--говорим, что позиция "Против всех" есть--> 
+
+    <ReferenceActivity Name="SayNoneAboveExists" Execute="Common.SayPhrase" 
+
+                       k:Yes="MoveNextElection"/> 
+
+ 
+
+
+ 
+    <!--говорим, что позиции "Против всех" нет--> 
+
+    <ReferenceActivity Name="SayNoneAboveNotExists" Execute="Common.SayPhrase" 
+
+                       k:Yes="MoveNextElection"/> 
+
+  </CompositeActivity> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="ReadSourceDataActivity.SaySDForUik"> 
+
+    <Parameter Name="TextFormat">УИК: {p0}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">sd_for_uik</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadSourceDataActivity.SayElectionDate"> 
+
+    <Parameter Name="TextFormat">Дата: {p0:ddMMyyyy}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0:ddMMyyyy}</Parameter> 
+
+    <Parameter Name="Sounds">election_date</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadSourceDataActivity.SayBulletinCount"> 
+
+    <Parameter Name="TextFormat">Бюллетеней: {p0}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">bulletin_count</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadSourceDataActivity.SayVotingStartTime"> 
+
+    <Parameter Name="TextFormat">Начало: {p0:hhmm}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0:hhmm}</Parameter> 
+
+    <Parameter Name="Sounds">voting_start_time</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadSourceDataActivity.SayVotingEndTime"> 
+
+    <Parameter Name="TextFormat">Окончание: {p0:hhmm}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0:hhmm}</Parameter> 
+
+    <Parameter Name="Sounds">voting_end_time</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadSourceDataActivity.SayBulletinNumber"> 
+
+    <Parameter Name="TextFormat">Бюллетень №{p0}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">bulletin_number</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadSourceDataActivity.SayStampCommittees"> 
+
+    <Parameter Name="TextFormat">Вышест.ком: {p*:delim[, ]}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p*}</Parameter> 
+
+    <Parameter Name="Sounds">stamp_committees</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadSourceDataActivity.SayMandateCount"> 
+
+    <Parameter Name="TextFormat">Мандатов: {p0}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">mandates</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadSourceDataActivity.SayCandidateCount"> 
+
+    <Parameter Name="TextFormat">Позиций: {p0}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+
+    <Parameter Name="Sounds">candidates</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadSourceDataActivity.SayDisabledCandidateNumbers"> 
+
+    <Parameter Name="TextFormat">Сняты: {p*:delim[, ]}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p*}</Parameter> 
+
+    <Parameter Name="Sounds">canceled_candidates</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadSourceDataActivity.SayNoneAboveExists"> 
+
+    <Parameter Name="TextFormat">Против всех ЕСТЬ</Parameter> 
+
+    <Parameter Name="Sounds">none_above_exists</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadSourceDataActivity.SayNoneAboveNotExists"> 
+
+    <Parameter Name="TextFormat">Против всех НЕТ</Parameter> 
+
+    <Parameter Name="Sounds">none_above_not_exists</Parameter> 
+
+  </ActivityParametersBinding> 
+
+</Workflow>
+
+

@@ -1,0 +1,309 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+  <Include Ref="Activities/SystemMenu/ResetSoft.wf" /> 
+
+  <Include Ref="Activities/SystemMenu/DateTimeSettings.wf" /> 
+
+  <Include Ref="Activities/SystemMenu/LimitSettings.wf" /> 
+
+  <Include Ref="Activities/SystemMenu/PaperSettings.wf" /> 
+
+  <Include Ref="Activities/SystemMenu/ShutDownDSS.wf" /> 
+
+  <Include Ref="Activities/SystemMenu/BadBulletinSettings.wf" /> 
+
+  <Include Ref="Activities/SystemMenu/StampSettings.wf" /> 
+
+  <Include Ref="Activities/SystemMenu/VolumeSettings.wf" /> 
+
+  <Include Ref="Activities/SystemMenu/ResetUIK.wf" /> 
+
+ 
+
+ 
+
+  <!--Системное меню--> 
+
+  <CompositeActivity Name="SystemMenuActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.SystemMenuActivity, Croc.Bpc.Workflow" 
+
+                     Tracking="false"> 
+
+ 
+
+ 
+
+    <!--запрашиваем пароль--> 
+
+    <ReferenceActivity Name="ReadPassword" Execute="Common.SayAndReadValue" 
+
+                       Parameters="Required=@@True;Silent=@@True;PasswordChar=*" 
+
+                       k:Yes="AcceptPassword" k:No="@@Return(Yes)"/> 
+
+	  <!--проверка пароля--> 
+
+	  <Activity Name="AcceptPassword" Execute="AcceptPassword"  
+
+              k:Yes="GoToResetSoft" k:No="SayBadPassword"/> 
+
+    <!--индикатор, что неверный пароль--> 
+
+    <ReferenceActivity Name="SayBadPassword" Execute="Common.SayAndWaitTimeout" 
+
+                       Parameters="Timeout=5000;Silent=@@True" 
+
+                       k:Yes="ReadPassword"/> 
+
+ 
+
+ 
+
+	  <!--Перейти к сбросу ПО?--> 
+
+	  <ReferenceActivity Name="GoToResetSoft" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Silent=@@True" 
+
+                       k:No="GoToResetUIK" k:Back="ExitSystemMenu"/> 
+
+    <!--Сброс ПО--> 
+
+    <ReferenceActivity Name="ResetSoft" Execute="ResetSoftActivity"/> 
+
+ 
+
+ 
+
+    <!--Перейти к сбросу УИК?--> 
+
+    <ReferenceActivity Name="GoToResetUIK" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Silent=@@True" 
+
+                       k:No="GoToDateTimeSettings" k:Back="GoToResetSoft"/> 
+
+    <!--Сброс УИК--> 
+
+    <ReferenceActivity Name="ResetUIK" Execute="ResetUIKActivity"/> 
+
+
+ 
+ 
+
+    <!--Перейти к изменению даты и времени?--> 
+
+	  <ReferenceActivity Name="GoToDateTimeSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Silent=@@True" 
+
+                       k:No="GoToLimitSettings" k:Back="GoToResetUIK"/> 
+
+    <!--изменение даты и времени--> 
+
+    <ReferenceActivity Name="DateTimeSettings" Execute="DateTimeSettingsActivity"/> 
+
+ 
+
+ 
+
+    <!--Перейти к установке порогов?--> 
+
+	  <ReferenceActivity Name="GoToLimitSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Silent=@@True" 
+
+                       k:No="GoToPaperSettings" k:Back="GoToDateTimeSettings"/> 
+
+    <!--установка порогов--> 
+
+    <ReferenceActivity Name="LimitSettings" Execute="LimitSettingsActivity"/> 
+
+ 
+
+ 
+
+    <!--Перейти к заданию плотности бумаги?--> 
+
+	  <ReferenceActivity Name="GoToPaperSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Silent=@@True" 
+
+                       k:No="GoToShutDownDDL" k:Back="GoToLimitSettings"/> 
+
+    <!--задание плотности бумаги--> 
+
+    <ReferenceActivity Name="PaperSettings" Execute="PaperSettingsActivity"/> 
+
+ 
+
+ 
+
+    <!--Перейти к отключению ДДЛ?--> 
+
+	  <ReferenceActivity Name="GoToShutDownDDL" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Silent=@@True" 
+
+                       k:No="GoToBadBulletinSettings" k:Back="GoToPaperSettings"/> 
+
+    <!--отключение ДДЛ--> 
+
+    <ReferenceActivity Name="ShutDownDSS" Execute="ShutDownDSSActivity"/> 
+
+ 
+
+ 
+
+    <!--Перейти к настройке реверса НУФ?--> 
+
+	  <ReferenceActivity Name="GoToBadBulletinSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Silent=@@True" 
+
+                       k:No="GoToStampSettings" k:Back="GoToShutDownDDL"/> 
+
+    <!--настройка реверса НУФ--> 
+
+    <ReferenceActivity Name="BadBulletinSettings" Execute="BadBulletinSettingsActivity"/> 
+
+ 
+
+ 
+
+    <!--Перейти к настройке контроля печати УИК?--> 
+
+    <ReferenceActivity Name="GoToStampSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Silent=@@True" 
+
+                       k:No="GoToVolumeSettings" k:Back="GoToBadBulletinSettings"/> 
+
+    <!--настройка контроля печати УИК--> 
+
+    <ReferenceActivity Name="StampSettings" Execute="StampSettingsActivity"/> 
+
+ 
+
+ 
+
+
+    <!--Перейти к изменению громкости?--> 
+
+	  <ReferenceActivity Name="GoToVolumeSettings" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Silent=@@True" 
+
+                       k:No="ExitSystemMenu" k:Back="GoToStampSettings"/> 
+
+    <!--изменение громкости--> 
+
+    <ReferenceActivity Name="VolumeSettings" Execute="VolumeSettingsActivity"/> 
+
+ 
+
+ 
+
+    <!--Выйти из меню?--> 
+
+	  <ReferenceActivity Name="ExitSystemMenu" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Silent=@@True" 
+
+                       k:No="GoToResetSoft" k:Back="GoToVolumeSettings" 
+
+                       k:Yes="@@Return(Yes)"/> 
+
+  </CompositeActivity> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="SystemMenuActivity.ReadPassword"> 
+
+    <Parameter Name="TextFormat">Пароль: ____</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToResetSoft"> 
+
+	  <Parameter Name="TextFormat">Перейти к сбросу ПО?</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToResetUIK"> 
+
+    <Parameter Name="TextFormat">Перейти к сбросу УИК?</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToDateTimeSettings"> 
+
+    <Parameter Name="TextFormat">Перейти к изменению даты и времени?</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToLimitSettings"> 
+
+    <Parameter Name="TextFormat">Перейти к установке порогов?</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToPaperSettings"> 
+
+    <Parameter Name="TextFormat">Перейти к заданию плотности бумаги?</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToShutDownDDL"> 
+
+    <Parameter Name="TextFormat">Перейти к отключению ДДЛ?</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToBadBulletinSettings"> 
+
+    <Parameter Name="TextFormat">Перейти к настройке реверса НУФ?</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToStampSettings"> 
+
+    <Parameter Name="TextFormat">Перейти к настройке контроля печати УИК?</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="SystemMenuActivity.GoToVolumeSettings"> 
+
+    <Parameter Name="TextFormat">Перейти к изменению громкости?</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="SystemMenuActivity.SayBadPassword"> 
+
+    <Parameter Name="TextFormat">Неправильный пароль!</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="SystemMenuActivity.ExitSystemMenu"> 
+
+
+    <Parameter Name="TextFormat">Выйти из меню?</Parameter> 
+
+  </ActivityParametersBinding> 
+
+</Workflow>
+
+

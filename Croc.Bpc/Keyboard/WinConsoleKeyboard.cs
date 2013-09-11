@@ -1,0 +1,63 @@
+using System; 
+
+using System.Threading; 
+
+ 
+
+ 
+
+namespace Croc.Bpc.Keyboard 
+
+{ 
+
+    /// <summary> 
+
+    /// ?????????? ??? ?????????? ?????????? Windows-??????????? 
+
+    /// </summary> 
+
+    public class WinConsoleKeyboard : BaseKeyboard 
+
+    { 
+
+        /// <summary> 
+
+        /// ????? ?????? ???????????? ?????? ????? ??????? 
+
+        /// </summary> 
+
+        protected override void WatcherMethod() 
+
+        { 
+
+            while (true) 
+
+            { 
+
+                var scanCode = (int)Console.ReadKey(true).Key; 
+
+                var timeStamp = (int)(DateTime.Now.Ticks / 10000); // 100 nano to millisec 
+
+ 
+
+ 
+
+                if (_disposed) 
+
+                    return; 
+
+ 
+
+ 
+
+                OnNewDataReady(scanCode, timeStamp); 
+
+            } 
+
+        } 
+
+    } 
+
+}
+
+

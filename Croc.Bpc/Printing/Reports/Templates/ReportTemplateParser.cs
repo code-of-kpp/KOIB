@@ -1,0 +1,1651 @@
+using System; 
+
+using System.Collections; 
+
+using System.Collections.Generic; 
+
+using System.Reflection; 
+
+using System.Text; 
+
+using System.Text.RegularExpressions; 
+
+using System.Xml.Serialization; 
+
+using Croc.Bpc.Common; 
+
+using Croc.Bpc.Election.Voting; 
+
+using Croc.Core; 
+
+using Croc.Core.Utils; 
+
+using Croc.Core.Utils.Text; 
+
+ 
+
+ 
+
+namespace Croc.Bpc.Printing.Reports.Templates 
+
+{ 
+
+    /// <summary> 
+
+    /// ??????????? ????????? 
+
+    /// </summary> 
+
+    public class ReportTemplateParser 
+
+    { 
+
+        /// <summary> 
+
+        /// ??????????????? ??? ????????? ????? 
+
+        /// </summary> 
+
+        public const string MACRO_CURRENT_ROW = "##Row##"; 
+
+ 
+
+ 
+
+        /// <summary> 
+
+        /// ??????? ????????? 
+
+        /// </summary> 
+
+        private Dictionary<string, object> parameters = new Dictionary<string, object>(); 
+
+ 
+
+ 
+
+        /// <summary> 
+
+        /// ?????????? ????????? 
+
+        /// </summary> 
+
+        /// <param name="name">???</param> 
+
+        /// <param name="value">????????</param> 
+
+        public void AddParameter(string name, object value) 
+
+        { 
+
+            parameters["@" + name] = value; 
+
+        } 
+
+ 
+
+ 
+
+        /// <summary> 
+
+        /// ????????? ???????? ??????? 
+
+        /// </summary> 
+
+        /// <param name="expression">???????, ???????? ???????</param> 
+
+        /// <param name="invert">??????? ???????? ???????</param> 
+
+        /// <returns>????????? ????????</returns> 
+
+
+        public bool Check(string expression, bool invert) 
+
+        { 
+
+            if(expression == null) 
+
+            { 
+
+                // ???? ????????? ?? ???????, ?? ??????? ??? ?????? 
+
+                return true; 
+
+            } 
+
+ 
+
+ 
+
+            object obj = getVariable(expression); 
+
+ 
+
+ 
+
+            if(obj == null) 
+
+            { 
+
+                return invert ? true : false; 
+
+            } 
+
+            if(obj is bool) 
+
+            { 
+
+                return invert ? !((bool)obj) : (bool)obj; 
+
+            } 
+
+            if(obj is IEnumerable) 
+
+            { 
+
+                // ??????? ??????? ??????, ???? ???? ???????? ? ????????? 
+
+                return invert ?  
+
+                    ! (obj as IEnumerable).GetEnumerator().MoveNext() : 
+
+                    (obj as IEnumerable).GetEnumerator().MoveNext(); 
+
+            } 
+
+ 
+
+ 
+
+            try  
+
+            { 
+
+                // ??????? ?????????????????? ??? int, ???? ?????? ????, ?? ??????? ??????? 
+
+                return invert ?  
+
+                    ! (Convert.ToInt32(obj) > 0) : 
+
+                    Convert.ToInt32(obj) > 0; 
+
+            } 
+
+            catch 
+
+            { 
+
+            } 
+
+ 
+
+ 
+
+            // ??? ??? ??? ????????? ?????????? ??? ?????? 
+
+            // ???? ? ?????? ?? ??????? ????? - ?????? ??????? ????? 
+
+            return invert ? 
+
+                ! (obj.ToString().Length > 0) : 
+
+                obj.ToString().Length > 0; 
+
+        } 
+
+ 
+
+ 
+
+        /// <summary> 
+
+
+        /// ?????????? ????????? ??? ?????? ?????????? {$(??? ??????????)} 
+
+        /// </summary> 
+
+        Regex reVariable = new Regex(@"\{\$([^}]*)\}", RegexOptions.IgnoreCase | RegexOptions.Singleline); 
+
+ 
+
+ 
+
+        /// <summary> 
+
+        /// ?????????? ????????? ??? ?????? ?????????? ? ??????? ??????? $(??? ??????????) 
+
+        /// </summary> 
+
+        Regex reFmtVariable = new Regex(@"\$([^;]*)", RegexOptions.IgnoreCase | RegexOptions.Singleline); 
+
+ 
+
+ 
+
+        /// <summary> 
+
+        /// ????????? ?????? - ?????????? ?????????? 
+
+        /// </summary> 
+
+        /// <param name="fmtLine">?????? ??????????????</param> 
+
+        /// <returns>??????</returns> 
+
+        /// <remarks> 
+
+        /// ?????? ?????????? 
+
+        /// {$(??? ??????????)&lt;(????????? ?????? ??? ?????? ????? ';')&gt;[|(??????)][|(????)]} 
+
+        /// (??????) - ??????????? ???? ? ??????? ???? ????? ToString(string) 
+
+        ///     ?????? ?????? ???????: 
+
+        ///         #u - ToUpper 
+
+        ///         #l - ToLower 
+
+        ///         #w - ????? ???????? 
+
+        /// (????) - ???????????? ?????? ??? ?????????? ???????, ??????? ????????? ???? ??????? 
+
+        ///  
+
+        /// ??????????? ?????????? 
+
+        /// @(??? ??????????) - ?????????? ????? 
+
+        /// @Current - ??????? ? ?????????, ??????? ? 1 (???????????? ?????? ????????? ? ??????????? ?????) 
+
+        /// </remarks> 
+
+        public string Format(string fmtLine) 
+
+        { 
+
+			fmtLine = fmtLine.Trim(); 
+
+ 
+
+ 
+
+			if (fmtLine != null) 
+
+            { 
+
+                Match mComponents = reVariable.Match(fmtLine); 
+
+ 
+
+ 
+
+                while (mComponents.Success) 
+
+                { 
+
+                    string[] components = mComponents.Groups[1].Value.Split('|'); 
+
+                    string replaceStr = String.Empty; 
+
+ 
+
+ 
+
+                    object obj = getVariable(components[0]); 
+
+ 
+
+ 
+
+                    // ??? ??????? ?? ??????: ?????? ???? ???????????? ???, ??? ???????? ? ???????? ? ???????? ????? 
+
+
+                    if (obj is IEnumerable && !(obj is string)) 
+
+                    { 
+
+                        StringBuilder list = new StringBuilder(); 
+
+                        foreach (object o in obj as IEnumerable) 
+
+                        { 
+
+                            if (0 < list.Length) list.Append(", "); 
+
+                            if (components.Length > 2) 
+
+                            { 
+
+                                // ??????? ???? ??????? ? ?????? 
+
+                                list.Append(FormatObject(getValue(new string[] { components[2] }, o, 0), components.Length > 1 ? components[1] : "")); 
+
+                            } 
+
+                            else 
+
+                            { 
+
+                                list.Append(FormatObject(o, components.Length > 1 ? components[1] : "")); 
+
+                            } 
+
+                        } 
+
+ 
+
+ 
+
+                        replaceStr = list.ToString(); 
+
+                    } 
+
+                    else 
+
+                    { 
+
+                        replaceStr = FormatObject(obj, components.Length > 1 ? components[1] : ""); 
+
+                    } 
+
+ 
+
+ 
+
+                    fmtLine = fmtLine.Replace(mComponents.Groups[0].Value, replaceStr); 
+
+ 
+
+ 
+
+                    mComponents = mComponents.NextMatch(); 
+
+                } 
+
+            } 
+
+ 
+
+ 
+
+            return fmtLine; 
+
+        } 
+
+ 
+
+ 
+
+        private string FormatObject(object o, string fmtString) 
+
+        { 
+
+            if (o.GetType().IsEnum) 
+
+            { 
+
+                foreach (object attribute in o.GetType().GetField(o.ToString()).GetCustomAttributes(true)) 
+
+                { 
+
+                    if (attribute is PresentationForReportAttribute) 
+
+                    { 
+
+                        return (attribute as PresentationForReportAttribute).DisplayName; 
+
+                    } 
+
+                } 
+
+ 
+
+
+ 
+                // TODO: ?? ??????????? ??????? #u #l 
+
+                return o.ToString(); 
+
+            } 
+
+            else 
+
+            { 
+
+                // TODO: ? ?????????? ???? ?? ??????????? ??????? #u #l 
+
+                if(o is bool) 
+
+                { 
+
+                    return (bool) o ? "??" : "???"; 
+
+                } 
+
+ 
+
+ 
+
+                string objectPresentation; 
+
+ 
+
+ 
+
+                if (fmtString.Length > 0) 
+
+                { 
+
+                    string[] fmtParts = fmtString.Split('#'); 
+
+ 
+
+ 
+
+                    if(fmtParts[0].Length > 0) 
+
+                    { 
+
+                        // ???? ???????????? ??????? ??? ToString 
+
+                        MethodInfo m = o.GetType().GetMethod("ToString", new Type[] {typeof (string)}); 
+
+ 
+
+ 
+
+                        if (m != null) 
+
+                        { 
+
+                            if (o is DateTime && PlatformDetector.IsUnix && fmtParts[0].Contains("MMMM")) 
+
+                            { 
+
+								// ???????? ????????????? ???????? ??????? (? ??????????? ?????) 
+
+								objectPresentation =  
+
+									((DateTime)o).ToString(fmtParts[0], new System.Globalization.CultureInfo("ru-RU")); 
+
+								objectPresentation = DataConvert(objectPresentation); 
+
+                            } 
+
+                            else  
+
+                            { 
+
+                                // ?????????? ?????????? ? ????????? ?????? 
+
+                                Match mComponents = reFmtVariable.Match(fmtParts[0]); 
+
+ 
+
+ 
+
+                                while (mComponents.Success) 
+
+                                { 
+
+                                    fmtParts[0] = fmtParts[0].Replace( 
+
+                                        mComponents.Groups[0].Value,  
+
+                                        getVariable(mComponents.Groups[1].Value).ToString()); 
+
+ 
+
+ 
+
+                                    mComponents = mComponents.NextMatch(); 
+
+
+                                } 
+
+ 
+
+ 
+
+                                // ???????? ????? ?????? 
+
+                                objectPresentation = m.Invoke(o, new object[] { fmtParts[0] }).ToString(); 
+
+                            } 
+
+                        } 
+
+                        else 
+
+                        { 
+
+                            objectPresentation = o.ToString(); 
+
+                        } 
+
+                    } 
+
+                    else 
+
+                    { 
+
+                        objectPresentation = o.ToString(); 
+
+                    } 
+
+ 
+
+ 
+
+                    if (fmtParts.Length > 1 && fmtParts[1].Length > 0) 
+
+                    { 
+
+                        // ?????? ?????? ?????????????? 
+
+                        switch (fmtParts[1][0]) 
+
+                        { 
+
+                            case 'u': 
+
+                                // ? ??????? ??????? 
+
+                                return objectPresentation.ToUpper(); 
+
+                            case 'l': 
+
+                                // ? ?????? ???????? 
+
+                                return objectPresentation.ToLower(); 
+
+                            case 'w': 
+
+                                // ????? ???????? 
+
+                                int value; 
+
+                                if (Int32.TryParse(objectPresentation, out value)) 
+
+                                { 
+
+                                    return CustomRusNumber.Str(value, true).Trim(); 
+
+                                } 
+
+                                break; 
+
+                        } 
+
+                    } 
+
+                } 
+
+                else 
+
+                { 
+
+                    objectPresentation = o.ToString(); 
+
+                } 
+
+ 
+
+ 
+
+                return objectPresentation; 
+
+            } 
+
+        } 
+
+ 
+
+
+ 
+		/// <summary> 
+
+		/// ????????? ???????????? ?? ???????????? ?????, ?????? ????? ?????? &lt;...&gt; ?? ??????????? 
+
+		///		?????? ?????????? Object.SomeMethod&lt;Param1.Prop1;Param2&gt;.SomeProp 
+
+		///		????? ????????? ?? 3 ????? Object /SomeMethod&lt;Param1.Prop1;Param2&gt; / SomeProp 
+
+		/// </summary> 
+
+		/// <param name="variableName">?????? ??? ??????????</param> 
+
+		/// <param name="splitter">?? ?????? ??????? ????????? ?? ?????</param> 
+
+		/// <returns>?????? ??????????? ????????</returns> 
+
+		private string[] GetVariableComponents(string variableName, char splitter) 
+
+		{ 
+
+			List<string> components = new List<string>(); 
+
+			do 
+
+			{ 
+
+				var ltIndex = variableName.IndexOf("<"); 
+
+				if (ltIndex == -1) 
+
+				{ 
+
+					components.AddRange(variableName.Trim().Split(splitter)); 
+
+					return components.ToArray(); 
+
+				} 
+
+ 
+
+ 
+
+				var tail = variableName.Substring(ltIndex); 
+
+				components.AddRange(variableName.Substring(0, ltIndex).Split(splitter)); 
+
+ 
+
+ 
+
+				int charCount = 0; 
+
+				int endIndex = 1; 
+
+				foreach (var ch in tail) 
+
+				{ 
+
+					if (ch == '>') 
+
+						charCount--; 
+
+					if (ch == '<') 
+
+						charCount++; 
+
+					if (charCount == 0) 
+
+						break; 
+
+ 
+
+ 
+
+					endIndex++; 
+
+				} 
+
+ 
+
+ 
+
+				components[components.Count - 1] += variableName.Substring(ltIndex, endIndex); 
+
+				variableName = tail.Substring(endIndex); 
+
+			} 
+
+			while (variableName.Length > 0); 
+
+ 
+
+ 
+
+			return components.ToArray(); 
+
+		} 
+
+
+ 
+ 
+
+        /// <summary> 
+
+        /// ???????? ????? ?????????? ?? ?? ????? 
+
+        /// </summary> 
+
+        /// <param name="variableName"></param> 
+
+        /// <returns></returns> 
+
+        public object getVariable(string variableName) 
+
+        { 
+
+			string[] components = GetVariableComponents(variableName, '.'); 
+
+ 
+
+ 
+
+            try 
+
+            { 
+
+                if (components[0][0] == '@') 
+
+                { 
+
+                    // ??? ??? ?????????? ????? 
+
+                    if(loopCollection.ContainsKey(components[0])) 
+
+                    { 
+
+                        return getValue(components, loopCollection[components[0]].enumerator.Current, 1); 
+
+                    } 
+
+                    // ??? ??????? ???????? 
+
+                    if(parameters.ContainsKey(components[0])) 
+
+                    { 
+
+                        return getValue(components, parameters[components[0]], 1); 
+
+                    } 
+
+                } 
+
+ 
+
+ 
+
+                switch (components[0]) 
+
+                { 
+
+                    case "CurrentRow": 
+
+                        // ??????? ?????? 
+
+                        return MACRO_CURRENT_ROW; 
+
+                    case "TAB": 
+
+                        // ????????? 
+
+                        return  "   "; 
+
+                    case "CRLF": 
+
+                        // ??????? ?????? 
+
+                        return Environment.NewLine; 
+
+                    case "CurrentDateTime": 
+
+                        // ??????? ???? ? ????? 
+
+                        return getValue(components, DateTime.Now, 1); 
+
+                    case "AppVersion": 
+
+                        // ?????? 
+
+                        return getValue(components, CoreApplication.Instance.ApplicationVersion, 1); 
+
+ 
+
+ 
+
+                    case "ElectionManager": 
+
+						// ???????? ??????? 
+
+
+                        return getValue(components, Managers.ElectionManager, 1); 
+
+                    case "ScannersInfo": 
+
+						// ?????? 
+
+                        return getValue(components, Managers.ScannersInfo, 1); 
+
+					case "VoteKey": 
+
+						return getValue(components, new VoteKey(), 1); 
+
+ 
+
+ 
+
+                    default: 
+
+						throw new ArgumentException("?? ??????? ?????????? " + components[0]); 
+
+                } 
+
+            } 
+
+            catch (ReportTemplateParserException pex) 
+
+            { 
+
+				throw new ArgumentException("?? ??????? ???????? ?????????? ?????? " + variableName, pex); 
+
+            } 
+
+        } 
+
+ 
+
+ 
+
+        private object getValue(string[] components, object obj, int index) 
+
+        { 
+
+			try 
+
+            { 
+
+                if (components.Length <= index) 
+
+                { 
+
+                    // ???? ????? ?? ??????? ???????, ?? ?????? ???? 
+
+                    return obj; 
+
+                } 
+
+ 
+
+ 
+
+				string parametersString = null; 
+
+				string memberName = components[index]; 
+
+ 
+
+ 
+
+				// ???? ? ??????????/?????? ??????????? ????????? ?????? 
+
+				if (components[index].Contains("<")) 
+
+				{ 
+
+					var ltIndex = components[index].IndexOf("<"); 
+
+					var gtIndex = components[index].LastIndexOf(">"); 
+
+					parametersString = components[index].Substring(ltIndex + 1, gtIndex - ltIndex - 1); 
+
+					// ??? ??????????? ???????? / ?????? 
+
+					memberName = components[index].Substring(0, ltIndex); 
+
+				} 
+
+ 
+
+ 
+
+				string[] memberParams = new string[0]; 
+
+ 
+
+ 
+
+				// ???? ???????? ????????? ? ??????????? ?????? 
+
+				if (!String.IsNullOrEmpty(parametersString)) 
+
+
+					memberParams = GetVariableComponents(parametersString, ';'); 
+
+ 
+
+ 
+
+				if (components[index] == "@Current") 
+
+                { 
+
+                    // ?????? ??????, ????????? ??????? ??????? ????????????? 
+
+                    if(index > 0 && loopCollection.ContainsKey(components[index - 1])) 
+
+                    { 
+
+                        return loopCollection[components[index - 1]].current; 
+
+                    } 
+
+                } 
+
+ 
+
+ 
+
+                foreach (MemberInfo member in obj.GetType().GetMembers()) 
+
+                { 
+
+                    switch(member.MemberType) 
+
+                    { 
+
+                        case MemberTypes.Field: 
+
+                        case MemberTypes.Property: 
+
+                            MemberInfo found = null; 
+
+ 
+
+ 
+
+							if (member.Name != memberName) 
+
+                            { 
+
+                                foreach (object attribute in member.GetCustomAttributes(true)) 
+
+                                { 
+
+                                    if (attribute is XmlAttributeAttribute) 
+
+                                    { 
+
+                                        if (((XmlAttributeAttribute)attribute).AttributeName == components[index]) 
+
+                                        { 
+
+                                            found = member; 
+
+                                        } 
+
+                                    } 
+
+                                    if (attribute is XmlArrayAttribute) 
+
+                                    { 
+
+                                        if (((XmlArrayAttribute)attribute).ElementName == components[index]) 
+
+                                        { 
+
+                                            found = member; 
+
+                                        } 
+
+                                    } 
+
+                                    if (attribute is XmlElementAttribute) 
+
+                                    { 
+
+                                        if (((XmlElementAttribute)attribute).ElementName == components[index]) 
+
+                                        { 
+
+                                            found = member; 
+
+                                        } 
+
+                                    } 
+
+                                } 
+
+                            } 
+
+                            else 
+
+
+                            { 
+
+                                found = member; 
+
+                            } 
+
+ 
+
+ 
+
+                            if (found != null) 
+
+                            { 
+
+                                object child; 
+
+                                if(member.MemberType == MemberTypes.Field) 
+
+                                { 
+
+                                    FieldInfo field = obj.GetType().GetField(member.Name); 
+
+                                    child = field.GetValue(obj); 
+
+                                } 
+
+                                else 
+
+                                { 
+
+                                    PropertyInfo prop = obj.GetType().GetProperty(member.Name); 
+
+                                    child = prop.GetValue(obj, null); 
+
+                                } 
+
+ 
+
+ 
+
+                                // ????? ???? 
+
+                                if (index != components.Length - 1) 
+
+                                { 
+
+                                    return getValue(components, child, index + 1); 
+
+                                } 
+
+                                else 
+
+                                { 
+
+                                    // ?????????? ????, ?????????? ??? ????? 
+
+                                    return child; 
+
+                                } 
+
+                            } 
+
+ 
+
+ 
+
+                            break; 
+
+                        case MemberTypes.Method: 
+
+							if (member.Name == memberName) 
+
+                            { 
+
+								try 
+
+								{ 
+
+									MethodInfo method = (MethodInfo)member; 
+
+									if (method.GetParameters().Length == memberParams.Length) 
+
+									{ 
+
+										object[] methodParams = GetMethodParameters(method.GetParameters(), memberParams); 
+
+ 
+
+ 
+
+										return getValue(components, method.Invoke(obj, methodParams), index + 1); 
+
+									} 
+
+								} 
+
+								// ??? ????? ???? ? ?? ??? ?????, ???, ??? ????????? ?????? 
+
+								catch 
+
+
+								{ 
+
+									continue; 
+
+								} 
+
+							} 
+
+                            break; 
+
+						case MemberTypes.Constructor: 
+
+							if (member.Name.TrimStart('.') == memberName) 
+
+							{ 
+
+								var ctor = (ConstructorInfo)member; 
+
+								if (ctor.GetParameters().Length == memberParams.Length) 
+
+								{ 
+
+									object[] ctorParams = GetMethodParameters(ctor.GetParameters(), memberParams); 
+
+ 
+
+ 
+
+									return getValue(components, ctor.Invoke(ctorParams), index + 1); 
+
+								} 
+
+							} 
+
+							break; 
+
+                    } 
+
+                } 
+
+ 
+
+ 
+
+                throw new ReportTemplateParserException(ReportTemplateParserException.ExceptionReason.NotFound, components[index], obj.GetType()); 
+
+            } 
+
+            catch(Exception ex) 
+
+            { 
+
+                throw new ReportTemplateParserException(ReportTemplateParserException.ExceptionReason.NotFound, components[index], obj.GetType(), ex); 
+
+            } 
+
+        } 
+
+ 
+
+ 
+
+		/// <summary> 
+
+		/// ???????? ?????????????? ???????? ????????? ?? ?????? 
+
+		/// </summary> 
+
+		/// <param name="methodParam">?????????? ?????????</param> 
+
+		/// <param name="value">????????? ???????? ?????????</param> 
+
+		/// <returns>?????????????? ???????? ?????????</returns> 
+
+		private object GetTypedValueFromString(ParameterInfo methodParam, string value) 
+
+		{ 
+
+			object paramValue; 
+
+ 
+
+ 
+
+			// ???? ??? ??????? 
+
+			if (methodParam.ParameterType.IsGenericType) 
+
+				// ??????????? ?????? Nullable 
+
+				if (methodParam.ParameterType.GetGenericTypeDefinition() == typeof(Nullable<>)) 
+
+				{ 
+
+					var genericArg = methodParam.ParameterType.GetGenericArguments()[0]; 
+
+					paramValue = genericArg.IsEnum 
+
+						? Enum.Parse(genericArg, value) : 
+
+
+						paramValue = Convert.ChangeType(value, genericArg); 
+
+				} 
+
+				else 
+
+					throw new NotImplementedException(); 
+
+			else 
+
+				paramValue = methodParam.ParameterType.IsEnum 
+
+					? Enum.Parse(methodParam.ParameterType, value) : 
+
+					paramValue = Convert.ChangeType(value, methodParam.ParameterType); 
+
+ 
+
+ 
+
+			return paramValue; 
+
+		} 
+
+ 
+
+ 
+
+		/// <summary> 
+
+		/// ???????? ?????????????? ???????? ?????????? ?? ??????? ????? 
+
+		/// </summary> 
+
+		/// <param name="methodParams">??????????? ?????????</param> 
+
+		/// <param name="values">???????? ??????????(string)</param> 
+
+		/// <returns></returns> 
+
+		private object[] GetMethodParameters(ParameterInfo[] methodParams, string[] values) 
+
+		{ 
+
+			// ???????? ?????????? 
+
+			object[] paramValues = new object[methodParams.Length]; 
+
+ 
+
+ 
+
+			int i = 0; 
+
+			// ??? ???? ?????????? 
+
+			foreach (var paramTypeInfo in methodParams) 
+
+			{ 
+
+				if (String.IsNullOrEmpty(values[i])) 
+
+				{ 
+
+					paramValues[i] = null; 
+
+					i++; 
+
+					continue; 
+
+				} 
+
+ 
+
+ 
+
+				// ???? ??? ?????????? 
+
+				if (values[i].StartsWith("$")) 
+
+				{ 
+
+					var value = getVariable(values[i].Substring(1)); 
+
+ 
+
+ 
+
+					// ???? ???????? ?? ???? ???? ????????? ???????? ? ??????? 
+
+					if (value.GetType() != paramTypeInfo.ParameterType) 
+
+						paramValues[i] = GetTypedValueFromString(paramTypeInfo, value.ToString()); 
+
+					else 
+
+						paramValues[i] = value; 
+
+ 
+
+
+ 
+					i++; 
+
+					continue; 
+
+				} 
+
+ 
+
+ 
+
+				// ??????? ???????? ?? string 
+
+				paramValues[i] = GetTypedValueFromString(paramTypeInfo, values[i]); 
+
+				i++; 
+
+			} 
+
+ 
+
+ 
+
+			return paramValues; 
+
+		} 
+
+ 
+
+ 
+
+        /// <summary> 
+
+        /// ?????? ????????????? 
+
+        /// </summary> 
+
+        private ArrayList emptyEnumerator = new ArrayList(); 
+
+ 
+
+ 
+
+        /// <summary> 
+
+        /// ????????? ????? 
+
+        /// </summary> 
+
+        private class LoopContext 
+
+        { 
+
+            /// <summary> 
+
+            /// ????????????? 
+
+            /// </summary> 
+
+            public IEnumerator enumerator; 
+
+            /// <summary> 
+
+            /// ??????? ??????? (??????? ? 1) 
+
+            /// </summary> 
+
+            public int current; 
+
+            /// <summary> 
+
+            /// ??????????? 
+
+            /// </summary> 
+
+            /// <param name="e">?????????????</param> 
+
+            public LoopContext(IEnumerator e)  
+
+            { 
+
+                enumerator = e; 
+
+                current = 1; 
+
+            } 
+
+        } 
+
+ 
+
+ 
+
+        /// <summary> 
+
+        /// ????? ?????????? ????? - ?????? (??????????) 
+
+        /// </summary> 
+
+
+        private Dictionary<string, LoopContext> loopCollection = new Dictionary<string, LoopContext>(); 
+
+ 
+
+ 
+
+        /// <summary> 
+
+        /// ??????? ??? ???? ????? 
+
+        /// </summary> 
+
+        public delegate void ForBody(); 
+
+ 
+
+ 
+
+        /// <summary> 
+
+        /// ????????? ???? 
+
+        /// </summary> 
+
+        /// <param name="variable">?????????? ?????</param> 
+
+        /// <param name="collection">?????????</param> 
+
+        /// <param name="forBody">???? ?????</param> 
+
+        public void RunFor(string variable, string collection, ForBody forBody) 
+
+        { 
+
+            // ?????? ?? ?????? 
+
+            if (collection != null && variable != null) 
+
+            { 
+
+                variable = "@" + variable.Trim(); 
+
+ 
+
+ 
+
+                LoopContext context = GetEnumerator(variable, collection.Trim()); 
+
+ 
+
+ 
+
+                if (context.enumerator != null) 
+
+                { 
+
+                    while (context.enumerator.MoveNext()) 
+
+                    { 
+
+                        forBody(); 
+
+                        context.current++; 
+
+                    } 
+
+ 
+
+ 
+
+                    loopCollection.Remove(variable); 
+
+                } 
+
+            } 
+
+        } 
+
+ 
+
+ 
+
+        /// <summary> 
+
+        /// ?????????? ????????????? 
+
+        /// </summary> 
+
+        /// <param name="variable">?????????? ?????</param> 
+
+        /// <param name="collection">?????????</param> 
+
+        /// <returns>?????????????</returns> 
+
+        private LoopContext GetEnumerator(string variable, string collection) 
+
+        { 
+
+            if (collection == null || variable == null) 
+
+
+            { 
+
+                // ?????? ?? ?????? 
+
+                return new LoopContext(emptyEnumerator.GetEnumerator()); 
+
+            } 
+
+ 
+
+ 
+
+            // ????????, ??? ?? ??? ????? ?????????? 
+
+            if(loopCollection.ContainsKey(variable)) 
+
+            { 
+
+                throw new ReportTemplateParserException(ReportTemplateParserException.ExceptionReason.AmbigiousFor, variable, typeof(string));  
+
+            } 
+
+ 
+
+ 
+
+            object obj = getVariable(collection.Trim()); 
+
+ 
+
+ 
+
+            // ?????? ??????, ????? ????? ??????? ???????????? ????? 
+
+            if (obj != null && obj is IEnumerable && !(obj is string)) 
+
+            { 
+
+                loopCollection[variable] = new LoopContext((obj as IEnumerable).GetEnumerator()); 
+
+ 
+
+ 
+
+                return loopCollection[variable]; 
+
+            } 
+
+ 
+
+ 
+
+            return new LoopContext(emptyEnumerator.GetEnumerator()); 
+
+        } 
+
+ 
+
+ 
+
+        /// <summary> 
+
+        /// ?? ???? ???????? ?????? ? ????? ???????? ?????????? ????? ? ?????? ????? 
+
+        /// </summary> 
+
+        /// <param name="sDataTime">????  ? ???? ??????</param> 
+
+        /// <returns>??????????????? ????</returns> 
+
+        public static string DataConvert(string sDataTime) 
+
+        { 
+
+            Hashtable hMounth = new Hashtable(); 
+
+            hMounth.Add("??????","??????"); 
+
+            hMounth.Add("???????","???????"); 
+
+            hMounth.Add("????","?????"); 
+
+            hMounth.Add("??????","??????"); 
+
+            hMounth.Add("???","???"); 
+
+            hMounth.Add("????","????"); 
+
+            hMounth.Add("????","????"); 
+
+            hMounth.Add("??????","???????"); 
+
+            hMounth.Add("????????","????????"); 
+
+            hMounth.Add("???????","???????"); 
+
+            hMounth.Add("??????","??????"); 
+
+            hMounth.Add("???????","???????");	 
+
+
+            IDictionaryEnumerator myEnumerator = hMounth.GetEnumerator(); 
+
+            while ( myEnumerator.MoveNext() ) 
+
+            { 
+
+                int index; 
+
+                index = sDataTime.ToLower().IndexOf((string)myEnumerator.Key); 
+
+                if(index >=0) 
+
+                { 
+
+                    while(index != sDataTime.Length && sDataTime[index] != ' ') 
+
+                    { 
+
+                        sDataTime = sDataTime.Remove(index,1); 
+
+                    } 
+
+                    sDataTime = sDataTime.Insert(index,(string)myEnumerator.Value); 
+
+                    break; 
+
+                } 
+
+            } 
+
+            return sDataTime; 
+
+        } 
+
+    } 
+
+}
+
+

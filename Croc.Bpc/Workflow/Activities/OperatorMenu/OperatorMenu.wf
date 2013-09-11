@@ -1,0 +1,120 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+  <Include Ref="Activities/OperatorMenu/ViewVersion.wf" /> 
+
+  <Include Ref="Activities/OperatorMenu/ViewDate.wf" /> 
+
+ 
+
+ 
+
+  <!--Меню оператора--> 
+
+  <CompositeActivity Name="OperatorMenuActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.OperatorMenu.OperatorMenuActivity, Croc.Bpc.Workflow" 
+
+                     Tracking="false"> 
+
+ 
+
+ 
+
+    <!--индикатор, Меню оператора--> 
+
+    <ReferenceActivity Name="SayOperatorMenu" Execute="Common.SayAndWaitTimeout" 
+
+                       Parameters="Timeout=3000;Silent=@@True" 
+
+                       k:Yes="GoToViewVersion"/> 
+
+ 
+
+ 
+
+    <!--перейти к просмотру версии ПО?--> 
+
+    <ReferenceActivity Name="GoToViewVersion" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Silent=@@True" 
+
+                       k:No="GoToViewDate" k:Back="ExitSystemMenu"/> 
+
+    <!--просмотр версии ПО--> 
+
+    <ReferenceActivity Name="ViewVersion" Execute="ViewVersionActivity"/> 
+
+ 
+
+ 
+
+    <!--Перейти к просмотру даты?--> 
+
+	  <ReferenceActivity Name="GoToViewDate" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Silent=@@True" 
+
+                       k:No="ExitSystemMenu" k:Back="GoToViewVersion"/> 
+
+    <!--просмотр даты--> 
+
+    <ReferenceActivity Name="ViewDate" Execute="ViewDateActivity"/> 
+
+ 
+
+ 
+
+    <!--Выйти из меню?--> 
+
+	  <ReferenceActivity Name="ExitSystemMenu" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Silent=@@True" 
+
+                       k:No="GoToViewVersion" k:Back="GoToViewDate" 
+
+                       k:Yes="@@Return(Yes)"/> 
+
+  </CompositeActivity> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="OperatorMenuActivity.SayOperatorMenu"> 
+
+    <Parameter Name="TextFormat">Меню оператора</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="OperatorMenuActivity.GoToViewVersion"> 
+
+
+    <Parameter Name="TextFormat">Перейти к просмотру версии ПО?</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="OperatorMenuActivity.GoToViewDate"> 
+
+    <Parameter Name="TextFormat">Перейти к просмотру даты?</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="OperatorMenuActivity.ExitSystemMenu"> 
+
+    <Parameter Name="TextFormat">Выйти из меню?</Parameter> 
+
+  </ActivityParametersBinding> 
+
+</Workflow>
+
+

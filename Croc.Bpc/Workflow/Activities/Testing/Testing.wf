@@ -1,0 +1,467 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys" 
+
+  xmlns:vt="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/VotingTime" 
+
+  xmlns:rr="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/RecognitionResult"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+ 
+
+ 
+
+  <!--Режим тестирования--> 
+
+  <CompositeActivity Name="TestingActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.Testing.TestingActivity, Croc.Bpc.Workflow" 
+
+                     Tracking="false"> 
+
+ 
+
+ 
+
+    <!--установим режим голосования = Тестирование--> 
+
+    <Activity Name="SetVotingModeToTest" Execute="SetVotingModeToTest"/> 
+
+ 
+
+ 
+
+    <!--включаем сканирование и зеленую лампочку--> 
+
+    <Activity Name="StartScanning" Execute="StartScanning"/> 
+
+ 
+
+ 
+
+    <!--говорим начальную фразу--> 
+
+    <ReferenceActivity Name="SayTestingStarted" Execute="Common.SayPhrase"/> 
+
+ 
+
+ 
+
+    <!--проверяем дату голосования--> 
+
+    <Activity Name="CheckVotingDate" Execute="CheckVotingDate" 
+
+              vt:ElectionDayHasNotCome="SayWereSomeDaysToVotingStart" 
+
+              vt:ElectionDayPassed="SayElectionDayPassed" 
+
+              vt:ElectionDayNow="CheckVotingTime"/> 
+
+ 
+
+ 
+
+    <!--говорим сколько осталось дней до начала голосования--> 
+
+    <ReferenceActivity Name="SayWereSomeDaysToVotingStart" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@DaysToVotingStart" 
+
+                       k:Yes="SetIndicatorReceivedBulletinsCount"/> 
+
+ 
+
+ 
+
+    <!--говорим, что день голосования уже прошел--> 
+
+    <ReferenceActivity Name="SayElectionDayPassed" Execute="Common.SayPhrase" 
+
+                       k:Yes="SetIndicatorReceivedBulletinsCount"/> 
+
+ 
+
+ 
+
+    <!--проверяем время голосования--> 
+
+    <Activity Name="CheckVotingTime" Execute="CheckVotingTime" 
+
+              vt:SomeTimeToVotingStart="SayWereSomeTimeToVotingStart" 
+
+              vt:VotingTimeNow="SayBeginVoting" 
+
+
+              vt:NotVotingTime="SetIndicatorReceivedBulletinsCount"/> 
+
+ 
+
+ 
+
+    <!--говорим сколько осталось времени до начала голосования--> 
+
+    <ReferenceActivity Name="SayWereSomeTimeToVotingStart" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@TimeToVotingStart" 
+
+                       k:Yes="SetIndicatorReceivedBulletinsCount"/> 
+
+ 
+
+ 
+
+    <!--говорим, что пора начать голосование--> 
+
+    <ReferenceActivity Name="SayBeginVoting" Execute="Common.SayPhrase" 
+
+                       k:Yes="SetIndicatorReceivedBulletinsCount"/> 
+
+ 
+
+ 
+
+    <!--выведем на индикатор "Принято: <Кол-во принятых бюллетеней>"--> 
+
+    <ReferenceActivity Name="SetIndicatorReceivedBulletinsCount" Execute="Common.SetIndicator" 
+
+                       Parameters="Parameters=@ReceivedBulletinsCount"/> 
+
+ 
+
+ 
+
+    <!--говорим, чтобы опускали тестовые бюллетени, и ждем нажатия НЕТ для выхода--> 
+
+    <ReferenceActivity Name="SayDropTestingBulletins" Execute="Common.SayAndWaitNo" 
+
+                       k:No="StopScanning"/> 
+
+ 
+
+ 
+
+    <!--выключаем сканирование и зеленую лампочку--> 
+
+    <Activity Name="StopScanning" Execute="StopScanning"/> 
+
+ 
+
+ 
+
+    <!--говорим: хотите закончить тестирование?--> 
+
+    <ReferenceActivity Name="SayWantToFinishTest" Execute="Common.SayAndWaitYesOrNo" 
+
+                       k:Yes="@@Return(Yes)" k:No="StartScanning"/> 
+
+ 
+
+ 
+
+    <!--Обработка листа==============================================================================================--> 
+
+ 
+
+ 
+
+    <!--ждем завершения обработки бюллетеня, выводим на индикатор ждите--> 
+
+    <ReferenceActivity Name="WaitSheetProcessed" Execute="Common.WaitEvents" Priority="3" 
+
+                       Parameters="WaitedEvents=@SheetProcessed"/> 
+
+ 
+
+ 
+
+    <!--анализируем результат распознавания бюллетеня--> 
+
+    <Activity Name="CheckRecognitionResult" Execute="CheckRecognitionResult" Priority="3" 
+
+              rr:BadBulletin="SayBadBulletin" 
+
+              rr:NoMarksBulletin="SayNoMarksBulletin" 
+
+              rr:TooManyMarksBulletin="SayTooManyMarksBulletin_PrepareParams" 
+
+              rr:ValidBulletin="SayValidBulletin_PrepareParams" 
+
+              rr:BulletinReversed="SayBulletinReversed" 
+
+              rr:BulletinReceivingForbidden="SayConfirmBulletinReceivingInTestMode" 
+
+              rr:Error="CheckVotingTime"/> 
+
+
+ 
+ 
+
+    <!--говорим, что НУФ и называем причину НУФа--> 
+
+    <ReferenceActivity Name="SayBadBulletin" Execute="Common.SayPhrase" Priority="3" 
+
+                       Parameters="Sounds=@BadBulletinReasonSounds;Parameters=@BadBulletinReasonText" 
+
+                       k:Yes="SayReceivedBulletinsCount"/> 
+
+ 
+
+ 
+
+    <!--говорим, что нет отметок--> 
+
+    <ReferenceActivity Name="SayNoMarksBulletin" Execute="Common.SayPhrase" Priority="3" 
+
+                       k:Yes="SayStampNumber"/> 
+
+ 
+
+ 
+
+    <!--говорим, что превышение отметок и перечисляем отмеченные позиции--> 
+
+    <Activity Name="SayTooManyMarksBulletin_PrepareParams" Execute="PrepareParamsForSaySelectedMarks" Priority="3"/> 
+
+    <ReferenceActivity Name="SayTooManyMarksBulletin" Execute="Common.SayPhrase" Priority="3" 
+
+                       Parameters="TextFormat=@PhraseTextFormat;PhraseFormat=@PhraseFormat;Sounds=@PhraseSounds;Parameters=@PhraseParams" 
+
+                       k:Yes="SayStampNumber"/> 
+
+ 
+
+ 
+
+    <!--говорим, что действительный бюллетень и перечисляем отмеченные позиции--> 
+
+    <Activity Name="SayValidBulletin_PrepareParams" Execute="PrepareParamsForSaySelectedMarks" Priority="3"/> 
+
+    <ReferenceActivity Name="SayValidBulletin" Execute="Common.SayPhrase" Priority="3" 
+
+                       Parameters="TextFormat=@PhraseTextFormat;PhraseFormat=@PhraseFormat;Sounds=@PhraseSounds;Parameters=@PhraseParams" 
+
+                       k:Yes="SayStampNumber"/> 
+
+ 
+
+ 
+
+    <!--говорим причину реверса--> 
+
+    <ReferenceActivity Name="SayBulletinReversed" Execute="Common.SayPhrase" Priority="3" 
+
+                       Parameters="TextFormat=@ReverseReasonText;Sounds=@ReverseReasonSound" 
+
+                       k:Yes="CheckVotingTime"/> 
+
+ 
+
+ 
+
+    <!--говорим, чтобы нажали ДА для подтверждения принятия бюллетеня в режиме тестирования--> 
+
+    <ReferenceActivity Name="SayConfirmBulletinReceivingInTestMode" Execute="Common.SayAndWaitYesOrNo" Priority="3" 
+
+                       k:Yes="ConfirmBulletinReceiving" k:No="CheckVotingTime"/> 
+
+    <!--подтвердить принятие бюллетеня--> 
+
+    <Activity Name="ConfirmBulletinReceiving" Execute="ConfirmBulletinReceiving" Priority="3" 
+
+              k:Yes="CheckVotingTime"/> 
+
+ 
+
+ 
+
+    <!--говорим номер печати на бюллетене--> 
+
+    <ReferenceActivity Name="SayStampNumber" Execute="Common.SayPhrase" Priority="3" 
+
+                       Parameters="Parameters=@StampNumber"/> 
+
+ 
+
+ 
+
+    <!--говорим кол-во принятых тестовых бюллетеней--> 
+
+    <ReferenceActivity Name="SayReceivedBulletinsCount" Execute="Common.SayPhrase" Priority="3" 
+
+                       Parameters="Parameters=@ReceivedBulletinsCount" 
+
+                       k:Yes="CheckVotingTime"/> 
+
+
+ 
+ 
+
+  </CompositeActivity> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SayTestingStarted"> 
+
+    <Parameter Name="TextFormat">Тестирование! Проверьте распознавание. Время {p0:hhmm}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{s1}{p0:hhmm}</Parameter> 
+
+    <Parameter Name="Sounds">[testing_started,local_time]</Parameter> 
+
+    <Parameter Name="Parameters">@Common.LocalDateTimeNow</Parameter> 
+
+    <Parameter Name="SilentOnSlave">true</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SayWereSomeDaysToVotingStart"> 
+
+    <Parameter Name="TextFormat">{p0:d} до голосования</Parameter> 
+
+    <Parameter Name="PhraseFormat">{p0:d}{s0}</Parameter> 
+
+    <Parameter Name="Sounds">to_voting_start_remains</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SayElectionDayPassed"> 
+
+    <Parameter Name="TextFormat">День выборов уже прошел!</Parameter> 
+
+    <Parameter Name="Sounds">voting_day_passed</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SayWereSomeTimeToVotingStart"> 
+
+    <Parameter Name="TextFormat">{p0:hhmm} до голосования</Parameter> 
+
+    <Parameter Name="PhraseFormat">{p0:hhmm}{s0}</Parameter> 
+
+    <Parameter Name="Sounds">to_voting_start_remains</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SayBeginVoting"> 
+
+    <Parameter Name="TextFormat">Пора голосовать!</Parameter> 
+
+    <Parameter Name="Sounds">begin_voting</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SetIndicatorReceivedBulletinsCount"> 
+
+    <Parameter Name="TextFormat">Тест: {p0}</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SayDropTestingBulletins"> 
+
+    <Parameter Name="Sounds">drop_testing_bulletins</Parameter> 
+
+    <!--5 минут--> 
+
+    <Parameter Name="RepeatTimeout">0:5</Parameter> 
+
+    <Parameter Name="IgnoreButtonsOnSlave">true</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SayWantToFinishTest"> 
+
+    <Parameter Name="TextFormat">Завершить тест?</Parameter> 
+
+    <Parameter Name="Sounds">finish_test</Parameter> 
+
+  </ActivityParametersBinding> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.WaitSheetProcessed"> 
+
+    <Parameter Name="TextFormat">ЖДИТЕ!</Parameter> 
+
+  </ActivityParametersBinding> 
+
+ 
+
+ 
+
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SayBadBulletin"> 
+
+    <Parameter Name="TextFormat">{p0}</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SayNoMarksBulletin"> 
+
+    <Parameter Name="TextFormat">Недействительный. Нет отметок</Parameter> 
+
+    <Parameter Name="Sounds">blanktype_nomarks</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SayTooManyMarksBulletin_PrepareParams"> 
+
+    <Parameter Name="Text">Недействительный. Превышение отметок. Отметки: </Parameter> 
+
+    <Parameter Name="Sound">blanktype_toomanymarks</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SayValidBulletin_PrepareParams"> 
+
+    <Parameter Name="Text">Действительный. Отметки: </Parameter> 
+
+    <Parameter Name="Sound">blanktype_valid</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SayConfirmBulletinReceivingInTestMode"> 
+
+    <Parameter Name="TextFormat">Подтверждаете ввод?</Parameter> 
+
+    <Parameter Name="Sounds">confirm_bulletin_receiving_in_test_mode</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SayStampNumber"> 
+
+    <Parameter Name="TextFormat">Печать: {p0}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">stamp_number</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="TestingActivity.SayReceivedBulletinsCount"> 
+
+    <Parameter Name="TextFormat">Тест: {p0}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">received_test_bulletin</Parameter> 
+
+  </ActivityParametersBinding> 
+
+ 
+
+ 
+
+</Workflow>
+
+

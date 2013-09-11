@@ -1,0 +1,230 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+  <Include Ref="Activities/Printing.wf" /> 
+
+  <Include Ref="Activities/Summarizing/SaveVotingResults.wf" /> 
+
+  <Include Ref="Activities/Summarizing/ReadVotingReport.wf" /> 
+
+  <Include Ref="Activities/Summarizing/EnterAdditionalInfo.wf" /> 
+
+ 
+
+  <!--подведение итогов голосования--> 
+
+  <CompositeActivity Name="SummarizingActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.Summarizing.SummarizingActivity, Croc.Bpc.Workflow" 
+
+                     Tracking="false"> 
+
+ 
+
+    <!--сформируем протокол с предварительными результатами голосования по всем выборам--> 
+
+    <Activity Name="GeneratePreliminaryVotingResultProtocol" 
+
+Execute="GeneratePreliminaryVotingResultProtocol"/> 
+
+ 
+
+    <!--проверим, является ли данный сканер Главным--> 
+
+    <ReferenceActivity Name="IsMasterScanner" Execute="Common.IsMasterScanner" 
+
+                       k:Yes="SavePreliminaryVotingResults" k:No="MoveFirstElection"/> 
+
+ 
+
+    <!--сохраним результаты голосования--> 
+
+    <ReferenceActivity Name="SavePreliminaryVotingResults" Execute="SaveVotingResultsActivity"/> 
+
+     
+
+    <!--сбросим счетчик выборов--> 
+
+    <Activity Name="ResetElectionEnumerator" Execute="ResetElectionEnumerator"/> 
+
+     
+
+
+    <!--перебираем выборы для печати--> 
+
+    <Activity Name="MoveNextElectionForPrinting" Execute="MoveNextElection" 
+
+              k:Yes="PrintPreliminaryElectionProtocol" k:No="PrintMoreCopies"/> 
+
+ 
+
+    <!--печатаем предварительный протокол голосования по выборам--> 
+
+    <ReferenceActivity Name="PrintPreliminaryElectionProtocol" Execute="PrintingActivity" 
+
+                       
+
+Parameters="ReportType=PreliminaryElectionProtocol;ReportParameters=@PreliminaryElectionProtoco
+
+lParameters;ImplicitPrint=@@True;NeedPrintCopies=@@False" 
+
+                       k:Yes="MoveNextElectionForPrinting" k:No="MoveNextElectionForPrinting"/> 
+
+ 
+
+    <!--говорим: распечатать дополнительные копии протокола?--> 
+
+    <ReferenceActivity Name="PrintMoreCopies" Execute="Common.SayAndWaitYesOrNo" 
+
+                       Parameters="Parameters=@CurrentElectionNumber" 
+
+                       k:Yes="ResetElectionEnumerator" k:No="MoveFirstElection"/> 
+
+     
+
+    <!--
+
+=====================================================================================
+
+========================--> 
+
+    <!--сбросим счетчик выборов на 0--> 
+
+    <Activity Name="MoveFirstElection" Execute="ResetElectionEnumerator"/> 
+
+ 
+
+    <!--перебираем выборы--> 
+
+    <Activity Name="MoveNextElection" Execute="MoveNextElection" 
+
+              k:Yes="IsMasterScanner2" k:No="@@Return(Yes)"/> 
+
+     
+
+    <!--проверим, является ли данный сканер Главным--> 
+
+    <ReferenceActivity Name="IsMasterScanner2" Execute="Common.IsMasterScanner" 
+
+                       k:Yes="SayReadVotingReport" k:No="WaitForAddInfoEnteredOnMaster"/> 
+
+ 
+
+
+    <!--
+
+=====================================================================================
+
+========================--> 
+
+    <!--На главном сканере--> 
+
+ 
+
+    <!--говорим: зачитать протокол голосования по выборам?--> 
+
+    <ReferenceActivity Name="SayReadVotingReport" Execute="Common.SayAndWaitYesOrNo" 
+
+                       Parameters="Parameters=@CurrentElectionNumber" 
+
+                       k:Yes="ReadVotingReport" k:No="EnterAdditionalInfo"/> 
+
+ 
+
+    <!--зачитываем протокол голосования по выборам--> 
+
+    <ReferenceActivity Name="ReadVotingReport" Execute="ReadVotingReportActivity" 
+
+                       Parameters="ElectionIndex=@CurrentElectionIndex"/> 
+
+     
+
+    <!--ввод доп. сведений по текущим выборам--> 
+
+    <ReferenceActivity Name="EnterAdditionalInfo" Execute="EnterAdditionalInfoActivity" 
+
+                       Parameters="ElectionIndex=@CurrentElectionIndex"/> 
+
+ 
+
+    <!--известим подчиненный о завершении ввода доп. сведений и  
+
+        сформируем протокол с результатами голосования--> 
+
+    <Activity Name="NoticeSlaveAboutAddInfoEnteredAndGenerateVotingResultProtocol"  
+
+              Execute="NoticeSlaveAboutAddInfoEnteredAndGenerateVotingResultProtocol"/> 
+
+ 
+
+    <!--сохраним результаты голосования--> 
+
+    <ReferenceActivity Name="SaveVotingResults" Execute="SaveVotingResultsActivity" 
+
+                       k:Yes="MoveNextElection"/> 
+
+     
+
+    <!--
+
+=====================================================================================
+
+========================--> 
+
+
+    <!--На подчиненном сканере--> 
+
+ 
+
+    <!--ждем завершения ввода доп. сведений по текущим выборам на главном сканере 
+
+        возвращает No, если во время ожидания главный сканер был потерян--> 
+
+    <Activity Name="WaitForAddInfoEnteredOnMaster" Execute="WaitForAddInfoEnteredOnMaster" 
+
+              k:Yes="GenerateVotingResultProtocol" k:No="@@Return(Yes)"/> 
+
+     
+
+    <!--сформируем протокол с результатами голосования--> 
+
+    <Activity Name="GenerateVotingResultProtocol" Execute="GenerateVotingResultProtocol" 
+
+              k:Yes="MoveNextElection"/> 
+
+ 
+
+  </CompositeActivity> 
+
+ 
+
+  <ActivityParametersBinding ActivityName="SummarizingActivity.SayReadVotingReport"> 
+
+    <Parameter Name="TextFormat">Зачитать протокол по выборам {p0}?</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">read_voting_report</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="SummarizingActivity.PrintMoreCopies"> 
+
+    <Parameter Name="TextFormat">Распечатать дополнительные копии протокола?</Parameter> 
+
+    <Parameter Name="Sounds">print_additional_copies_of_protocol</Parameter> 
+
+  </ActivityParametersBinding> 
+
+   
+
+</Workflow> 
+
+

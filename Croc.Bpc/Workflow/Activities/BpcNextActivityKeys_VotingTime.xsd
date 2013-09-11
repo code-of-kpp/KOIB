@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?> 
+
+<xs:schema xmlns="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/VotingTime"  
+
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"  
+
+           targetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/VotingTime"  
+
+           elementFormDefault="qualified"  
+
+           attributeFormDefault="unqualified"  
+
+           id="BpcNextActivityKeys_VotingTime"> 
+
+	<xs:attribute name="ElectionDayHasNotCome"> 
+
+		<xs:annotation> 
+
+			<xs:documentation>День голосования еще не наступил</xs:documentation> 
+
+		</xs:annotation> 
+
+	</xs:attribute> 
+
+	<xs:attribute name="ElectionDayNow"> 
+
+		<xs:annotation> 
+
+			<xs:documentation>Сейчас день голосования</xs:documentation> 
+
+		</xs:annotation> 
+
+	</xs:attribute> 
+
+  <xs:attribute name="ElectionDayPassed"> 
+
+    <xs:annotation> 
+
+      <xs:documentation>День голосования уже прошел</xs:documentation> 
+
+    </xs:annotation> 
+
+  </xs:attribute> 
+
+  <xs:attribute name="VotingTimeNow"> 
+
+    <xs:annotation> 
+
+      <xs:documentation>Сейчас время голосования</xs:documentation> 
+
+    </xs:annotation> 
+
+  </xs:attribute> 
+
+  <xs:attribute name="SomeTimeToVotingStart"> 
+
+    <xs:annotation> 
+
+      <xs:documentation>До начала голосования осталось несколько часов и/или минут</xs:documentation> 
+
+    </xs:annotation> 
+
+  </xs:attribute> 
+
+  <xs:attribute name="NotVotingTime"> 
+
+		<xs:annotation> 
+
+			<xs:documentation>Сейчас не день голосования или время голосования уже прошло</xs:documentation> 
+
+		</xs:annotation> 
+
+	</xs:attribute>	 
+
+</xs:schema>
+
+

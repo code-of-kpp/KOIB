@@ -1,0 +1,244 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys" 
+
+  xmlns:kc="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/Cancelation"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+  <Include Ref="Activities/Cancelation/SayCanceledCandidatesInElection.wf" /> 
+
+ 
+
+ 
+
+  <!--Снятие кандидатов (позиций) для определенных выборов--> 
+
+  <CompositeActivity Name="CancelCandidatesActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.Cancelation.CancelCandidatesActivity, Croc.Bpc.Workflow"> 
+
+ 
+
+ 
+
+    <!--перебираем кандидатов--> 
+
+    <Activity Name="MoveNextCandidate" Execute="MoveNextCandidate" 
+
+              k:Yes="CheckCandidateStatus" k:No="SayCanceledCandidatesInElection"/> 
+
+ 
+
+ 
+
+    <!--говорим, какие кандидаты сняты в данных выборах--> 
+
+    <ReferenceActivity Name="SayCanceledCandidatesInElection" Execute="SayCanceledCandidatesInElectionActivity" 
+
+                       Parameters="ElectionIndex=@ElectionIndex" 
+
+                       k:Yes="@@Return(Yes)"/> 
+
+ 
+
+ 
+
+    <!--проверяем статус кандидата--> 
+
+    <Activity Name="CheckCandidateStatus" Execute="CheckCandidateStatus" 
+
+              kc:NotCanceled="IsNoneAboveCandidate" 
+
+              kc:CanceledLocally="SayWantToRestoreCandidate" 
+
+              kc:CanceledInSD="SayCandidateCanceledInSD"/> 
+
+ 
+
+ 
+
+    <!--снятие кандидата--> 
+
+ 
+
+ 
+
+    <!--проверим, является ли текущий кандидат позицией "Против всех"--> 
+
+    <Activity Name="IsNoneAboveCandidate" Execute="IsNoneAboveCandidate" 
+
+              k:Yes="MoveNextCandidate" k:No="SayWantToCancelCandidate"/> 
+
+ 
+
+ 
+
+    <!--говорим, желаете снять кандидата--> 
+
+    <ReferenceActivity Name="SayWantToCancelCandidate" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Parameters=@CurrentCandidateNumber" 
+
+                       k:Yes="NotCanceledCandidatesMoreThenMinRequired" k:No="MoveNextCandidate" k:Back="MovePreviousCandidate"/> 
+
+ 
+
+ 
+
+    <!--проверим, что кол-во еще не снятых позиций больше минимально необходимого кол-ва--> 
+
+    <Activity Name="NotCanceledCandidatesMoreThenMinRequired" Execute="NotCanceledCandidatesMoreThenMinRequired" 
+
+              k:Yes="CancelCandidate" k:No="SayCandidateCannotBeCanceled"/> 
+
+
+ 
+ 
+
+    <Activity Name="CancelCandidate" Execute="CancelCandidate"/> 
+
+    <ReferenceActivity Name="SayCandidateCanceled" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@CurrentCandidateNumber" 
+
+                       k:Yes="MoveNextCandidate"/> 
+
+ 
+
+ 
+
+    <!--говорим, что позиция не может быть снята--> 
+
+    <ReferenceActivity Name="SayCandidateCannotBeCanceled" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@MinRequiredNotCanceledCandidates" 
+
+                       k:Yes="MoveNextCandidate"/> 
+
+ 
+
+ 
+
+    <!--восстановление кандидата--> 
+
+    <ReferenceActivity Name="SayWantToRestoreCandidate" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Parameters=@CurrentCandidateNumber" 
+
+                       k:Yes="RestoreCandidate" k:No="MoveNextCandidate" k:Back="MovePreviousCandidate"/> 
+
+ 
+
+ 
+
+    <Activity Name="RestoreCandidate" Execute="RestoreCandidate"/> 
+
+    <ReferenceActivity Name="SayCandidateRestored" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@CurrentCandidateNumber" 
+
+                       k:Yes="MoveNextCandidate"/> 
+
+ 
+
+ 
+
+    <!--кандидат снят в ИД--> 
+
+    <ReferenceActivity Name="SayCandidateCanceledInSD" Execute="Common.SayPhrase"  
+
+                       Parameters="Parameters=@CurrentCandidateNumber" 
+
+                       k:Yes="MoveNextCandidate"/> 
+
+ 
+
+ 
+
+    <!--переход к предыдущему кандидату--> 
+
+    <Activity Name="MovePreviousCandidate" Execute="MovePreviousCandidate"  
+
+              k:Yes="MoveNextCandidate"/> 
+
+ 
+
+ 
+
+  </CompositeActivity> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="CancelCandidatesActivity.SayCandidateCannotBeCanceled"> 
+
+    <Parameter Name="TextFormat">Нельзя снять. Мин. кол-во {p0}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">position_cannot_be_canceled</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="CancelCandidatesActivity.SayWantToCancelCandidate"> 
+
+    <Parameter Name="TextFormat">Снять {p0}?</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">want_to_cancel_candidate</Parameter> 
+
+  </ActivityParametersBinding>   
+
+
+  <ActivityParametersBinding ActivityName="CancelCandidatesActivity.SayCandidateCanceled"> 
+
+    <Parameter Name="TextFormat">{p0} снята</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}{s1}</Parameter> 
+
+    <Parameter Name="Sounds">[position_number,canceled]</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="CancelCandidatesActivity.SayWantToRestoreCandidate"> 
+
+    <Parameter Name="TextFormat">Восстановить {p0}?</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">restore_candidate</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="CancelCandidatesActivity.SayCandidateRestored"> 
+
+    <Parameter Name="TextFormat">{p0} восстановлена</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}{s1}</Parameter> 
+
+    <Parameter Name="Sounds">[position_number,restored]</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="CancelCandidatesActivity.SayCandidateCanceledInSD"> 
+
+    <Parameter Name="TextFormat">{p0} снята вышестоящей комиссией</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}{s1}</Parameter> 
+
+    <Parameter Name="Sounds">[position_number,canceled_upper_commission]</Parameter> 
+
+  </ActivityParametersBinding> 
+
+</Workflow>
+
+

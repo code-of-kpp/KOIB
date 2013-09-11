@@ -1,0 +1,417 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys" 
+
+  xmlns:vt="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/VotingTime"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+  <Include Ref="Activities/Initialization/LoadConfig.wf" /> 
+
+  <Include Ref="Activities/Initialization/CheckConflict.wf" /> 
+
+  <Include Ref="Activities/Initialization/ReadSourceData.wf" /> 
+
+  <Include Ref="Activities/Initialization/ControlVotingStart.wf" /> 
+
+ 
+
+ 
+
+  <!--Инициализация--> 
+
+  <CompositeActivity Name="InitializationActivity"  
+
+                     Class="Croc.Bpc.Workflow.Activities.Initialization.InitializationActivity, Croc.Bpc.Workflow" 
+
+                     Tracking="false"> 
+
+ 
+
+ 
+
+    <!--загрузка состояния--> 
+
+    <Activity Name="LoadState" Execute="LoadState" 
+
+              k:Yes="SearchSourceDataFile" k:No="SayLoadStateFailedResetState"/> 
+
+    <!--говорим, что ошибка загрузки состояния и предлагаем сбросить состояние--> 
+
+    <ReferenceActivity Name="SayLoadStateFailedResetState" Execute="Common.SayAndWaitYesOrNo" 
+
+                       k:Yes="ResetState" k:No="Common.RestartApplication"/> 
+
+    <!--архивация текущего состояния и сброс в начальное--> 
+
+    <Activity Name="ResetState" Execute="ResetState" 
+
+              k:Yes="SearchSourceDataFile"/> 
+
+ 
+
+ 
+
+    <!--=============================================================================================================--> 
+
+ 
+
+ 
+
+    <!--говорим: вставьте флеш-диск и нажмите ДА, после чего ждем нажатия ДА или события "Другой сканер стал Главным"--> 
+
+    <ReferenceActivity Name="SayInsertFlashAndPressYes" Initialize="ResetScannerRoleToUndefined"  
+
+                       Execute="Common.SayAndWaitEvents" 
+
+                       Parameters="WaitedEvents=[@ButtonYesPressedEvent,@RemoteScannerBecameMaster]" 
+
+                       k:Yes="SearchSourceDataFile"/> 
+
+ 
+
+ 
+
+    <!--поиск файла с ИД--> 
+
+    <Activity Name="SearchSourceDataFile" Initialize="ResetScannerRoleToUndefined"  
+
+              Execute="SearchSourceDataFile" 
+
+              k:Yes="SetRoleToMaster" k:No="SetRoleToSlave"/> 
+
+ 
+
+ 
+
+    <!--установим роль сканера = "Главный"--> 
+
+    <Activity Name="SetRoleToMaster" Execute="SetRoleToMaster" 
+
+              k:Yes="SetDateTimeOnSlave" k:No="SayInsertFlashInJustOneScannerAndPressYes"/> 
+
+ 
+
+
+ 
+    <!--говорим: вставьте flash-диск только в 1 сканер и нажмите ДА, после чего ждем нажатия ДА или  
+
+        события "Другой сканер стал Главным"--> 
+
+    <ReferenceActivity Name="SayInsertFlashInJustOneScannerAndPressYes" Initialize="ResetScannerRoleToUndefined" 
+
+                       Execute="Common.SayAndWaitEvents" 
+
+                       Parameters="WaitedEvents=[@ButtonYesPressedEvent,@RemoteScannerBecameMaster]" 
+
+                       k:Yes="SearchSourceDataFile"/> 
+
+ 
+
+ 
+
+    <!--установим дату и время на подчиненном сканере--> 
+
+    <Activity Name="SetDateTimeOnSlave" Execute="SetDateTimeOnSlave" 
+
+              k:Yes="LoadConfig"/> 
+
+ 
+
+ 
+
+    <!--установим роль сканера = "Подчиненный"--> 
+
+    <Activity Name="SetRoleToSlave" Execute="SetRoleToSlave" 
+
+              k:Yes="LoadConfig" k:No="SaySourceDataNotFound"/> 
+
+ 
+
+ 
+
+    <!--говорим, что ИД не найдены и идем на повторный поиск--> 
+
+    <ReferenceActivity Name="SaySourceDataNotFound" Initialize="ResetScannerRoleToUndefined" 
+
+                       Execute="Common.SayPhrase" 
+
+                       k:Yes="SayInsertFlashAndPressYes"/> 
+
+ 
+
+ 
+
+    <!--=============================================================================================================--> 
+
+ 
+
+ 
+
+    <!--загрузка конфигурации--> 
+
+    <ReferenceActivity Name="LoadConfig" Execute="LoadConfigActivity" 
+
+                       k:Yes="LoadSourceData" k:No="SayInsertFlashAndPressYes"/> 
+
+ 
+
+ 
+
+    <!--загрузка ИД--> 
+
+    <Activity Name="LoadSourceData" Execute="LoadSourceData" 
+
+              k:Yes="CheckConflict" k:No="SayLoadSourceDataFailed"/> 
+
+    <!--говорим, что ошибка загрузки ИД--> 
+
+    <ReferenceActivity Name="SayLoadSourceDataFailed" Initialize="ResetScannerRoleToUndefined" 
+
+                       Execute="Common.SayPhrase" 
+
+                       k:Yes="SayInsertFlashAndPressYes"/> 
+
+ 
+
+ 
+
+    <!--проверка на наличие конфликта между двумя сканерами (ответ Yes = OK)--> 
+
+    <ReferenceActivity Name="CheckConflict" Execute="CheckConflictActivity" 
+
+                       Parameters="UikFromFile=@UikFromFile;SourceDataFromFile=@SourceDataFromFile" 
+
+                       k:Yes="IsMasterScanner" k:No="Common.RestartApplication"/> 
+
+ 
+
+ 
+
+    <!--=============================================================================================================--> 
+
+ 
+
+
+ 
+    <!--проверим, данный сканер Главный?--> 
+
+    <ReferenceActivity Name="IsMasterScanner" Execute="Common.IsMasterScanner" 
+
+              k:Yes="IsStateRestored" k:No="Synchronize"/> 
+
+ 
+
+ 
+
+    <!--проверим, состояние было восстановлено?--> 
+
+    <Activity Name="IsStateRestored" Execute="IsStateRestored" 
+
+              k:Yes="ControlVotingStart" k:No="IsSDElectionModeTraining"/> 
+
+ 
+
+ 
+
+    <!--проверим, в ИД режим выборов - тренировка?--> 
+
+    <Activity Name="IsSDElectionModeTraining" Execute="IsSDElectionModeTraining" 
+
+              k:Yes="ControlVotingStart" k:No="CheckElectionDate"/> 
+
+ 
+
+ 
+
+    <!--проверим дату выборов--> 
+
+    <Activity Name="CheckElectionDate" Execute="CheckElectionDate" 
+
+              vt:ElectionDayHasNotCome="SayElectionDateNotYetBegunStartTraining" 
+
+              vt:ElectionDayNow="SetElectionModeToReal" 
+
+              vt:ElectionDayPassed="SayElectionDateAlreadyPassed"/> 
+
+ 
+
+ 
+
+    <!--говорим, что дата голосования еще не наступила и предлагаем начать работу с тренировочном режиме--> 
+
+    <ReferenceActivity Name="SayElectionDateNotYetBegunStartTraining" Execute="Common.SayAndWaitYesOrNo" 
+
+                       Parameters="Parameters=@ElectionDate" 
+
+                       k:Yes="SetElectionModeToTraining" k:No="SayInsertFlashAndPressYes"/> 
+
+ 
+
+ 
+
+    <!--установить режим выборов = Тренировка--> 
+
+    <Activity Name="SetElectionModeToTraining" Execute="SetElectionModeToTraining" 
+
+              k:Yes="ReadSourceData" /> 
+
+ 
+
+ 
+
+    <!--установить режим выборов = Боевой--> 
+
+    <Activity Name="SetElectionModeToReal" Execute="SetElectionModeToReal" 
+
+              k:Yes="ReadSourceData" /> 
+
+ 
+
+ 
+
+    <!--говорим, что выборы уже прошли--> 
+
+    <ReferenceActivity Name="SayElectionDateAlreadyPassed" Initialize="ResetScannerRoleToUndefined" 
+
+                       Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@ElectionDate" 
+
+                       k:Yes="SayInsertFlashAndPressYes"/> 
+
+ 
+
+ 
+
+    <!--зачитываем ИД--> 
+
+    <ReferenceActivity Name="ReadSourceData" Execute="ReadSourceDataActivity" 
+
+                       k:Yes="SaySourceDataCorrect"/> 
+
+    <!--спрашиваем, верны ли исходные данные?--> 
+
+
+    <ReferenceActivity Name="SaySourceDataCorrect" Execute="Common.SayAndWaitYesOrNo" 
+
+                       k:Yes="ControlVotingStart" k:No="SayInsertFlashAndPressYes"/> 
+
+ 
+
+ 
+
+    <!--выполним контроль начала голосования--> 
+
+    <ReferenceActivity Name="ControlVotingStart" Execute="ControlVotingStartActivity" 
+
+                       k:Yes="Synchronize"/> 
+
+ 
+
+ 
+
+    <!--=============================================================================================================--> 
+
+ 
+
+ 
+
+    <!--синхронизация с удаленным сканером--> 
+
+    <!--после синхронизации или выходим в общую схему, или выполнение продолжится с действия, 
+
+        которое определяется восстановленным состоянием главного сканера--> 
+
+    <Activity Name="Synchronize" Execute="Synchronize" 
+
+                       k:Yes="@@Return(Yes)" k:No="SayInsertFlashAndPressYes"/> 
+
+ 
+
+ 
+
+  </CompositeActivity> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="InitializationActivity.SayLoadStateFailedResetState"> 
+
+    <Parameter Name="TextFormat">Ошибка загрузки состояния. Сбросить?</Parameter> 
+
+    <Parameter Name="Sounds">load_state_failed_reset_state</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="InitializationActivity.SayInsertFlashAndPressYes"> 
+
+    <Parameter Name="TextFormat">Вставьте Flash</Parameter> 
+
+    <Parameter Name="Sounds">to_continue_insert_flash_and_press_yes</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="InitializationActivity.SayInsertFlashInJustOneScannerAndPressYes"> 
+
+    <Parameter Name="TextFormat">Вставьте Flash в один сканер</Parameter> 
+
+    <Parameter Name="Sounds">insert_flash_in_just_one_scanner_and_press_yes</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="InitializationActivity.SaySourceDataNotFound"> 
+
+    <Parameter Name="TextFormat">ИД не обнаружены</Parameter> 
+
+    <Parameter Name="Sounds">source_data_not_found</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="InitializationActivity.SayLoadSourceDataFailed"> 
+
+    <Parameter Name="TextFormat">Ошибка загрузки ИД</Parameter> 
+
+    <Parameter Name="Sounds">load_source_data_failed</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="InitializationActivity.SaySourceDataCorrect"> 
+
+    <Parameter Name="TextFormat">Данные верны?</Parameter> 
+
+    <Parameter Name="Sounds">source_data_correct</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="InitializationActivity.SayElectionDateNotYetBegunStartTraining"> 
+
+    <Parameter Name="TextFormat">Выборы не наступили. Начать тренировку?</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0:ddMMyyyy}{s1}{s2}</Parameter> 
+
+    <Parameter Name="Sounds">[election_date,not_yet_begun,start_training]</Parameter> 
+
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="InitializationActivity.SayElectionDateAlreadyPassed"> 
+
+    <Parameter Name="TextFormat">Выборы уже прошли!</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0:ddMMyyyy}{s1}</Parameter> 
+
+    <Parameter Name="Sounds">[election_date,already_passed]</Parameter> 
+
+  </ActivityParametersBinding> 
+
+</Workflow>
+
+

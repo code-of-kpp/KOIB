@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="windows-1251"?> 
+
+<!-- не выполнившиеся контрольные соотношения --> 
+
+<ReportTemplate name="FailedControlRelations" pageNumbered="false" 
+
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+
+xmlns="http://localhost/Schemas/SIB2003/ReportTemplate" 
+
+xsi:schemaLocation="http://localhost/Schemas/SIB2003/ReportTemplate ReportTemplate.xsd"> 
+
+ <Parameters> 
+
+  <!-- выборы, на основе которых формируется отчет --> 
+
+  <Parameter>Election</Parameter> 
+
+ </Parameters> 
+
+ <Header> 
+
+  <Line>Не выполнившиеся контрольные соотношения</Line> 
+
+  <Line>Текущие дата и время: {$CurrentDateTime|dd.MM.yyyy HH:mm:ss}</Line> 
+
+  <Line/> 
+
+  <If condition="ElectionManager.HasSourceData"> 
+
+   <Then> 
+
+    <If condition="@Election.Protocol.Checks"> 
+
+     <Then> 
+
+      <If not="true" condition="@Election.KSTurnedOff"> 
+
+       <Then> 
+
+        <For each="Check" 
+
+in="@Election.Protocol.Checks"> 
+
+         <Body> 
+
+          <!-- печатаем формулу 
+
+КС --> 
+
+          <If 
+
+condition="@Check.Enabled"> 
+
+           <Then> 
+
+            <If 
+
+condition="@Check.Failed"> 
+
+            
+
+ <Then> 
+
+
+             
+
+ <Line> 
+
+             
+
+  <Parts> 
+
+             
+
+   <Part>{$TAB}{$TAB}{$TAB}</Part> 
+
+             
+
+   <Part condition="@Check.Mild"> 
+
+             
+
+    <Parts> 
+
+             
+
+     <Part>[ЛОГИЧЕСКОЕ] </Part> 
+
+             
+
+    </Parts> 
+
+             
+
+   </Part> 
+
+             
+
+  
+
+ <Part>{$@Check.GetFullExpression&lt;$@Election.Protocol;$ElectionManager.VotingResults&gt
+
+;}</Part> 
+
+             
+
+  </Parts> 
+
+             
+
+ </Line> 
+
+             
+
+ <!-- и их расшифровку --> 
+
+             
+
+ <Line>{$TAB}{$TAB}{$TAB}{$@Check.GetExpansion&lt;$@Election.Protocol&gt;}</Line> 
+
+             
+
+ <Line>{$CRLF}</Line> 
+
+            
+
+ </Then> 
+
+            </If> 
+
+           </Then> 
+
+          </If> 
+
+
+         </Body> 
+
+        </For> 
+
+        <Line/> 
+
+        <If 
+
+condition="@Election.NoneAboveExists"> 
+
+         <Then> 
+
+          <Line>{$TAB}{$TAB}P = 
+
+{$ElectionManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;;;;$@Election.NoneAboveCandidate.I
+
+d;$@Election.ElectionId;&gt;&gt;}</Line> 
+
+         </Then> 
+
+        </If> 
+
+        <Line>{$TAB}{$TAB}M = 
+
+{$@Election.MaxMarks}</Line> 
+
+        <Line>{$TAB}{$TAB}S = 
+
+{$ElectionManager.VotingResults.VotesCount&lt;$VoteKey.ctor&lt;;;;;$@Election.ElectionId;&gt;&gt;}</
+
+Line> 
+
+        <For each="Line" 
+
+in="@Election.Protocol.Lines"> 
+
+         <Body> 
+
+         
+
+ <Line>{$TAB}{$TAB}{$@Line.@Current}. {$@Line.num}{$@Line.additionalNum} = 
+
+{$@Line.Value}</Line> 
+
+         </Body> 
+
+        </For> 
+
+       </Then> 
+
+       <Else> 
+
+        <Line>КОНТРОЛЬНЫЕ СООТНОШЕНИЯ 
+
+ВЫПОЛНЕНЫ</Line> 
+
+       </Else> 
+
+      </If> 
+
+     </Then> 
+
+     <Else> 
+
+      <!-- Если не напечатано ни одного КС... --> 
+
+
+      <Line>{$TAB}{$TAB}КОНТРОЛЬНЫЕ СООТНОШЕНИЯ: 
+
+НЕТ</Line> 
+
+     </Else> 
+
+    </If> 
+
+   </Then> 
+
+   <Else> 
+
+    <Line>Исходные данные еще не получены</Line> 
+
+   </Else> 
+
+  </If> 
+
+ </Header> 
+
+</ReportTemplate> 
+
+

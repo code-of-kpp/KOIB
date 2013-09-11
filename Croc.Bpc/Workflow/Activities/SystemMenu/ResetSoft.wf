@@ -1,0 +1,51 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+ 
+
+ 
+
+  <!--Сброс ПО--> 
+
+  <CompositeActivity Name="ResetSoftActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.ResetSoftActivity, Croc.Bpc.Workflow" 
+
+                     Tracking="false"> 
+
+    <!--Сбросить ПО?--> 
+
+    <ReferenceActivity Name="AskWantToResetSoft" Execute="Common.SayAndWaitYesOrNo" 
+
+                       Parameters="Silent=@@True" 
+
+                       k:Yes="ResetSoft" k:No="@@Return(Yes)"/> 
+
+    <!--сброс ПО--> 
+
+    <Activity Name="ResetSoft" Execute="ResetSoft"/> 
+
+  </CompositeActivity> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="ResetSoftActivity.AskWantToResetSoft"> 
+
+    <Parameter Name="TextFormat">Сбросить ПО?</Parameter> 
+
+  </ActivityParametersBinding> 
+
+</Workflow>
+
+

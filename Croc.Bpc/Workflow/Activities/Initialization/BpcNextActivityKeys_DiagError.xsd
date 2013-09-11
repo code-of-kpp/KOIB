@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?> 
+
+<xs:schema 
+
+  xmlns="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/DiagError" 
+
+  xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+
+  targetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/DiagError" 
+
+  elementFormDefault="qualified" 
+
+  attributeFormDefault="unqualified" 
+
+  id="BpcNextActivityKeys_DiagError"> 
+
+ 
+
+ 
+
+  <!--Имена атрибутов соответствуют перечислению Croc.Bpc.Scanner.ScannerDiagnosticsError--> 
+
+ 
+
+ 
+
+  <xs:attribute name="RightDoubleSheetSensorNotWork"> 
+
+    <xs:annotation> 
+
+      <xs:documentation>Не работает правый датчик двойного листа</xs:documentation> 
+
+    </xs:annotation> 
+
+  </xs:attribute> 
+
+  <xs:attribute name="LeftDoubleSheetSensorNotWork"> 
+
+    <xs:annotation> 
+
+      <xs:documentation>Не работает левый датчик двойного листа</xs:documentation> 
+
+    </xs:annotation> 
+
+  </xs:attribute> 
+
+  <xs:attribute name="DoubleSheetSensorNotWork"> 
+
+    <xs:annotation> 
+
+      <xs:documentation>Не работает датчик двойного листа</xs:documentation> 
+
+    </xs:annotation> 
+
+  </xs:attribute> 
+
+  <xs:attribute name="WrongDriverVersion"> 
+
+    <xs:annotation> 
+
+      <xs:documentation>Некорректная версия драйвера сканера</xs:documentation> 
+
+    </xs:annotation> 
+
+  </xs:attribute> 
+
+  <xs:attribute name="WrongDriverConfig"> 
+
+    <xs:annotation> 
+
+      <xs:documentation>Некорректный файл конфигурации драйвера</xs:documentation> 
+
+    </xs:annotation> 
+
+  </xs:attribute> 
+
+  <xs:attribute name="WrongBrightnessCoefFile"> 
+
+    <xs:annotation> 
+
+      <xs:documentation>Некорректный файл коэффициентов яркости</xs:documentation> 
+
+    </xs:annotation> 
+
+  </xs:attribute> 
+
+</xs:schema>
+
+

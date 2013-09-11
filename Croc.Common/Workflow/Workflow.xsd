@@ -1,0 +1,643 @@
+<?xml version="1.0" encoding="utf-8"?> 
+
+<xs:schema xmlns="http://schemas.croc.ru/Workflow" xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://schemas.croc.ru/Workflow"
+
+elementFormDefault="qualified" attributeFormDefault="unqualified" id="Workflow"> 
+
+	<xs:complexType name="BaseActivity" abstract="true"> 
+
+		<xs:sequence> 
+
+			<xs:element ref="Parameters" minOccurs="0"> 
+
+				<xs:annotation> 
+
+					<xs:documentation>Параметры действия. Будут переданы в метод действия при его вызове</xs:documentation> 
+
+				</xs:annotation> 
+
+			</xs:element> 
+
+			<xs:element ref="NextActivities" minOccurs="0"> 
+
+				<xs:annotation> 
+
+					<xs:documentation>Следующие действия к выполнению которых может быть выполнен переход после заверешения выполнения данного
+
+действия</xs:documentation> 
+
+				</xs:annotation> 
+
+			</xs:element> 
+
+		</xs:sequence> 
+
+		<xs:attribute name="Name" type="xs:string" use="required"> 
+
+			<xs:annotation> 
+
+				<xs:documentation>Локальное имя действия. Доложно быть уникальным впределах составного действия</xs:documentation> 
+
+			</xs:annotation> 
+
+		</xs:attribute> 
+
+		<xs:attribute name="Initialize" type="xs:string" use="optional"> 
+
+			<xs:annotation> 
+
+				<xs:documentation>Имя метода, реализующего инициализацию действия</xs:documentation> 
+
+			</xs:annotation> 
+
+		</xs:attribute> 
+
+		<xs:attribute name="Uninitialize" type="xs:string" use="optional"> 
+
+			<xs:annotation> 
+
+				<xs:documentation>Имя метода, реализующего деинициализацию действия</xs:documentation> 
+
+			</xs:annotation> 
+
+		</xs:attribute> 
+
+		<xs:attribute name="Priority" type="xs:unsignedByte" use="optional" default="5"> 
+
+			<xs:annotation> 
+
+				<xs:documentation>Приоритет действия. Возможный значения от 1 (самый высокий) до 10 (самый низкий). По умолчанию = 5</xs:documentation> 
+
+			</xs:annotation> 
+
+		</xs:attribute> 
+
+		<xs:attribute name="Parameters" type="xs:string" use="optional"> 
+
+			<xs:annotation> 
+
+				<xs:documentation>Параметры действия. Будут переданы в метод действия при его вызове</xs:documentation> 
+
+			</xs:annotation> 
+
+		</xs:attribute> 
+
+		<xs:attribute name="NextActivities" type="xs:string" use="optional"> 
+
+			<xs:annotation> 
+
+				<xs:documentation>Следующие действия к выполнению которых может быть выполнен переход после заверешения выполнения данного
+
+действия</xs:documentation> 
+
+			</xs:annotation> 
+
+		</xs:attribute> 
+
+		<xs:attribute name="Tracking" type="xs:boolean" use="optional" default="true"> 
+
+			<xs:annotation> 
+
+
+				<xs:documentation>Включение/выключение отслеживания</xs:documentation> 
+
+			</xs:annotation> 
+
+		</xs:attribute> 
+
+		<xs:anyAttribute namespace="##other"/> 
+
+	</xs:complexType> 
+
+	<xs:complexType name="EventHandlerActivity" abstract="true"> 
+
+		<xs:attribute name="Name" type="xs:string" use="required"> 
+
+			<xs:annotation> 
+
+				<xs:documentation>Локальное имя действия. Доложно быть уникальным впределах составного действия</xs:documentation> 
+
+			</xs:annotation> 
+
+		</xs:attribute> 
+
+		<xs:attribute name="Event" type="xs:string" use="required"> 
+
+			<xs:annotation> 
+
+				<xs:documentation>Имя св-ва составного действия, которое возвращает делегат события типа EventHandler</xs:documentation> 
+
+			</xs:annotation> 
+
+		</xs:attribute> 
+
+		<xs:attribute name="Handler" type="xs:string" use="required"> 
+
+			<xs:annotation> 
+
+				<xs:documentation>Полное имя действия, которое должно начать выполняться при возникновении события</xs:documentation> 
+
+			</xs:annotation> 
+
+		</xs:attribute> 
+
+		<xs:attribute name="NextActivity" type="xs:string" use="optional"> 
+
+			<xs:annotation> 
+
+				<xs:documentation>Следующее действие, к выполнению которого должен быть выполнен переход после заверешения выполнения данного
+
+действия</xs:documentation> 
+
+			</xs:annotation> 
+
+		</xs:attribute> 
+
+	</xs:complexType> 
+
+	<xs:simpleType name="EventHandlingType"> 
+
+		<xs:list> 
+
+			<xs:simpleType> 
+
+				<xs:restriction base="xs:token"> 
+
+					<xs:enumeration value="Sync"> 
+
+						<xs:annotation> 
+
+							<xs:documentation>Синхронная обработка - текущее выполнение потока работ будет прервано и управление передастся в действие-обработчик
+
+события</xs:documentation> 
+
+						</xs:annotation> 
+
+					</xs:enumeration> 
+
+					<xs:enumeration value="Async"> 
+
+						<xs:annotation> 
+
+							<xs:documentation>Асинхронная обработка - для вызова действия-обработчика события будет запущен дополнительный поток работ, который будет работать
+
+параллельно с основным потоком работ</xs:documentation> 
+
+						</xs:annotation> 
+
+					</xs:enumeration> 
+
+				</xs:restriction> 
+
+			</xs:simpleType> 
+
+		</xs:list> 
+
+	</xs:simpleType> 
+
+	<xs:complexType name="MonitorActivity" abstract="true"> 
+
+		<xs:attribute name="Name" type="xs:string" use="required"> 
+
+
+			<xs:annotation> 
+
+				<xs:documentation>Локальное имя действия. Доложно быть уникальным впределах составного действия</xs:documentation> 
+
+			</xs:annotation> 
+
+		</xs:attribute> 
+
+		<xs:attribute name="LockName" type="xs:string" use="required"> 
+
+			<xs:annotation> 
+
+				<xs:documentation>Имя блокировки</xs:documentation> 
+
+			</xs:annotation> 
+
+		</xs:attribute> 
+
+		<xs:attribute name="NextActivity" type="xs:string" use="optional"> 
+
+			<xs:annotation> 
+
+				<xs:documentation>Следующее действие, к выполнению которого должен быть выполнен переход после заверешения выполнения данного
+
+действия</xs:documentation> 
+
+			</xs:annotation> 
+
+		</xs:attribute> 
+
+	</xs:complexType> 
+
+	<xs:element name="Parameters"> 
+
+		<xs:complexType> 
+
+			<xs:sequence> 
+
+				<xs:element ref="Parameter" maxOccurs="unbounded"> 
+
+					<xs:annotation> 
+
+						<xs:documentation>Параметр действия</xs:documentation> 
+
+					</xs:annotation> 
+
+				</xs:element> 
+
+			</xs:sequence> 
+
+		</xs:complexType> 
+
+	</xs:element> 
+
+	<xs:element name="Parameter"> 
+
+		<xs:complexType> 
+
+			<xs:simpleContent> 
+
+				<xs:extension base="xs:string"> 
+
+					<xs:attribute name="Name" type="xs:string" use="required"> 
+
+						<xs:annotation> 
+
+							<xs:documentation>Имя параметра</xs:documentation> 
+
+						</xs:annotation> 
+
+					</xs:attribute> 
+
+				</xs:extension> 
+
+			</xs:simpleContent> 
+
+		</xs:complexType> 
+
+	</xs:element> 
+
+	<xs:element name="NextActivities"> 
+
+		<xs:complexType> 
+
+			<xs:sequence> 
+
+				<xs:element name="NextActivity" maxOccurs="unbounded"> 
+
+					<xs:annotation> 
+
+						<xs:documentation>Описание следующего действия</xs:documentation> 
+
+					</xs:annotation> 
+
+					<xs:complexType> 
+
+						<xs:simpleContent> 
+
+							<xs:extension base="xs:string"> 
+
+
+								<xs:attribute name="Key" type="xs:string" use="required"> 
+
+									<xs:annotation> 
+
+										<xs:documentation>Клюк следующего действия</xs:documentation> 
+
+									</xs:annotation> 
+
+								</xs:attribute> 
+
+							</xs:extension> 
+
+						</xs:simpleContent> 
+
+					</xs:complexType> 
+
+				</xs:element> 
+
+			</xs:sequence> 
+
+		</xs:complexType> 
+
+	</xs:element> 
+
+	<xs:element name="Workflow"> 
+
+		<xs:complexType> 
+
+			<xs:sequence maxOccurs="unbounded"> 
+
+				<xs:element name="Include" minOccurs="0"> 
+
+					<xs:annotation> 
+
+						<xs:documentation>Подключение внешнего файла с описанием схемы</xs:documentation> 
+
+					</xs:annotation> 
+
+					<xs:complexType> 
+
+						<xs:attribute name="Ref" type="xs:string" use="required"> 
+
+							<xs:annotation> 
+
+								<xs:documentation>Путь к подключаемому файлу с схемой</xs:documentation> 
+
+							</xs:annotation> 
+
+						</xs:attribute> 
+
+					</xs:complexType> 
+
+				</xs:element> 
+
+				<xs:element name="CompositeActivity" minOccurs="0"> 
+
+					<xs:annotation> 
+
+						<xs:documentation>Составное действие</xs:documentation> 
+
+					</xs:annotation> 
+
+					<xs:complexType> 
+
+						<xs:sequence maxOccurs="unbounded"> 
+
+							<xs:element name="Activity" minOccurs="0" maxOccurs="unbounded"> 
+
+								<xs:annotation> 
+
+									<xs:documentation>Действие, которое выполняет заданный метод</xs:documentation> 
+
+								</xs:annotation> 
+
+								<xs:complexType> 
+
+									<xs:complexContent> 
+
+										<xs:extension base="BaseActivity"> 
+
+											<xs:attribute name="Execute" type="xs:string" use="required"> 
+
+												<xs:annotation> 
+
+													<xs:documentation>Имя метода, реализующего логику действия</xs:documentation> 
+
+												</xs:annotation> 
+
+											</xs:attribute> 
+
+										</xs:extension> 
+
+									</xs:complexContent> 
+
+								</xs:complexType> 
+
+							</xs:element> 
+
+							<xs:element name="ReferenceActivity" minOccurs="0"> 
+
+
+								<xs:annotation> 
+
+									<xs:documentation>Действие-ссылка на другое действие. При выполнении данного действия происходит выполнение того действия, на которое указывает
+
+ссылка</xs:documentation> 
+
+								</xs:annotation> 
+
+								<xs:complexType> 
+
+									<xs:complexContent> 
+
+										<xs:extension base="BaseActivity"> 
+
+											<xs:attribute name="Execute" type="xs:string" use="required"> 
+
+												<xs:annotation> 
+
+													<xs:documentation>Полное имя действия, которое нужно выполнить. Полное имя = ИмяСоставногоДействия.ИмяДействия или просто
+
+ИмяСоставногоДействия</xs:documentation> 
+
+												</xs:annotation> 
+
+											</xs:attribute> 
+
+										</xs:extension> 
+
+									</xs:complexContent> 
+
+								</xs:complexType> 
+
+							</xs:element> 
+
+							<xs:element name="SubscribeToEvent" minOccurs="0"> 
+
+								<xs:annotation> 
+
+									<xs:documentation>Действие-подписчик на событие. При выполнении данного действия выполняется подписка на заданное событие,         при возникновении
+
+которого будет выполнено действие-обработчик</xs:documentation> 
+
+								</xs:annotation> 
+
+								<xs:complexType> 
+
+									<xs:complexContent> 
+
+										<xs:extension base="EventHandlerActivity"> 
+
+											<xs:attribute name="HandlingType" type="EventHandlingType" use="optional" default="Sync"> 
+
+												<xs:annotation> 
+
+													<xs:documentation>Тип обработки события</xs:documentation> 
+
+												</xs:annotation> 
+
+											</xs:attribute> 
+
+										</xs:extension> 
+
+									</xs:complexContent> 
+
+								</xs:complexType> 
+
+							</xs:element> 
+
+							<xs:element name="UnsubscribeFromEvent" minOccurs="0"> 
+
+								<xs:annotation> 
+
+									<xs:documentation>Действие-отписчик от события. При выполнении данного действия выполняется отписка от заданного события обработчика, которым
+
+является действие-обработчик</xs:documentation> 
+
+								</xs:annotation> 
+
+								<xs:complexType> 
+
+									<xs:complexContent> 
+
+										<xs:extension base="EventHandlerActivity"/> 
+
+									</xs:complexContent> 
+
+								</xs:complexType> 
+
+							</xs:element> 
+
+							<xs:element name="MonitorEnter" minOccurs="0"> 
+
+								<xs:annotation> 
+
+									<xs:documentation>Действие, которое получает эксклюзивную блокировку с заданным именем</xs:documentation> 
+
+								</xs:annotation> 
+
+								<xs:complexType> 
+
+
+									<xs:complexContent> 
+
+										<xs:extension base="MonitorActivity"/> 
+
+									</xs:complexContent> 
+
+								</xs:complexType> 
+
+							</xs:element> 
+
+							<xs:element name="MonitorExit" minOccurs="0"> 
+
+								<xs:annotation> 
+
+									<xs:documentation>Действие, которое освобождает эксклюзивную блокировку с заданным именем</xs:documentation> 
+
+								</xs:annotation> 
+
+								<xs:complexType> 
+
+									<xs:complexContent> 
+
+										<xs:extension base="MonitorActivity"/> 
+
+									</xs:complexContent> 
+
+								</xs:complexType> 
+
+							</xs:element> 
+
+						</xs:sequence> 
+
+						<xs:attribute name="Tracking" type="xs:boolean" use="optional" default="true"> 
+
+							<xs:annotation> 
+
+								<xs:documentation>Включение/выключение отслеживания</xs:documentation> 
+
+							</xs:annotation> 
+
+						</xs:attribute> 
+
+						<xs:attribute name="Name" type="xs:string" use="required"> 
+
+							<xs:annotation> 
+
+								<xs:documentation>Имя действия. Должно быть уникальным во всей схеме, в том числе с учетом подключаемых файлов</xs:documentation> 
+
+							</xs:annotation> 
+
+						</xs:attribute> 
+
+						<xs:attribute name="Class" type="xs:string" use="optional"> 
+
+							<xs:annotation> 
+
+								<xs:documentation>Полный тип класса, в котором реализована логика действия</xs:documentation> 
+
+							</xs:annotation> 
+
+						</xs:attribute> 
+
+					</xs:complexType> 
+
+				</xs:element> 
+
+				<xs:element name="ActivityParametersBinding" minOccurs="0"> 
+
+					<xs:complexType> 
+
+						<xs:sequence> 
+
+							<xs:element ref="Parameter" minOccurs="0" maxOccurs="unbounded"> 
+
+								<xs:annotation> 
+
+									<xs:documentation>Привязываемые параметры</xs:documentation> 
+
+								</xs:annotation> 
+
+							</xs:element> 
+
+						</xs:sequence> 
+
+						<xs:attribute name="ActivityName" type="xs:string" use="required"> 
+
+							<xs:annotation> 
+
+								<xs:documentation>Полное имя действия, для которого нужно привязать значения параметров</xs:documentation> 
+
+							</xs:annotation> 
+
+						</xs:attribute> 
+
+						<xs:attribute name="Parameters" use="optional"> 
+
+							<xs:annotation> 
+
+								<xs:documentation>Привязываемые параметры</xs:documentation> 
+
+
+							</xs:annotation> 
+
+						</xs:attribute> 
+
+					</xs:complexType> 
+
+				</xs:element> 
+
+			</xs:sequence> 
+
+			<xs:attribute name="RootActivity" type="xs:string" use="optional"> 
+
+				<xs:annotation> 
+
+					<xs:documentation>Имя корневого составного действия, с которого начинается выполнение (не обязательный для подключаемого файла)</xs:documentation> 
+
+				</xs:annotation> 
+
+			</xs:attribute> 
+
+			<xs:attribute name="DefaultNextActivityKey" type="xs:string" use="optional"> 
+
+				<xs:annotation> 
+
+					<xs:documentation>Название ключа следующего действия по умолчанию (не обязательный для подключаемого файла)</xs:documentation> 
+
+				</xs:annotation> 
+
+			</xs:attribute> 
+
+		</xs:complexType> 
+
+	</xs:element> 
+
+</xs:schema>
+
+

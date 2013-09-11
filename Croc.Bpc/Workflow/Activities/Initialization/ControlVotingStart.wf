@@ -1,0 +1,63 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf"/> 
+
+  <Include Ref="Activities/Testing/Testing.wf"/> 
+
+  <Include Ref="Activities/SystemMenu/ResetUIK.wf"/> 
+
+ 
+
+ 
+
+  <!--Контроль начала голосования--> 
+
+  <CompositeActivity Name="ControlVotingStartActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.Initialization.ControlVotingStartActivity, Croc.Bpc.Workflow" 
+
+                     Tracking="false"> 
+
+ 
+
+ 
+
+    <!--проверим, режим выборов - тренировка?--> 
+
+    <Activity Name="IsElectionModeTraining" Execute="IsElectionModeTraining" 
+
+              k:Yes="StartControlThread" k:No="@@Return(Yes)"/> 
+
+ 
+
+ 
+
+    <!--запустим поток отслеживания времени начала голосования--> 
+
+    <Activity Name="StartControlThread" Execute="StartControlThread" 
+
+              Parameters="ControlPeriod=00:01:00;MinTimeToVotingStart=02:00:00" 
+
+              k:Yes="@@Return(Yes)"/> 
+
+ 
+
+ 
+
+  </CompositeActivity> 
+
+ 
+
+ 
+
+</Workflow>
+
+

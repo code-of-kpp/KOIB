@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="windows-1251"?> 
+
+<!-- Исходные данные --> 
+
+<ReportTemplate name="SourceData" restriction="Scanner.Voting.HasSourceData" 
+
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+
+ xmlns="http://localhost/Schemas/SIB2003/ReportTemplate"  
+
+ xsi:schemaLocation="http://localhost/Schemas/SIB2003/ReportTemplate ReportTemplate.xsd"> 
+
+  <Parameters> 
+
+    <Parameter>SourceData</Parameter> 
+
+    <Parameter>UIK</Parameter> 
+
+  </Parameters> 
+
+  <Header> 
+
+  <Line fontSize="+2" bold="true" italic="false" align="Center">Исходные данные для 
+
+УИК N ,$@UIK-</Line> 
+
+    <Line>Состав УИК: ,$ScannersInfo.GetScannerInfos-</Line> 
+
+  <If condition="@SourceData.IsReal"> 
+
+   <Else> 
+
+    <Line>ТРЕНИРОВОЧНЫЙ РЕЖИМ</Line> 
+
+   </Else> 
+
+  </If> 
+
+    <!--В коиб-2010 только 1 источник: флеш-память--> 
+
+  <!--<Line>ИСТОЧНИК ДАННЫХ: ,$ElectionManager.SourceData.Source-</Line>--> 
+
+  <Line>СКАНЕР N ,$ScannersInfo.LocalScannerSerialNumber-</Line> 
+
+  <Line>ДАТА ГОЛОСОВАНИЯ: ,$@SourceData.ElectionDate|d}</Line> 
+
+  <Line>ДАННЫЕ ПРЕДНАЗНАЧЕНЫ ДЛЯ УИК: 
+
+{$@SourceData.Targets|0000|num}</Line> 
+
+  <!-- Вывести номера вышестоящих комиссий --> 
+
+  <Line condition="@SourceData.Targets">НОМЕРА ВЫШЕСТОЯЩИХ КОМИССИЙ: 
+
+{$@SourceData.GetParentComitteeStamps}</Line> 
+
+  <Line>КОЛИЧЕСТВО ТИПОВ БЮЛЛЕТЕНЕЙ: ,$@SourceData.Blanks.Length}</Line> 
+
+  <Line>ПОСЛЕДОВАТЕЛЬНОСТЬ СМЕНЫ РЕЖИМОВ: ,$@SourceData.Modes}</Line> 
+
+
+  <!-- Вывести времена начала режимов --> 
+
+  <If condition="@SourceData.VotingModeTimes"> 
+
+   <Then> 
+
+    <Line>{$TAB-Время начала стационарного режима: 
+
+{$@SourceData.MainVotingStartTime|t}</Line> 
+
+    <Line>{$TAB-Время окончания стационарного режима: 
+
+{$@SourceData.MainVotingEndTime|t}</Line> 
+
+   </Then> 
+
+  </If> 
+
+  <Line>БЮЛЛЕТЕНИ:</Line> 
+
+  <!-- Последовательно обходим все бланки --> 
+
+  <For each="Blank" in="@SourceData.Blanks"> 
+
+   <Body> 
+
+    <Line>,$TAB-БЮЛЛЕТЕНЬ N ,$@Blank.Id-</Line> 
+
+    <Line>,$TAB-,$TAB-ВЫБОРЫ: ,$@Blank.Elections-</Line> 
+
+   </Body> 
+
+  </For> 
+
+  <Line>ВЫБОРЫ:</Line> 
+
+  <For each="Election" in="@SourceData.Elections"> 
+
+   <Body> 
+
+    <Line>{$TAB}{$@Election.@Current}. {$@Election.Name}</Line> 
+
+    <Line>{$TAB}{$TAB-РЕЖИМЫ ГОЛОСОВАНИЯ: 
+
+{$@Election.Modes}</Line> 
+
+    <Line>{$TAB}{$TAB-ЧИСЛО МАНДАТОВ: 
+
+{$@Election.MaxMarks}</Line> 
+
+    <Line>{$TAB}{$TAB-НАЛИЧИЕ ОТМЕТКИ «ПРОТИВ ВСЕХ»: 
+
+{$@Election.NoneAboveExists}</Line> 
+
+    <Line>{$TAB}{$TAB-ЧИСЛО ПОЗИЦИЙ: 
+
+{$@Election.Candidates.Length}</Line> 
+
+    <Line>{$TAB}{$TAB-ПОЗИЦИИ:</Line> 
+
+    <For each="Candidate" in="@Election.Candidates"> 
+
+
+     <Body> 
+
+      <Line> 
+
+       <Parts> 
+
+       
+
+ <Part>{$TAB}{$TAB}{$TAB}{$@Candidate.@Current}. </Part> 
+
+        <Part 
+
+condition="@Candidate.LastName">{$@Candidate.LastName|#u}</Part> 
+
+        <Part 
+
+condition="@Candidate.FirstName"> {$@Candidate.FirstName}</Part> 
+
+        <Part 
+
+condition="@Candidate.Patronymic"> {$@Candidate.Patronymic}</Part> 
+
+        <Part 
+
+condition="@Candidate.Disabled"> (позиция снята)</Part> 
+
+        <Part 
+
+condition="@Candidate.DisabledLocally"> (позиция снята на УИК)</Part> 
+
+       </Parts> 
+
+      </Line> 
+
+     </Body> 
+
+    </For> 
+
+        <Line>{$CRLF}</Line> 
+
+    <Line>{$TAB}{$TAB-НАИМЕНОВАНИЕ ПРОТОКОЛА: 
+
+{$@Election.Protocol.Name}</Line> 
+
+    <If condition="@Election.Protocol.DisabledString"> 
+
+     <Then> 
+
+      <Line>{$TAB}{$TAB-СТРОКА ДЛЯ СНЯТЫХ ПОЗИЦИЙ: 
+
+{$@Election.Protocol.DisabledString}</Line> 
+
+     </Then> 
+
+     <Else> 
+
+      <Line>{$TAB}{$TAB-СНЯТЫЕ ПОЗИЦИИ НЕ 
+
+ВКЛЮЧАЮТСЯ В ОТЧЕТ</Line> 
+
+     </Else> 
+
+    </If> 
+
+
+    <If condition="@Election.Protocol.Lines"> 
+
+     <Then> 
+
+      <Line>,$TAB-,$TAB-СТРОКИ ПРОТОКОЛА:</Line> 
+
+      <For each="Line" in="@Election.Protocol.Lines"> 
+
+       <Body> 
+
+       
+
+ <Line>{$TAB}{$TAB}{$TAB}{$@Line.Num}{$@Line.AdditionalNum}. {$@Line.Name}. 
+
+({$@Line.Type})</Line> 
+
+       </Body> 
+
+      </For> 
+
+     </Then> 
+
+     <Else> 
+
+      <Line>{$TAB}{$TAB-СТРОКИ ПРОТОКОЛА: НЕТ</Line> 
+
+     </Else> 
+
+    </If> 
+
+    <If condition="ElectionManager.NeedExecuteCheckExpressions"> 
+
+     <Then> 
+
+            <Line>{$CRLF}</Line> 
+
+      <Line>,$TAB-,$TAB-КОНТРОЛЬНЫЕ 
+
+СООТНОШЕНИЯ:</Line> 
+
+      <For each="Check" in="@Election.Protocol.Checks"> 
+
+       <Body> 
+
+        <Line condition="@Check.Enabled"> 
+
+         <Parts> 
+
+         
+
+ <Part>{$TAB}{$TAB}{$TAB}</Part> 
+
+          <Part 
+
+condition="@Check.Mild"> 
+
+           <Parts> 
+
+           
+
+ <Part>*ЛОГИЧЕСКОЕ+ </Part> 
+
+
+           </Parts> 
+
+          </Part> 
+
+         
+
+ <Part>{$@Check.GetExpansion&lt;$@Election.Protocol&gt;}</Part> 
+
+         </Parts> 
+
+        </Line> 
+
+       </Body> 
+
+      </For> 
+
+     </Then> 
+
+     <Else> 
+
+      <Line>{$TAB}{$TAB-КОНТРОЛЬНЫЕ СООТНОШЕНИЯ: 
+
+НЕТ</Line> 
+
+     </Else> 
+
+    </If> 
+
+   </Body> 
+
+  </For> 
+
+ </Header> 
+
+ <PageFooter> 
+
+  <Line align="Left">Председатель участковой избирательной комиссии</Line> 
+
+  <Line align="Right">_______________    
+
+__________________________________</Line> 
+
+  <Line align="Right">    (фамилия,              (подпись либо причины отсутствия,   </Line> 
+
+  <Line align="Right">    инициалы)                    отметка об особом мнении)         </Line> 
+
+  <Line align="Left">Заместитель председателя комиссии</Line> 
+
+  <Line align="Right">_______________    
+
+__________________________________</Line> 
+
+  <Line align="Left">Секретарь комиссии</Line> 
+
+  <Line align="Right">_______________    
+
+__________________________________</Line> 
+
+ </PageFooter> 
+
+</ReportTemplate> 
+
+

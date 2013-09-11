@@ -1,0 +1,325 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+  <Include Ref="Activities/Printing.wf" /> 
+
+ 
+
+ 
+
+  <!--ввод дополнительных сведений--> 
+
+  <CompositeActivity Name="EnterAdditionalInfoActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.Summarizing.EnterAdditionalInfoActivity, Croc.Bpc.Workflow" 
+
+                     Tracking="false"> 
+
+ 
+
+ 
+
+    <!--говорим: ввод дополнительных сведений по выборам №E--> 
+
+    <ReferenceActivity Name="SayEnterAdditionalInfoForElection" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@ElectionNumber"/> 
+
+ 
+
+ 
+
+    <!--=============================================================================================================--> 
+
+    <!--вычисляем/запрашиваем значения строк протокола--> 
+
+ 
+
+ 
+
+    <!--перебираем строки протокола: устанавливаем итератор в начальное положение--> 
+
+    <Activity Name="ResetLineEnumerator" Execute="ResetLineEnumerator"/> 
+
+ 
+
+ 
+
+    <!--перебираем итератор к след. строке протокола--> 
+
+    <Activity Name="MoveNextLine" Execute="MoveNextLine" 
+
+              k:Yes="IsAutoCalculatedLine" k:No="CheckControlRelations"/> 
+
+ 
+
+ 
+
+    <!--проверим, текущая строка должна вычисляться автоматически?--> 
+
+    <Activity Name="IsAutoCalculatedLine" Execute="IsAutoCalculatedLine" 
+
+              k:Yes="CalculateLineValue" k:No="SayEnterLineValue"/> 
+
+ 
+
+ 
+
+    <!--вычислим значение текущей строки--> 
+
+    <Activity Name="CalculateLineValue" Execute="CalculateLineValue" 
+
+              k:Yes="MoveNextLine"/> 
+
+ 
+
+ 
+
+    <!--говорим: введите значение строки №L и считываем значение--> 
+
+    <ReferenceActivity Name="SayEnterLineValue" Execute="Common.SayAndReadValueCancelIsBack" 
+
+                       Parameters="Value=@CurrentLineValue;Required=@@True;Parameters=[@CurrentLineNumber,@CurrentLineAlphaNumber]" 
+
+                       k:Yes="AcceptEnteredLineValue" k:Back="MovePreviousLine"/> 
+
+ 
+
+ 
+
+    <!--принимаем введенное значение строки протокола--> 
+
+
+    <Activity Name="AcceptEnteredLineValue" Execute="AcceptEnteredLineValue" 
+
+              k:Yes="MoveNextLine"/> 
+
+ 
+
+ 
+
+    <!--переход к предыдущей строки протокола--> 
+
+    <Activity Name="MovePreviousLine" Execute="MovePreviousLine" 
+
+              k:Yes="IsAutoCalculatedAndNotFirstLine"/> 
+
+ 
+
+ 
+
+    <!--проверим, текущая строка должна вычисляться автоматически и она НЕ первая?--> 
+
+    <Activity Name="IsAutoCalculatedAndNotFirstLine" Execute="IsAutoCalculatedAndNotFirstLine" 
+
+              k:Yes="MovePreviousLine" k:No="IsAutoCalculatedLine"/> 
+
+ 
+
+ 
+
+    <!--проверяем контрольные соотношения--> 
+
+    <Activity Name="CheckControlRelations" Execute="CheckControlRelations" 
+
+              k:Yes="SayControlRelationsSatisfied" k:No="SayControlRelationsNotSatisfied"/> 
+
+ 
+
+ 
+
+    <!--=============================================================================================================--> 
+
+    <!--КС выполнены--> 
+
+ 
+
+ 
+
+    <!--говорим: Контрольные соотношения выполнены--> 
+
+    <ReferenceActivity Name="SayControlRelationsSatisfied" Execute="Common.SayPhrase"/> 
+
+ 
+
+ 
+
+    <!--печатаем протокол голосования по выборам--> 
+
+    <ReferenceActivity Name="PrintElectionProtocol" Execute="PrintingActivity" 
+
+                       Parameters="ReportType=ElectionProtocol;ReportParameters=@ElectionProtocolParameters;ImplicitPrint=@@True;NeedPrintCopies=@@False" 
+
+                       k:Yes="SayCheckAndSignProtocol" k:No="@@Return(Yes)"/> 
+
+ 
+
+ 
+
+    <!--говорим: Проверьте и подпишите протокол--> 
+
+    <ReferenceActivity Name="SayCheckAndSignProtocol" Execute="Common.SayPhrase"/> 
+
+ 
+
+ 
+
+    <!--говорим: Протокол подписан?--> 
+
+    <ReferenceActivity Name="SayProtocolSigned" Execute="Common.SayAndWaitYesOrNo" 
+
+                       k:Yes="SayPrintAdditionalCopiesOfProtocol" k:No="SayRetryEnterAdditionalInfo"/> 
+
+ 
+
+ 
+
+    <!--говорим: Повторить ввод дополнительных сведений?--> 
+
+    <ReferenceActivity Name="SayRetryEnterAdditionalInfo" Execute="Common.SayAndWaitYesOrNo" 
+
+                       k:Yes="SayEnterAdditionalInfoForElection" k:No="SayProtocolSigned"/> 
+
+ 
+
+ 
+
+    <!--говорим: Распечатать дополнительные копии протокола?--> 
+
+    <ReferenceActivity Name="SayPrintAdditionalCopiesOfProtocol" Execute="Common.SayAndWaitYesOrNo" 
+
+                       k:Yes="PrintElectionProtocolAddCopies" k:No="@@Return(Yes)"/> 
+
+
+ 
+ 
+
+    <!--печатаем доп. копии протокола голосования--> 
+
+    <ReferenceActivity Name="PrintElectionProtocolAddCopies" Execute="PrintingActivity" 
+
+                       Parameters="ReportType=ElectionProtocol;ReportParameters=@ElectionProtocolParameters;ImplicitPrint=@@True" 
+
+                       k:Yes="@@Return(Yes)" k:No="@@Return(Yes)"/> 
+
+ 
+
+ 
+
+    <!--=============================================================================================================--> 
+
+    <!--КС не выполнены--> 
+
+ 
+
+ 
+
+    <!--говорим: Контрольные соотношения не выполнены--> 
+
+    <ReferenceActivity Name="SayControlRelationsNotSatisfied" Execute="Common.SayPhrase"/> 
+
+ 
+
+ 
+
+    <!--печатаем невыполненные КС--> 
+
+    <ReferenceActivity Name="PrintFailedControlRelations" Execute="PrintingActivity" 
+
+                       Parameters="ReportType=FailedControlRelations;ReportParameters=@ElectionProtocolParameters" 
+
+                       k:Yes="SayEnterAdditionalInfoForElection" k:No="SayEnterAdditionalInfoForElection"/> 
+
+ 
+
+ 
+
+  </CompositeActivity> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="EnterAdditionalInfoActivity.SayEnterAdditionalInfoForElection"> 
+
+    <Parameter Name="TextFormat">Ввод дополнительных сведений по выборам №{p0}</Parameter> 
+
+    <Parameter Name="Sounds">enter_additional_info_for_election</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="EnterAdditionalInfoActivity.SayEnterLineValue"> 
+
+    <Parameter Name="TextFormat">{p0}{p1}: ____</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}{p1}{s1}</Parameter> 
+
+    <Parameter Name="Sounds">[enter_line_value,and_press_yes]</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="EnterAdditionalInfoActivity.SayControlRelationsSatisfied"> 
+
+    <Parameter Name="TextFormat">Контрольные соотношения выполнены</Parameter> 
+
+    <Parameter Name="Sounds">control_relations_satisfied</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="EnterAdditionalInfoActivity.SayCheckAndSignProtocol"> 
+
+    <Parameter Name="TextFormat">Проверьте и подпишите протокол</Parameter> 
+
+    <Parameter Name="Sounds">check_and_sign_protocol</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="EnterAdditionalInfoActivity.SayProtocolSigned"> 
+
+    <Parameter Name="TextFormat">Протокол подписан?</Parameter> 
+
+    <Parameter Name="Sounds">protocol_signed</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="EnterAdditionalInfoActivity.SayRetryEnterAdditionalInfo"> 
+
+    <Parameter Name="TextFormat">Повторить ввод дополнительных сведений?</Parameter> 
+
+    <Parameter Name="Sounds">retry_enter_additional_info</Parameter> 
+
+  </ActivityParametersBinding> 
+
+
+  <ActivityParametersBinding ActivityName="EnterAdditionalInfoActivity.SayPrintAdditionalCopiesOfProtocol"> 
+
+    <Parameter Name="TextFormat">Распечатать дополнительные копии протокола?</Parameter> 
+
+    <Parameter Name="Sounds">print_additional_copies_of_protocol</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="EnterAdditionalInfoActivity.SayControlRelationsNotSatisfied"> 
+
+    <Parameter Name="TextFormat">Контрольные соотношения не выполнены</Parameter> 
+
+    <Parameter Name="Sounds">control_relations_not_satisfied</Parameter> 
+
+  </ActivityParametersBinding> 
+
+ 
+
+ 
+
+</Workflow>
+
+

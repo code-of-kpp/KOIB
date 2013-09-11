@@ -1,0 +1,177 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+  <Include Ref="Activities/Testing/ReadCandidatesTestVoteCount.wf" /> 
+
+ 
+
+ 
+
+  <!--зачитывание протокола тестирования--> 
+
+  <CompositeActivity Name="ReadTestingReportActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.Testing.ReadTestingReportActivity, Croc.Bpc.Workflow" 
+
+                     Tracking="false"> 
+
+ 
+
+ 
+
+    <!-- печатаем протокол тестирования--> 
+
+	  <ReferenceActivity Name="PrintTestResult" Execute="PrintingActivity" 
+
+					   Parameters="ReportType=TestResults;ReportParameters=@TestResultsPrintParameters" 
+
+					   k:Yes="MoveNextElection"/> 
+
+ 
+
+ 
+
+	  <!--перебираем выборы--> 
+
+    <Activity Name="MoveNextElection" Execute="MoveNextElection" 
+
+              k:Yes="SayTestingReportForElection" k:No="@@Return(Yes)"/> 
+
+ 
+
+ 
+
+    <!--говорим: протокол тестирования по выборам №N--> 
+
+    <ReferenceActivity Name="SayTestingReportForElection" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@CurrentElectionNumber"/> 
+
+ 
+
+ 
+
+    <!--говорим кол-во бюллетеней: всего--> 
+
+    <ReferenceActivity Name="SayTotalBulletinCount" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@TotalBulletinCount"/> 
+
+ 
+
+ 
+
+    <!--говорим кол-во бюллетеней: действительных--> 
+
+    <ReferenceActivity Name="SayValidBulletinCount" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@ValidBulletinCount"/> 
+
+ 
+
+ 
+
+    <!--говорим кол-во бюллетеней: не действительных--> 
+
+    <ReferenceActivity Name="SayNotValidBulletinCount" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@NotValidBulletinCount"/> 
+
+ 
+
+ 
+
+    <!--говорим кол-во бюллетеней: НУФ--> 
+
+    <ReferenceActivity Name="SayBadBulletinCount" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@BadBulletinCount"/> 
+
+ 
+
+
+ 
+    <!--зачитываем кол-во голосов по каждой позиции для выборов №Е--> 
+
+    <ReferenceActivity Name="ReadCandidatesVoteCount" Execute="ReadCandidatesTestVoteCountActivity" 
+
+                       Parameters="ElectionIndex=@CurrentElectionIndex" 
+
+                       k:Yes="MoveNextElection"/> 
+
+ 
+
+ 
+
+  </CompositeActivity> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="ReadTestingReportActivity.SayTestingReportForElection"> 
+
+    <Parameter Name="TextFormat">Выборы {p0}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">testing_report_for_election</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadTestingReportActivity.SayTotalBulletinCount"> 
+
+    <Parameter Name="TextFormat">Всего: {p0}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">total_bulletins</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadTestingReportActivity.SayValidBulletinCount"> 
+
+    <Parameter Name="TextFormat">Действит: {p0}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">valid_bulletins</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadTestingReportActivity.SayNotValidBulletinCount"> 
+
+    <Parameter Name="TextFormat">Недействит: {p0}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">not_valid_bulletins</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ReadTestingReportActivity.SayBadBulletinCount"> 
+
+    <Parameter Name="TextFormat">НУФ: {p0}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">bad_bulletins</Parameter> 
+
+  </ActivityParametersBinding> 
+
+ 
+
+ 
+
+</Workflow>
+
+

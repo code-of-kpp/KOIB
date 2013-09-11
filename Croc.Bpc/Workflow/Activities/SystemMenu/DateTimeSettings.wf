@@ -1,0 +1,131 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+ 
+
+ 
+
+  <!--Установка даты и время--> 
+
+  <CompositeActivity Name="DateTimeSettingsActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.SystemMenu.DateTimeSettingsActivity, Croc.Bpc.Workflow" 
+
+                     Tracking="false"> 
+
+    <!--запрашиваем новую дату--> 
+
+    <ReferenceActivity Name="ReadNewDate" Execute="Common.SayAndReadValue" 
+
+                       Parameters="Required=@@True;Silent=@@True;ReadValueMode=WithLeadingZero" 
+
+                       k:Yes="CheckNewDate" k:No="@@Return(Yes)"/> 
+
+ 
+
+ 
+
+    <!--проверяем дату на корректность--> 
+
+    <Activity Name="CheckNewDate" Execute="CheckNewDate" 
+
+              k:No="SayBadDate" k:Yes="ReadNewTime"/> 
+
+ 
+
+ 
+
+    <!--индикатор 3 сек "Некорректная Дата"--> 
+
+    <ReferenceActivity Name="SayBadDate" Execute="Common.SayAndWaitTimeout" 
+
+                       Parameters="Timeout=3000;Silent=@@True" 
+
+                       k:Yes="ReadNewDate"/> 
+
+ 
+
+ 
+
+    <!--запрашиваем новое время--> 
+
+    <ReferenceActivity Name="ReadNewTime" Execute="Common.SayAndReadValue" 
+
+                       Parameters="Required=@@True;Silent=@@True;ReadValueMode=WithLeadingZero" 
+
+                       k:Yes="CheckNewTime" k:No="@@Return(Yes)"/> 
+
+ 
+
+ 
+
+    <!--проверяем дату на корректность--> 
+
+    <Activity Name="CheckNewTime" Execute="CheckNewTime" 
+
+              k:No="SayBadTime" k:Yes="SetDateTime"/> 
+
+ 
+
+ 
+
+    <!--индикатор 3 сек "Некорректное время!"--> 
+
+    <ReferenceActivity Name="SayBadTime" Execute="Common.SayAndWaitTimeout" 
+
+                       Parameters="Timeout=3000;Silent=@@True" 
+
+                       k:Yes="ReadNewTime"/> 
+
+ 
+
+ 
+
+    <!--установка времени--> 
+
+    <Activity Name="SetDateTime" Execute="SetDateTime" 
+
+              k:Yes="@@Return(Yes)"/> 
+
+  </CompositeActivity> 
+
+
+ 
+ 
+
+  <ActivityParametersBinding ActivityName="DateTimeSettingsActivity.ReadNewDate"> 
+
+    <Parameter Name="TextFormat">Дата: __/__/____</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="DateTimeSettingsActivity.ReadNewTime"> 
+
+    <Parameter Name="TextFormat">Время: __:__</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="DateTimeSettingsActivity.SayBadDate"> 
+
+    <Parameter Name="TextFormat">Некорректная дата!</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="DateTimeSettingsActivity.SayBadTime"> 
+
+    <Parameter Name="TextFormat">Некорректное время!</Parameter> 
+
+  </ActivityParametersBinding> 
+
+</Workflow>
+
+

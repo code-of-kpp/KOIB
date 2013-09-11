@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?> 
+
+<xs:schema xmlns="http://schemas.croc.ru/Workflow/BpcNextActivityKeys" 
+
+           targetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys" 
+
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"  
+
+           id="BpcNextActivityKeys"> 
+
+  <xs:attribute name="Yes"> 
+
+    <xs:annotation> 
+
+      <xs:documentation>Да</xs:documentation> 
+
+    </xs:annotation> 
+
+  </xs:attribute> 
+
+	<xs:attribute name="No"> 
+
+    <xs:annotation> 
+
+      <xs:documentation>Нет</xs:documentation> 
+
+    </xs:annotation> 
+
+  </xs:attribute> 
+
+  <xs:attribute name="YesAndNo"> 
+
+    <xs:annotation> 
+
+      <xs:documentation>Да и Нет одновременно</xs:documentation> 
+
+    </xs:annotation> 
+
+  </xs:attribute> 
+
+	<xs:attribute name="Back"> 
+
+    <xs:annotation> 
+
+      <xs:documentation>Возврат</xs:documentation> 
+
+    </xs:annotation> 
+
+  </xs:attribute> 
+
+  <xs:attribute name="Help"> 
+
+    <xs:annotation> 
+
+      <xs:documentation>Помощь</xs:documentation> 
+
+    </xs:annotation> 
+
+  </xs:attribute> 
+
+</xs:schema>
+
+

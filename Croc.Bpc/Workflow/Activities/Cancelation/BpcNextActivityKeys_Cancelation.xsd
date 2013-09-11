@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?> 
+
+<xs:schema xmlns="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/Cancelation" xmlns:xs="http://www.w3.org/2001/XMLSchema"
+
+targetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/Cancelation" elementFormDefault="qualified" attributeFormDefault="unqualified"
+
+id="BpcNextActivityKeys_Cancelation"> 
+
+	<xs:attribute name="CanceledLocally"> 
+
+		<xs:annotation> 
+
+			<xs:documentation>Кандидат был снят локально</xs:documentation> 
+
+		</xs:annotation> 
+
+	</xs:attribute> 
+
+	<xs:attribute name="CanceledInSD"> 
+
+		<xs:annotation> 
+
+			<xs:documentation>Кандидат снят в ИД</xs:documentation> 
+
+		</xs:annotation> 
+
+	</xs:attribute> 
+
+	<xs:attribute name="NotCanceled"> 
+
+		<xs:annotation> 
+
+			<xs:documentation>Кандидат не снят</xs:documentation> 
+
+		</xs:annotation> 
+
+	</xs:attribute> 
+
+</xs:schema>
+
+

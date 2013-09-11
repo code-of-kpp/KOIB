@@ -1,0 +1,243 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys" 
+
+  xmlns:de="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/DiagError"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+ 
+
+ 
+
+  <CompositeActivity Name="ConnectToScannerActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.Initialization.ConnectToScannerActivity, Croc.Bpc.Workflow"> 
+
+ 
+
+ 
+
+    <!--установим соединение со сканером--> 
+
+    <Activity Name="EstablishConnectionToScanner" Execute="EstablishConnectionToScanner" 
+
+              k:Yes="SetIndicatorInitializing" k:No="SayConnectToScannerFailed" 
+
+			  Parameters="ErrorId=ConnectToScannerFailed"/> 
+
+    <!--говорим, что не удалось установить соединение и перезагружаем драйвер и приложение,  
+
+		если не помого то ОС--> 
+
+    <ReferenceActivity Name="SayConnectToScannerFailed" Execute="Common.ReportError" 
+
+			Parameters="ErrorId=ConnectToScannerFailed;ExitType=RestartDriverAndApplication;SecondExitType=RebootOperationSystem"/> 
+
+ 
+
+ 
+
+    <!--выведем на индикатор "Инициализация..."--> 
+
+    <ReferenceActivity Name="SetIndicatorInitializing" Execute="Common.SetIndicator"/> 
+
+ 
+
+ 
+
+    <!--выполняем диагностику сканера (если ошибок нет, то возвращаем Yes)--> 
+
+    <Activity Name="PerformDiagnostics" Execute="PerformDiagnostics" 
+
+              k:Yes="@@Return(Yes)" k:No="StartEnumerateDiagnosticsErrors"/> 
+
+ 
+
+ 
+
+    <!--инициализируем перебор ошибок диагностики--> 
+
+    <Activity Name="StartEnumerateDiagnosticsErrors" Execute="StartEnumerateDiagnosticsErrors" 
+
+              k:Yes="GetNextDiagnosticsError"/> 
+
+ 
+
+ 
+
+    <!--получим очередную ошибку диагностики--> 
+
+    <Activity Name="GetNextDiagnosticsError" Execute="GetNextDiagnosticsError" 
+
+              k:No="WasCriticalErrorFound" 
+
+              de:RightDoubleSheetSensorNotWork="SayRightDoubleSheetSensorNotWork" 
+
+              de:LeftDoubleSheetSensorNotWork="SayLeftDoubleSheetSensorNotWork" 
+
+              de:DoubleSheetSensorNotWork="SayDoubleSheetSensorNotWork" 
+
+              de:WrongDriverVersion="SayWrongDriverVersion" 
+
+              de:WrongDriverConfig="SayWrongDriverConfig" 
+
+              de:WrongBrightnessCoefFile="SayWrongBrightnessCoefFile"/> 
+
+ 
+
+ 
+
+    <!--не критичные ошибки--> 
+
+    <ReferenceActivity Name="SayRightDoubleSheetSensorNotWork" Execute="Common.SayPhrase" 
+
+
+                       k:Yes="GetNextDiagnosticsError"/> 
+
+    <ReferenceActivity Name="SayLeftDoubleSheetSensorNotWork" Execute="Common.SayPhrase" 
+
+                       k:Yes="GetNextDiagnosticsError"/> 
+
+    <ReferenceActivity Name="SayDoubleSheetSensorNotWork" Execute="Common.SayPhrase" 
+
+                       k:Yes="GetNextDiagnosticsError"/> 
+
+    <!--критичные ошибки--> 
+
+    <ReferenceActivity Name="SayWrongDriverVersion" Execute="Common.SayPhrase" 
+
+                       k:Yes="SetCriticalErrorFound"/> 
+
+    <ReferenceActivity Name="SayWrongDriverConfig" Execute="Common.SayPhrase" 
+
+                       k:Yes="SetCriticalErrorFound"/> 
+
+    <ReferenceActivity Name="SayWrongBrightnessCoefFile" Execute="Common.SayPhrase" 
+
+                       k:Yes="SetCriticalErrorFound"/> 
+
+ 
+
+ 
+
+    <!--выставим признак того, что обнаружена критичная ошибка--> 
+
+    <Activity Name="SetCriticalErrorFound" Execute="SetCriticalErrorFound" 
+
+              k:Yes="GetNextDiagnosticsError"/> 
+
+ 
+
+ 
+
+    <!--проверим, была ли найдена критичная ошибка?--> 
+
+    <Activity Name="WasCriticalErrorFound" Execute="WasCriticalErrorFound" 
+
+              k:Yes="SayContactTechnicalSupport" k:No="@@Return(Yes)" /> 
+
+ 
+
+ 
+
+    <!--говорим, чтобы обратились в службу техподдержки и ждем нажатия кнопки Помощь--> 
+
+    <ReferenceActivity Name="SayContactTechnicalSupport" Execute="Common.SayAndWaitHelp"  
+
+                       k:Help="StartEnumerateDiagnosticsErrors"/> 
+
+ 
+
+ 
+
+  </CompositeActivity> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="ConnectToScannerActivity.SetIndicatorInitializing"> 
+
+    <Parameter Name="TextFormat">Инициализация...</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ConnectToScannerActivity.SayConnectToScannerFailed"> 
+
+    <Parameter Name="TextFormat">Нет соединения со сканером</Parameter> 
+
+    <Parameter Name="Sounds">connect_to_scanner_failed</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ConnectToScannerActivity.SayRightDoubleSheetSensorNotWork"> 
+
+    <Parameter Name="TextFormat">Правый ДДЛ</Parameter> 
+
+    <Parameter Name="Sounds">right_double_sheet_sensor_not_work</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ConnectToScannerActivity.SayLeftDoubleSheetSensorNotWork"> 
+
+    <Parameter Name="TextFormat">Левый ДДЛ</Parameter> 
+
+    <Parameter Name="Sounds">left_double_sheet_sensor_not_work</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ConnectToScannerActivity.SayDoubleSheetSensorNotWork"> 
+
+    <Parameter Name="TextFormat">Не работает ДДЛ</Parameter> 
+
+    <Parameter Name="Sounds">double_sheet_sensor_not_work</Parameter> 
+
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ConnectToScannerActivity.SayWrongDriverVersion"> 
+
+    <Parameter Name="TextFormat">Версия драйвера</Parameter> 
+
+    <Parameter Name="Sounds">wrong_driver_version</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ConnectToScannerActivity.SayWrongDriverConfig"> 
+
+    <Parameter Name="TextFormat">Конфиг. драйвера</Parameter> 
+
+    <Parameter Name="Sounds">wrong_driver_config</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ConnectToScannerActivity.SayWrongBrightnessCoefFile"> 
+
+    <Parameter Name="TextFormat">Коэф. яркости</Parameter> 
+
+    <Parameter Name="Sounds">wrong_brightness_coef_file</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="ConnectToScannerActivity.SayContactTechnicalSupport"> 
+
+    <Parameter Name="TextFormat">Обратитесь в техподдержку</Parameter> 
+
+    <Parameter Name="Sounds">contact_technical_support</Parameter> 
+
+  </ActivityParametersBinding> 
+
+ 
+
+ 
+
+</Workflow>
+
+

@@ -1,0 +1,85 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+ 
+
+ 
+
+  <!--Озвучивает снятые позиции (кандидатов) в заданных выборах--> 
+
+  <CompositeActivity Name="SayCanceledCandidatesInElectionActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.Cancelation.SayCanceledCandidatesInElectionActivity, Croc.Bpc.Workflow"> 
+
+ 
+
+ 
+
+    <!--проверяем, есть ли снятые позиции или нет--> 
+
+    <Activity Name="HasCanceledCandidates" Execute="HasCanceledCandidates" 
+
+              k:Yes="SayCanceledCandidates" k:No="SayNoCanceledCandidates"/> 
+
+ 
+
+ 
+
+    <!--говорим номера снятых позиций--> 
+
+    <ReferenceActivity Name="SayCanceledCandidates" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@SayCanceledCandidatesPhraseParameters" 
+
+                       k:Yes="@@Return(Yes)"/> 
+
+ 
+
+ 
+
+    <!--говорим, что снятых позиций нет--> 
+
+    <ReferenceActivity Name="SayNoCanceledCandidates" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@ElectionNumber" 
+
+                       k:Yes="@@Return(Yes)"/> 
+
+  </CompositeActivity> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="SayCanceledCandidatesInElectionActivity.SayCanceledCandidates"> 
+
+    <Parameter Name="TextFormat">{p0}. Сняты: {p1-*:delim[, ]}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}{s1}{p1-*}</Parameter> 
+
+    <Parameter Name="Sounds">[election_number,canceled_candidates]</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="SayCanceledCandidatesInElectionActivity.SayNoCanceledCandidates"> 
+
+    <Parameter Name="TextFormat">{p0}. Снятых нет</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}{s1}</Parameter> 
+
+    <Parameter Name="Sounds">[election_number,no_canceled_positions]</Parameter> 
+
+  </ActivityParametersBinding> 
+
+</Workflow>
+
+

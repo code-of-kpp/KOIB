@@ -1,0 +1,194 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+  <Include Ref="Activities/Printing.wf" /> 
+
+  <Include Ref="Activities/Cancelation/CancelCandidates.wf" /> 
+
+  <Include Ref="Activities/Cancelation/SayCanceledCandidates.wf" /> 
+
+ 
+
+ 
+
+  <!--Снятие позиций (кандидатов)--> 
+
+  <CompositeActivity Name="CancelationActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.Cancelation.CancelationActivity, Croc.Bpc.Workflow" 
+
+                     Tracking="false"> 
+
+ 
+
+ 
+
+    <!--перебираем выборы--> 
+
+    <Activity Name="MoveNextElection" Execute="MoveNextElection" 
+
+              k:Yes="SayWantToCancelCandidates" k:No="WereChangesMade"/> 
+
+ 
+
+ 
+
+    <!--говорим "желаете снимать позиции для выборов №Е?"--> 
+
+    <ReferenceActivity Name="SayWantToCancelCandidates" Execute="Common.SayAndWaitYesOrNoOrBack" 
+
+                       Parameters="Parameters=@CurrentElectionNumber" 
+
+                       k:Yes="CancelCandidates" k:No="MoveNextElection" k:Back="MovePreviousElection"/> 
+
+ 
+
+ 
+
+    <!--снятие кандидатов для выборов №Е--> 
+
+    <ReferenceActivity Name="CancelCandidates" Execute="CancelCandidatesActivity" 
+
+                       Parameters="ElectionIndex=@CurrentElectionIndex" 
+
+                       k:Yes="MoveNextElection"/> 
+
+ 
+
+ 
+
+    <!--переход к предыдущим выборам--> 
+
+    <Activity Name="MovePreviousElection" Execute="MovePreviousElection" 
+
+              k:Yes="MoveNextElection"/> 
+
+ 
+
+ 
+
+    <!--проверяем, ИД были изменены?--> 
+
+    <Activity Name="WereChangesMade" Execute="WereChangesMade"  
+
+              k:Yes="SayCheckSD" k:No="SayNoChanges"/> 
+
+ 
+
+ 
+
+    <!--говорим, чтобы проверили правильность сделанных изменений--> 
+
+    <ReferenceActivity Name="SayCheckSD" Execute="Common.SayPhrase" /> 
+
+ 
+
+ 
+
+    <!--печатаем ИД--> 
+
+    <ReferenceActivity Name="PrintSourceData" Execute="PrintingActivity"  
+
+
+                       Parameters="ReportType=SourceData;ReportParameters=@SourceDataReportParameters"/> 
+
+ 
+
+ 
+
+    <!--озвучиваем снятые позиции--> 
+
+    <ReferenceActivity Name="SayCanceledCandidates" Execute="SayCanceledCandidatesActivity" /> 
+
+ 
+
+ 
+
+    <!--говорим, чтобы подтвердили изменения--> 
+
+    <ReferenceActivity Name="SayConfirmChanges" Execute="Common.SayAndWaitYesOrNo" 
+
+                       k:Yes="SaveChanges" k:No="ResetElectionEnumerator"/> 
+
+    <!--сохраняем изменения в состоянии--> 
+
+    <Activity Name="SaveChanges" Execute="SaveChanges" 
+
+              k:Yes="@@Return(Yes)"/> 
+
+    <!--сбросим перебор выборов чтобы начать с начала--> 
+
+    <Activity Name="ResetElectionEnumerator" Execute="ResetElectionEnumerator"  
+
+              k:Yes="MoveNextElection"/> 
+
+ 
+
+ 
+
+    <!--говорим, что не было сделано изменений--> 
+
+    <ReferenceActivity Name="SayNoChanges" Execute="Common.SayPhrase"  
+
+                       k:Yes="@@Return(Yes)" /> 
+
+ 
+
+ 
+
+  </CompositeActivity> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="CancelationActivity.SayWantToCancelCandidates"> 
+
+    <Parameter Name="TextFormat">Снимать позиции для выборов {p0}?</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{p0}</Parameter> 
+
+    <Parameter Name="Sounds">want_to_cancel_positions_for_election</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="CancelationActivity.SayCheckSD"> 
+
+    <Parameter Name="TextFormat">Проверьте ИД</Parameter> 
+
+    <Parameter Name="Sounds">check_source_data</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="CancelationActivity.SayConfirmChanges"> 
+
+    <Parameter Name="TextFormat">Подтверждаете изменения?</Parameter> 
+
+    <Parameter Name="Sounds">confirm_changes_during_cancelation</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="CancelationActivity.SayNoChanges"> 
+
+    <Parameter Name="TextFormat">Нет изменений!</Parameter> 
+
+    <Parameter Name="Sounds">no_changes_during_cancelation</Parameter> 
+
+  </ActivityParametersBinding> 
+
+ 
+
+ 
+
+</Workflow>
+
+

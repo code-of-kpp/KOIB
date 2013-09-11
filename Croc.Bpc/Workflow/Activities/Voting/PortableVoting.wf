@@ -1,0 +1,249 @@
+<Workflow 
+
+  xmlns="http://schemas.croc.ru/Workflow" 
+
+  xmlns:k="http://schemas.croc.ru/Workflow/BpcNextActivityKeys" 
+
+  xmlns:rr="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/RecognitionResult"> 
+
+ 
+
+ 
+
+  <Include Ref="Activities/Common.wf" /> 
+
+ 
+
+ 
+
+  <!--Голосование в переносном режиме--> 
+
+  <CompositeActivity Name="PortableVotingActivity" 
+
+                     Class="Croc.Bpc.Workflow.Activities.Voting.PortableVotingActivity, Croc.Bpc.Workflow" 
+
+                     Tracking="false"> 
+
+ 
+
+ 
+
+    <!--установим режим голосования = Переносной--> 
+
+    <Activity Name="SetVotingModeToPortable" Execute="SetVotingModeToPortable"/> 
+
+    <!--включаем сканирование и зеленую лампочку--> 
+
+    <Activity Name="FirstStartScanning" Execute="StartScanning"/> 
+
+ 
+
+ 
+
+    <!--проверим кол-во принятых бюллетеней: их больше 0?--> 
+
+    <Activity Name="CheckReceivedBulletinsCount" Execute="ReceivedBulletinsCountInCurrentModeMoreThenZero" 
+
+              k:Yes="SetIndicatorReceivedBulletinsCount" k:No="SayPortableVotingStarted"/> 
+
+ 
+
+ 
+
+    <!--говорим: начало переносного голосования...--> 
+
+    <ReferenceActivity Name="SayPortableVotingStarted" Execute="Common.SayPhrase" 
+
+                       Parameters="Parameters=@Common.LocalDateTimeNow"/> 
+
+ 
+
+ 
+
+    <!--выведем на индикатор "Принято: <Кол-во принятых бюллетеней>"--> 
+
+    <ReferenceActivity Name="SetIndicatorReceivedBulletinsCount" Execute="Common.SetIndicator" 
+
+                       Parameters="Parameters=@ReceivedBulletinsCount"/> 
+
+ 
+
+ 
+
+    <!--говорим: опускайте бюллетени по одному (говорим, только при нажатии на Помощь)--> 
+
+    <ReferenceActivity Name="SayDropBulletins" Execute="Common.SayAndWaitYesAndNoAtOnce" 
+
+                       k:YesAndNo="StopScanning"/> 
+
+ 
+
+ 
+
+    <!--выключаем сканирование и зеленую лампочку--> 
+
+    <Activity Name="StopScanning" Execute="StopScanning"/> 
+
+ 
+
+ 
+
+    <!--говорим: для завершения Переносного голосования нажмите Да, для возврата - Нет--> 
+
+    <ReferenceActivity Name="SayWantToFinishPortableVoting" Execute="Common.SayAndWaitYesOrNo" 
+
+                       k:Yes="@@Return(Yes)" k:No="StartScanning"/> 
+
+ 
+
+ 
+
+
+    <!--включаем сканирование и зеленую лампочку, если продолжаем работать в текущем режиме голосования--> 
+
+    <Activity Name="StartScanning" Execute="StartScanning" 
+
+              k:Yes="SetIndicatorReceivedBulletinsCount"/> 
+
+ 
+
+ 
+
+    <!--Обработка листа==============================================================================================--> 
+
+ 
+
+ 
+
+	<!--ждем завершения обработки бюллетеня, выводим на индикатор ждите--> 
+
+	<ReferenceActivity Name="WaitSheetProcessed" Execute="Common.WaitEvents" Priority="3" 
+
+                       Parameters="WaitedEvents=@SheetProcessed"/> 
+
+ 
+
+ 
+
+    <!--анализируем результат распознавания  бюллетеня--> 
+
+    <Activity Name="CheckRecognitionResult" Execute="CheckRecognitionResult" Priority="3" 
+
+              rr:BadBulletin="SayBulletinProcessed" 
+
+              rr:NoMarksBulletin="SayBulletinProcessed" 
+
+              rr:TooManyMarksBulletin="SayBulletinProcessed" 
+
+              rr:ValidBulletin="SayBulletinProcessed" 
+
+              rr:BulletinReversed="SayBulletinReversed" 
+
+              rr:BulletinReceivingForbidden="SayBulletinProcessed" 
+
+              rr:Error="SetIndicatorReceivedBulletinsCount"/> 
+
+ 
+
+ 
+
+    <!--говорим: ваш бюллетень обработан--> 
+
+    <ReferenceActivity Name="SayBulletinProcessed" Execute="Common.SayPhrase" Priority="3" 
+
+                       Parameters="Parameters=@ReceivedBulletinsCount" 
+
+                       k:Yes="SetIndicatorReceivedBulletinsCount"/> 
+
+ 
+
+ 
+
+    <!--говорим причину реверса--> 
+
+    <ReferenceActivity Name="SayBulletinReversed" Execute="Common.SayPhrase" Priority="3" 
+
+                       Parameters="TextFormat=@ReverseReasonText;Sounds=@ReverseReasonSound" 
+
+                       k:Yes="SetIndicatorReceivedBulletinsCount"/> 
+
+ 
+
+ 
+
+  </CompositeActivity> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="PortableVotingActivity.SayPortableVotingStarted"> 
+
+    <Parameter Name="TextFormat">Переносное голосование. Время {p0:hhmm}</Parameter> 
+
+    <Parameter Name="PhraseFormat">{s0}{s1}{p0:hhmm}{s2}</Parameter> 
+
+    <Parameter Name="Sounds">[voting_portable_started,local_time,for_end_voting_press_yes_and_no]</Parameter> 
+
+    <Parameter Name="SilentOnSlave">true</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="PortableVotingActivity.SetIndicatorReceivedBulletinsCount"> 
+
+    <Parameter Name="TextFormat">Переносной: {p0}</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="PortableVotingActivity.SayDropBulletins"> 
+
+    <Parameter Name="Sounds">drop_bulletins</Parameter> 
+
+
+    <Parameter Name="SayFirstTime">false</Parameter> 
+
+    <!--бесконечно--> 
+
+    <Parameter Name="RepeatTimeout">Infinite</Parameter> 
+
+    <Parameter Name="IgnoreButtonsOnSlave">true</Parameter> 
+
+  </ActivityParametersBinding> 
+
+  <ActivityParametersBinding ActivityName="PortableVotingActivity.SayWantToFinishPortableVoting"> 
+
+    <Parameter Name="TextFormat">Завершить переносное голосование?</Parameter> 
+
+    <Parameter Name="Sounds">yes_for_end_portable_voting_no_for_continue_voting</Parameter> 
+
+  </ActivityParametersBinding> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="PortableVotingActivity.WaitSheetProcessed"> 
+
+    <Parameter Name="TextFormat">ЖДИТЕ!</Parameter> 
+
+  </ActivityParametersBinding> 
+
+ 
+
+ 
+
+  <ActivityParametersBinding ActivityName="PortableVotingActivity.SayBulletinProcessed"> 
+
+    <Parameter Name="TextFormat">Переносной: {p0}</Parameter> 
+
+    <Parameter Name="Sounds">your_bulletin_processed</Parameter> 
+
+  </ActivityParametersBinding> 
+
+ 
+
+ 
+
+</Workflow>
+
+

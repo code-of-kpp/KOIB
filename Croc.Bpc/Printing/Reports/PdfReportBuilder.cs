@@ -62,7 +62,7 @@ namespace Croc.Bpc.Printing.Reports
                 try 
                 { 
                     _pdfDocument = new Document(PageSize.A4); 
-                    _pdfDocument.ClaspFooter = ClaspFooter; 
+                    //_pdfDocument.ClaspFooter = ClaspFooter; 
                     PdfWriter writer = PdfWriter.GetInstance(_pdfDocument, stream); 
                     writer.PageEvent = new PdfEventHelper(this); 
                     _pdfDocument.SetMargins(Margins[0], Margins[1], Margins[2], Margins[3]); 
@@ -278,13 +278,13 @@ namespace Croc.Bpc.Printing.Reports
         private static Table MakeTable(int dataColums, int rows) 
         { 
             var tbl = new Table(dataColums, rows); 
-            tbl.WidthPercentage = 100; 
+            //tbl.WidthPercentage = 100; 
             tbl.Cellpadding = 0; 
             tbl.Border = Border; 
             tbl.CellsFitPage = true; 
-            tbl.SpaceInsideCell = 0; 
+            //tbl.SpaceInsideCell = 0; 
             tbl.Spacing = 0; 
-            tbl.SpaceInsideCell = 0; 
+            //tbl.SpaceInsideCell = 0; 
             return tbl; 
         } 
         private static string TextAlign(string text, Font font, LineAlign lineAlign, float areaWidth, char fillChar) 

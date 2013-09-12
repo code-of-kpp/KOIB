@@ -1,0 +1,107 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{D743A63E-3D50-48EA-8746-F10A640D913B}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Croc.Workflow</RootNamespace>
+    <AssemblyName>Croc.Workflow</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ComponentModel\Activity.cs" />
+    <Compile Include="ComponentModel\ActivityExecutionException.cs" />
+    <Compile Include="ComponentModel\ActivityExecutionInterruptException.cs" />
+    <Compile Include="ComponentModel\ActivityExecutionMethodCaller.cs" />
+    <Compile Include="ComponentModel\ActivityParameter.cs" />
+    <Compile Include="ComponentModel\ActivityParameterDictionary.cs" />
+    <Compile Include="ComponentModel\ActivityParameterEvaluator.cs" />
+    <Compile Include="ComponentModel\ActivityPriority.cs" />
+    <Compile Include="ComponentModel\ActivityUnInitializeMethodCaller.cs" />
+    <Compile Include="ComponentModel\Compiler\ParametersBindingActivity.cs" />
+    <Compile Include="ComponentModel\Compiler\UnevaluatedActivity.cs" />
+    <Compile Include="ComponentModel\Compiler\UnevaluatedActivityParameterEvaluator.cs" />
+    <Compile Include="ComponentModel\Compiler\UnevaluatedEventHolder.cs" />
+    <Compile Include="ComponentModel\Compiler\WorkflowSchemeParser.cs" />
+    <Compile Include="ComponentModel\Compiler\WorkflowSchemeParserException.cs" />
+    <Compile Include="ComponentModel\Compiler\XmlReaderEx.cs" />
+    <Compile Include="ComponentModel\CompositeActivity.cs" />
+    <Compile Include="ComponentModel\EventActivityHandler.cs" />
+    <Compile Include="ComponentModel\EventHandlerActivity.cs" />
+    <Compile Include="ComponentModel\EventHandlingType.cs" />
+    <Compile Include="ComponentModel\EventHolder.cs" />
+    <Compile Include="ComponentModel\MethodCaller.cs" />
+    <Compile Include="ComponentModel\MonitorActivity.cs" />
+    <Compile Include="ComponentModel\MonitorEnterActivity.cs" />
+    <Compile Include="ComponentModel\MonitorExitActivity.cs" />
+    <Compile Include="ComponentModel\NextActivityKey.cs" />
+    <Compile Include="ComponentModel\ReferenceActivity.cs" />
+    <Compile Include="ComponentModel\ReturnActivity.cs" />
+    <Compile Include="ComponentModel\SubscribeToEventActivity.cs" />
+    <Compile Include="ComponentModel\UnsubscribeFromEventActivity.cs" />
+    <Compile Include="ComponentModel\WorkflowExecutionContext.cs" />
+    <Compile Include="ComponentModel\WorkflowScheme.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Runtime\Hosting\DefaultWorkflowSchemeLoaderService.cs" />
+    <Compile Include="Runtime\Hosting\FileWorkflowPersistenceService.cs" />
+    <Compile Include="Runtime\Hosting\WorkflowPersistenceService.cs" />
+    <Compile Include="Runtime\Hosting\WorkflowRuntimeService.cs" />
+    <Compile Include="Runtime\Hosting\WorkflowSchemeLoaderService.cs" />
+    <Compile Include="Runtime\WorkflowBuiltinFunctions.cs" />
+    <Compile Include="Runtime\WorkflowCompletedEventArgs.cs" />
+    <Compile Include="Runtime\WorkflowEventArgs.cs" />
+    <Compile Include="Runtime\WorkflowExecutionContextEventArgs.cs" />
+    <Compile Include="Runtime\WorkflowInstance.cs" />
+    <Compile Include="Runtime\WorkflowRuntime.cs" />
+    <Compile Include="Runtime\WorkflowTerminatedEventArgs.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Workflow.xsd">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Croc.Core.csproj">
+      <Project>{DA8D9F8F-6447-4E19-ABF7-68FE37282936}</Project>
+      <Name>Croc.Core</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -1,0 +1,197 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{88F19E39-5D2B-4D02-9AD4-FBC1373F6CE6}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Croc.Bpc.Workflow</RootNamespace>
+    <AssemblyName>Croc.Bpc.Workflow</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Activities\BpcCompositeActivity.cs" />
+    <Compile Include="Activities\BpcNextActivityKeys.cs">
+      <DependentUpon>BpcNextActivityKeys.xsd</DependentUpon>
+    </Compile>
+    <Compile Include="Activities\BpcNextActivityKeys_RecognitionResult.cs">
+      <DependentUpon>BpcNextActivityKeys_RecognitionResult.xsd</DependentUpon>
+    </Compile>
+    <Compile Include="Activities\BpcNextActivityKeys_VotingTime.cs">
+      <DependentUpon>BpcNextActivityKeys_VotingTime.xsd</DependentUpon>
+    </Compile>
+    <Compile Include="Activities\Cancelation\BpcNextActivityKeys_Cancelation.cs">
+      <DependentUpon>BpcNextActivityKeys_Cancelation.xsd</DependentUpon>
+    </Compile>
+    <Compile Include="Activities\Cancelation\CancelationActivity.cs" />
+    <Compile Include="Activities\Cancelation\CancelCandidatesActivity.cs" />
+    <Compile Include="Activities\Cancelation\SayCanceledCandidatesInElectionActivity.cs" />
+    <Compile Include="Activities\CandidateEnumeratorActivity.cs" />
+    <Compile Include="Activities\Common.cs" />
+    <Compile Include="Activities\ElectionEnumeratorActivity.cs" />
+    <Compile Include="Activities\ElectionParametrizedActivity.cs" />
+    <Compile Include="Activities\Initialization\CheckConflict.cs" />
+    <Compile Include="Activities\Initialization\ConnectToScanner.cs" />
+    <Compile Include="Activities\Initialization\ControlVotingStart.cs" />
+    <Compile Include="Activities\Initialization\Initialization.cs" />
+    <Compile Include="Activities\Initialization\LoadConfig.cs" />
+    <Compile Include="Activities\Initialization\ReadSourceData.cs" />
+    <Compile Include="Activities\Initialization\RemoteScannerSearch.cs" />
+    <Compile Include="Activities\Main.cs" />
+    <Compile Include="Activities\Mock.cs" />
+    <Compile Include="Activities\OperatorMenu\OperatorMenuActivity.cs" />
+    <Compile Include="Activities\OperatorMenu\ViewDateActivity.cs" />
+    <Compile Include="Activities\OperatorMenu\ViewIpAddressActivity.cs" />
+    <Compile Include="Activities\OperatorMenu\ViewVersionActivity.cs" />
+    <Compile Include="Activities\OperatorMenu\VolumeSettingsActivity.cs" />
+    <Compile Include="Activities\Printing.cs" />
+    <Compile Include="Activities\ScanningActivity.cs" />
+    <Compile Include="Activities\Summarizing\EnterAdditionalInfoActivity.cs" />
+    <Compile Include="Activities\Summarizing\PreliminarySummarizingActivity.cs" />
+    <Compile Include="Activities\Summarizing\ReadCandidatesVoteCountActivity.cs" />
+    <Compile Include="Activities\Summarizing\ReadVotingReportActivity.cs" />
+    <Compile Include="Activities\Summarizing\SaveVotingResultsActivity.cs" />
+    <Compile Include="Activities\Summarizing\SummarizingActivity.cs" />
+    <Compile Include="Activities\SystemMenu\BadBulletinSettingsActivity.cs" />
+    <Compile Include="Activities\SystemMenu\BlankPaperTypeSettingsActivity.cs" />
+    <Compile Include="Activities\SystemMenu\DateTimeSettingsActivity.cs" />
+    <Compile Include="Activities\SystemMenu\DssEnabledSettingsActivity.cs" />
+    <Compile Include="Activities\SystemMenu\DssLevelSettingsActivity.cs" />
+    <Compile Include="Activities\SystemMenu\ExitSoftActivity.cs" />
+    <Compile Include="Activities\SystemMenu\MarkerSettingsActivity.cs" />
+    <Compile Include="Activities\SystemMenu\PaperSettingsActivity.cs" />
+    <Compile Include="Activities\SystemMenu\PrintPreliminaryProtocolActivity.cs" />
+    <Compile Include="Activities\SystemMenu\PrintSDActivity.cs" />
+    <Compile Include="Activities\SystemMenu\ResetConfigActivity.cs" />
+    <Compile Include="Activities\SystemMenu\ResetSoftActivity.cs" />
+    <Compile Include="Activities\SystemMenu\ResetUikActivity.cs" />
+    <Compile Include="Activities\SystemMenu\StampSettingsActivity.cs" />
+    <Compile Include="Activities\SystemMenu\SystemMenuActivity.cs" />
+    <Compile Include="Activities\Testing\ReadCandidatesTestVoteCountActivity.cs" />
+    <Compile Include="Activities\Testing\ReadTestingReportActivity.cs" />
+    <Compile Include="Activities\Testing\TestingActivity.cs" />
+    <Compile Include="Activities\Voting\MainVotingActivity.cs" />
+    <Compile Include="Activities\Voting\PortableVotingActivity.cs" />
+    <Compile Include="Config\WorkflowManagerConfig.cs" />
+    <Compile Include="Config\XmlSchemaConfig.cs" />
+    <Compile Include="Config\XmlSchemaConfigCollection.cs" />
+    <Compile Include="InfoOutputEventArgs.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="WorkflowManager.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Activities\BpcNextActivityKeys.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Activities\BpcNextActivityKeys_RecognitionResult.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Activities\BpcNextActivityKeys_VotingTime.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Activities\Cancelation\BpcNextActivityKeys_Cancelation.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Activities\Cancelation\Cancelation.wf" />
+    <None Include="Activities\Cancelation\CancelCandidates.wf" />
+    <None Include="Activities\Cancelation\SayCanceledCandidates.wf" />
+    <None Include="Activities\Cancelation\SayCanceledCandidatesInElection.wf" />
+    <None Include="Activities\Common.wf" />
+    <None Include="Activities\Initialization\BpcNextActivityKeys_DiagError.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Activities\Initialization\CheckConflict.wf" />
+    <None Include="Activities\Initialization\ConnectToScanner.wf" />
+    <None Include="Activities\Initialization\ControlVotingStart.wf" />
+    <None Include="Activities\Initialization\Initialization.wf" />
+    <None Include="Activities\Initialization\LoadConfig.wf" />
+    <None Include="Activities\Initialization\ReadSourceData.wf" />
+    <None Include="Activities\Initialization\RemoteScannerSearch.wf" />
+    <None Include="Activities\Main.wf" />
+    <None Include="Activities\Mock.wf" />
+    <None Include="Activities\OperatorMenu\OperatorMenu.wf" />
+    <None Include="Activities\OperatorMenu\ViewDate.wf" />
+    <None Include="Activities\OperatorMenu\ViewIpAddress.wf" />
+    <None Include="Activities\OperatorMenu\ViewVersion.wf" />
+    <None Include="Activities\OperatorMenu\VolumeSettings.wf" />
+    <None Include="Activities\Printing.wf" />
+    <None Include="Activities\Summarizing\EnterAdditionalInfo.wf" />
+    <None Include="Activities\Summarizing\PreliminarySummarizing.wf" />
+    <None Include="Activities\Summarizing\ReadCandidatesVoteCount.wf" />
+    <None Include="Activities\Summarizing\ReadVotingReport.wf" />
+    <None Include="Activities\Summarizing\SaveVotingResults.wf" />
+    <None Include="Activities\Summarizing\Summarizing.wf" />
+    <None Include="Activities\SystemMenu\BadBulletinSettings.wf" />
+    <None Include="Activities\SystemMenu\BlankPaperTypeSettings.wf" />
+    <None Include="Activities\SystemMenu\DateTimeSettings.wf" />
+    <None Include="Activities\SystemMenu\DssEnabledSettings.wf" />
+    <None Include="Activities\SystemMenu\DssLevelSettings.wf" />
+    <None Include="Activities\SystemMenu\ExitSoft.wf" />
+    <None Include="Activities\SystemMenu\MarkerSettings.wf" />
+    <None Include="Activities\SystemMenu\PaperSettings.wf" />
+    <None Include="Activities\SystemMenu\PrintPreliminaryProtocol.wf" />
+    <None Include="Activities\SystemMenu\PrintSD.wf" />
+    <None Include="Activities\SystemMenu\ResetConfig.wf" />
+    <None Include="Activities\SystemMenu\ResetSoft.wf" />
+    <None Include="Activities\SystemMenu\ResetUik.wf" />
+    <None Include="Activities\SystemMenu\StampSettings.wf" />
+    <None Include="Activities\SystemMenu\SystemMenu.wf" />
+    <None Include="Activities\Testing\ReadCandidatesTestVoteCount.wf" />
+    <None Include="Activities\Testing\ReadTestingReport.wf" />
+    <None Include="Activities\Testing\Testing.wf" />
+    <None Include="Activities\Voting\MainVoting.wf" />
+    <None Include="Activities\Voting\PortableVoting.wf" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Croc.Common\Core\Croc.Core.csproj">
+      <Project>{DA8D9F8F-6447-4E19-ABF7-68FE37282936}</Project>
+      <Name>Croc.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Croc.Common\Workflow\Croc.Workflow.csproj">
+      <Project>{D743A63E-3D50-48EA-8746-F10A640D913B}</Project>
+      <Name>Croc.Workflow</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Common\Croc.Bpc.Common.csproj">
+      <Project>{04ABA847-581D-4CAD-BD32-9B0BBBEF42B1}</Project>
+      <Name>Croc.Bpc.Common</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

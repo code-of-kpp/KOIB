@@ -1,0 +1,118 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{CB5AB65E-2835-4CF9-A603-70B84A512CF2}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Croc.Bpc.Printing</RootNamespace>
+    <AssemblyName>Croc.Bpc.Printing</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Croc.Bpc.RegExpressions">
+      <HintPath>..\..\lib\Croc.Bpc.RegExpressions.dll</HintPath>
+    </Reference>
+    <Reference Include="itextsharp">
+      <HintPath>..\..\packages\iTextSharp.4.1.2\lib\itextsharp.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Config\CommandsConfig.cs" />
+    <Compile Include="Config\FontConfig.cs" />
+    <Compile Include="Config\MarginConfig.cs" />
+    <Compile Include="Config\PrinterConfig.cs" />
+    <Compile Include="Config\PrinterConfigCollection.cs" />
+    <Compile Include="Config\PrintingManagerConfig.cs" />
+    <Compile Include="Config\ReportConfig.cs" />
+    <Compile Include="CupsFailureException.cs" />
+    <Compile Include="PrintingManager.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Reports\IReportElement.cs" />
+    <Compile Include="Reports\Lines.cs" />
+    <Compile Include="Reports\Managers.cs" />
+    <Compile Include="Reports\PdfReportBuilder.cs" />
+    <Compile Include="Reports\ReportBuilder.cs" />
+    <Compile Include="Reports\ReportLine.cs" />
+    <Compile Include="Reports\ServiceLine.cs" />
+    <Compile Include="Reports\ServiceMode.cs" />
+    <Compile Include="Reports\Templates\BasePlainElement.cs" />
+    <Compile Include="Reports\Templates\BaseTableHolder.cs" />
+    <Compile Include="Reports\Templates\ColDefinition.cs" />
+    <Compile Include="Reports\Templates\FontDefinition.cs" />
+    <Compile Include="Reports\Templates\ForClause.cs" />
+    <Compile Include="Reports\Templates\IfClause.cs" />
+    <Compile Include="Reports\Templates\LineClause.cs" />
+    <Compile Include="Reports\Templates\LinePart.cs" />
+    <Compile Include="Reports\Templates\ParseExceptionReason.cs" />
+    <Compile Include="Reports\Templates\ReportTemplate.cs" />
+    <Compile Include="Reports\Templates\ReportTemplateParser.cs" />
+    <Compile Include="Reports\Templates\ReportTemplateParserException.cs" />
+    <Compile Include="Reports\Templates\ServiceTableColumns.cs" />
+    <Compile Include="Reports\Templates\SetCurrentRow.cs" />
+    <Compile Include="Reports\Templates\Table.cs" />
+    <Compile Include="Reports\Templates\TableFontDefinition.cs" />
+    <Compile Include="Reports\Templates\TableFor.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Data\Schemas\ReportTemplate.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Data\Templates\ElectionProtocol.xml" />
+    <Content Include="Data\Templates\ElectionProtocol_Narrow.xml" />
+    <Content Include="Data\Templates\FailedControlRelations.xml" />
+    <Content Include="Data\Templates\SourceData.xml" />
+    <Content Include="Data\Templates\SourceData_Narrow.xml" />
+    <Content Include="Data\Templates\TestResults.xml" />
+    <Content Include="Data\Templates\TestResults_Narrow.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Croc.Common\Core\Croc.Core.csproj">
+      <Project>{DA8D9F8F-6447-4E19-ABF7-68FE37282936}</Project>
+      <Name>Croc.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Common\Croc.Bpc.Common.csproj">
+      <Project>{04ABA847-581D-4CAD-BD32-9B0BBBEF42B1}</Project>
+      <Name>Croc.Bpc.Common</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

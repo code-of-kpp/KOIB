@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <xs:schema xmlns="http://schemas.croc.ru/Workflow" xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://schemas.croc.ru/Workflow"
-lementFormDefault="qualified" attributeFormDefault="unqualified" id="Workflow"> 
+elementFormDefault="qualified" attributeFormDefault="unqualified" id="Workflow"> 
     <xs:complexType name="BaseActivity" abstract="true"> 
 
 

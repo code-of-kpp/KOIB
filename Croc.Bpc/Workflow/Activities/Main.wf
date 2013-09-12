@@ -23,7 +23,7 @@
 
   <CompositeActivity Name="MainActivity" 
                      Class="Croc.Bpc.Workflow.Activities.MainActivity, Croc.Bpc.Workflow"> 
-    <Region Note="Подписка на события"> 
+    <Region Note="РџРѕРґРїРёСЃРєР° РЅР° СЃРѕР±С‹С‚РёСЏ"> 
 
 
       <SubscribeToEvent Name="SubscribeToUnexpectedErrorEvent" 
@@ -69,7 +69,7 @@
     </Region> 
 
 
-    <Region Note="Инициализация"> 
+    <Region Note="РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ"> 
 
 
       <ReferenceActivity Name="ConnectToScanner" Execute="ConnectToScannerActivity" Tracking="false"/> 
@@ -266,8 +266,10 @@
       <Parameter Name="HelpSounds">start_training_or_cancel_candidates_help_message</Parameter> 
     </ActivityParametersBinding> 
     <ActivityParametersBinding ActivityName="SayYesForVotingNoForBackToInitialization"> 
-      <Parameter Name="TextFormat">Для перехода в стационарный режим голосования нажмите ДА. Для возврата к получению исходных данных и тестированию
-�ажмите НЕТ</Parameter> 
+      <Parameter Name="TextFormat">
+        Для перехода в стационарный режим голосования нажмите ДА. Для возврата к получению исходных данных и тестированию
+        нажмите НЕТ
+      </Parameter> 
       <Parameter Name="Sounds">yes_for_voting_no_for_back_to_testing</Parameter> 
       <Parameter Name="SilentOnSlave">true</Parameter> 
       <Parameter Name="IgnoreButtonsOnSlave">true</Parameter> 
@@ -294,8 +296,10 @@
       <Parameter Name="IgnoreButtonsOnSlave">true</Parameter> 
     </ActivityParametersBinding> 
     <ActivityParametersBinding ActivityName="SayYesForBackToSummarizingNoForEndElection"> 
-      <Parameter Name="TextFormat">Для возврата к подведению итогов нажмите ДА. Для завершения цикла голосования и начала нового цикла выборов нажмите
-�ЕТ</Parameter> 
+      <Parameter Name="TextFormat">
+        Для возврата к подведению итогов нажмите ДА. Для завершения цикла голосования и начала нового цикла выборов нажмите
+        НЕТ
+      </Parameter> 
       <Parameter Name="Sounds">yes_for_back_to_summarizing_no_for_end_election</Parameter> 
     </ActivityParametersBinding> 
     <ActivityParametersBinding ActivityName="SayStartNewElectionForbidden"> 
@@ -303,7 +307,8 @@
       <Parameter Name="Sounds">start_new_election_forbidden</Parameter> 
     </ActivityParametersBinding> 
     <ActivityParametersBinding ActivityName="SayYesForNewElectionNoForBackToSummarizing"> 
-      <Parameter Name="TextFormat">Для начала нового цикла выборов нажмите ДА. Для возврата к подведению итогов нажмите НЕТ. 
+      <Parameter Name="TextFormat">
+        Для начала нового цикла выборов нажмите ДА. Для возврата к подведению итогов нажмите НЕТ.
       </Parameter> 
       <Parameter Name="Sounds">yes_for_new_election_no_for_back_to_summarizing</Parameter> 
     </ActivityParametersBinding> 

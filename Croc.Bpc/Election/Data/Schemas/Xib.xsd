@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <xs:schema targetNamespace="http://localhost/Schemas/xib.xsd" xmlns="http://localhost/Schemas/xib.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema"
-lementFormDefault="qualified" attributeFormDefault="unqualified"> 
+elementFormDefault="qualified" attributeFormDefault="unqualified"> 
 
 
     <xs:element name="Xib"> 

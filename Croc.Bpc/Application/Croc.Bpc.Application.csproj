@@ -63,9 +63,57 @@
       <Project>{DA8D9F8F-6447-4E19-ABF7-68FE37282936}</Project>
       <Name>Croc.Core</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\Croc.Common\Workflow\Croc.Workflow.csproj">
+      <Project>{d743a63e-3d50-48ea-8746-f10a640d913b}</Project>
+      <Name>Croc.Workflow</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Common\Croc.Bpc.Common.csproj">
       <Project>{04ABA847-581D-4CAD-BD32-9B0BBBEF42B1}</Project>
       <Name>Croc.Bpc.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Configuration\Croc.Bpc.Configuration.csproj">
+      <Project>{bef131e6-f516-46f3-9198-d49c18837c5f}</Project>
+      <Name>Croc.Bpc.Configuration</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Election\Croc.Bpc.Election.csproj">
+      <Project>{889cb1f7-c567-472d-a952-4a54b81734da}</Project>
+      <Name>Croc.Bpc.Election</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\FileSystem\Croc.Bpc.FileSystem.csproj">
+      <Project>{2e592c1f-eb01-407a-8b93-c25dff951964}</Project>
+      <Name>Croc.Bpc.FileSystem</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\GsScannerDriver\Croc.Bpc.GsScannerDriver.csproj">
+      <Project>{09e43bb9-9426-457a-bb9f-4f3c1def5d03}</Project>
+      <Name>Croc.Bpc.GsScannerDriver</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Keyboard\Croc.Bpc.Keyboard.csproj">
+      <Project>{d9a3eb09-193e-4e62-88bb-bdacf0b1b5a5}</Project>
+      <Name>Croc.Bpc.Keyboard</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Printing\Croc.Bpc.Printing.csproj">
+      <Project>{cb5ab65e-2835-4cf9-a603-70b84a512cf2}</Project>
+      <Name>Croc.Bpc.Printing</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Recognizer\Croc.Bpc.Recognizer.csproj">
+      <Project>{03de31b2-31e1-4049-ad12-c13f70aaefc5}</Project>
+      <Name>Croc.Bpc.Recognizer</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Scanner\Croc.Bpc.Scanner.csproj">
+      <Project>{e71152d1-71a1-49a2-9132-58db50756b24}</Project>
+      <Name>Croc.Bpc.Scanner</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Sound\Croc.Bpc.Sound.csproj">
+      <Project>{ec687193-2676-4a31-b032-42b14f878ec6}</Project>
+      <Name>Croc.Bpc.Sound</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Synchronization\Croc.Bpc.Synchronization.csproj">
+      <Project>{1d46a75a-20a9-45cd-87f4-2983e49e8266}</Project>
+      <Name>Croc.Bpc.Synchronization</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Workflow\Croc.Bpc.Workflow.csproj">
+      <Project>{88f19e39-5d2b-4d02-9ad4-fbc1373f6ce6}</Project>
+      <Name>Croc.Bpc.Workflow</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

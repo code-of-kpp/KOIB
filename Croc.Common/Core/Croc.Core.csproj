@@ -1,0 +1,139 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{DA8D9F8F-6447-4E19-ABF7-68FE37282936}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Croc.Core</RootNamespace>
+    <AssemblyName>Croc.Core</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ApplicationExitEventArgs.cs" />
+    <Compile Include="ApplicationExitType.cs" />
+    <Compile Include="CodeContract.cs" />
+    <Compile Include="ConfigUpdatedEventArgs.cs" />
+    <Compile Include="Configuration\ApplicationConfig.cs" />
+    <Compile Include="Configuration\ConfigurableClassConfig.cs" />
+    <Compile Include="Configuration\ConfigurationElementTypeAttribute.cs" />
+    <Compile Include="Configuration\DiagnosticsConfig.cs" />
+    <Compile Include="Configuration\EnabledConfig.cs" />
+    <Compile Include="Configuration\FilterConfig.cs" />
+    <Compile Include="Configuration\FilterConfigCollection.cs" />
+    <Compile Include="Configuration\FormatterConfig.cs" />
+    <Compile Include="Configuration\MinMaxConfig.cs" />
+    <Compile Include="Configuration\SettingConfig.cs" />
+    <Compile Include="Configuration\SettingConfigCollection.cs" />
+    <Compile Include="Configuration\SubsystemConfig.cs" />
+    <Compile Include="Configuration\SubsystemConfigCollection.cs" />
+    <Compile Include="Configuration\TypedConfigElement.cs" />
+    <Compile Include="Configuration\ValueConfig.cs" />
+    <Compile Include="Configuration\ValueConfigCollection.cs" />
+    <Compile Include="Configuration\ValueConfigValidator.cs" />
+    <Compile Include="Configuration\WriterConfig.cs" />
+    <Compile Include="Configuration\WriterConfigCollection.cs" />
+    <Compile Include="CoreApplication.cs" />
+    <Compile Include="Diagnostics\Default\EventFormatter.cs" />
+    <Compile Include="Diagnostics\Default\FileWriter.cs" />
+    <Compile Include="Diagnostics\Default\FormattedTraceListener.cs" />
+    <Compile Include="Diagnostics\Default\LoggerExtensions.cs" />
+    <Compile Include="Diagnostics\Default\WriterToSystemTrace.cs" />
+    <Compile Include="Diagnostics\EventDispatcher.cs" />
+    <Compile Include="Diagnostics\EventProperties.cs" />
+    <Compile Include="Diagnostics\EventWriterTriplet.cs" />
+    <Compile Include="Diagnostics\IEventFileSystemWriter.cs" />
+    <Compile Include="Diagnostics\IEventFilter.cs" />
+    <Compile Include="Diagnostics\IEventFormatter.cs" />
+    <Compile Include="Diagnostics\IEventWriter.cs" />
+    <Compile Include="Diagnostics\IEventWriterFilter.cs" />
+    <Compile Include="Diagnostics\IInitializedType.cs" />
+    <Compile Include="Diagnostics\ILogger.cs" />
+    <Compile Include="Diagnostics\ILoggerContainer.cs" />
+    <Compile Include="Diagnostics\Logger.cs" />
+    <Compile Include="Diagnostics\LoggerEvent.cs" />
+    <Compile Include="Diagnostics\LoggingUtils.cs" />
+    <Compile Include="Diagnostics\NullLogger.cs" />
+    <Compile Include="Diagnostics\Test\EventFilter.cs" />
+    <Compile Include="Diagnostics\Test\EventFormatter.cs" />
+    <Compile Include="Diagnostics\Test\EventWriter.cs" />
+    <Compile Include="Diagnostics\Test\EventWriterFilter.cs" />
+    <Compile Include="Diagnostics\TraceLevelFilter.cs" />
+    <Compile Include="Extensions\ConvertExtensions.cs" />
+    <Compile Include="Extensions\EventExtensions.cs" />
+    <Compile Include="Extensions\ThreadExtensions.cs" />
+    <Compile Include="Extensions\TimeSpanExtensions.cs" />
+    <Compile Include="Extensions\Triplet.cs" />
+    <Compile Include="Extensions\TypeExtensions.cs" />
+    <Compile Include="ICoreApplication.cs" />
+    <Compile Include="IStateSubsystem.cs" />
+    <Compile Include="ISubsystem.cs" />
+    <Compile Include="IWaitController.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StateSubsystem.cs" />
+    <Compile Include="Subsystem.cs" />
+    <Compile Include="SubsystemStateAcceptanceResult.cs" />
+    <Compile Include="SubsystemStateEventArgs.cs" />
+    <Compile Include="Utils\Collections\ByNameAccessDictionary.cs" />
+    <Compile Include="Utils\Collections\ListStack.cs" />
+    <Compile Include="Utils\Collections\ThreadSafe\BlockingQueue.cs" />
+    <Compile Include="Utils\CommandLineArguments.cs" />
+    <Compile Include="Utils\ConfigurationUtils.cs" />
+    <Compile Include="Utils\Disposer.cs" />
+    <Compile Include="Utils\IO\FileUtils.cs" />
+    <Compile Include="Utils\ObjectDumper.cs" />
+    <Compile Include="Utils\ObjectDumperSettings.cs" />
+    <Compile Include="Utils\PlatformDetector.cs" />
+    <Compile Include="Utils\Text\RegExpressions\RegExpressionAttribute.cs" />
+    <Compile Include="Utils\Text\RegExpressions\RegExpressionsCompiler.cs" />
+    <Compile Include="Utils\Text\RollTextMachine.cs" />
+    <Compile Include="Utils\Text\RusNumber.cs" />
+    <Compile Include="Utils\Text\StringFormatParser.cs" />
+    <Compile Include="Utils\Text\TextBuilder.cs" />
+    <Compile Include="Utils\Threading\EventWaitHandleEx.cs" />
+    <Compile Include="Utils\Threading\ThreadUtils.cs" />
+    <Compile Include="Utils\Threading\TimeoutWaitHandle.cs" />
+    <Compile Include="Utils\Threading\WaitHandleUtils.cs" />
+    <Compile Include="Utils\Xml\PrettyPrintXmlWriter.cs" />
+    <Compile Include="Utils\Xml\XmlMerge.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

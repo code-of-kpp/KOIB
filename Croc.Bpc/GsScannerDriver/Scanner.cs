@@ -1515,8 +1515,7 @@ namespace Croc.Bpc.GsScannerDriver
             public readonly int SizeofHalftoneBuffer; 
             public readonly int SizeofBinaryBuffer; 
             public readonly HardwareOptions Options = HardwareOptions.Default; 
-            public HardwareConfiguration(int udpPortReceive, int udpPortSend, int tcpPport, int maxLines, int dotsOneLine, ScannerVersion scannerVersion, HardwareOptions
-ptions) 
+            public HardwareConfiguration(int udpPortReceive, int udpPortSend, int tcpPport, int maxLines, int dotsOneLine, ScannerVersion scannerVersion, HardwareOptions options) 
             { 
                 UdpPortReceive = udpPortReceive; 
                 UdpPortSend = udpPortSend; 

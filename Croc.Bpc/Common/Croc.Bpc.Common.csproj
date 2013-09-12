@@ -1,0 +1,183 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{04ABA847-581D-4CAD-BD32-9B0BBBEF42B1}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Croc.Bpc.Common</RootNamespace>
+    <AssemblyName>Croc.Bpc.Common</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Croc.Bpc.RegExpressions">
+      <HintPath>..\..\lib\Croc.Bpc.RegExpressions.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib, Version=0.86.0.518, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Posix">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Mono-2.10.8\lib\mono\4.0\Mono.Posix.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Configuration\IConfigurationManager.cs" />
+    <Compile Include="Config\CommandConfig.cs" />
+    <Compile Include="Diagnostics\FileAppendLogger.cs" />
+    <Compile Include="Diagnostics\LoggerExtension.cs" />
+    <Compile Include="Diagnostics\Message.cs" />
+    <Compile Include="Diagnostics\MessageDublicatesFilter.cs" />
+    <Compile Include="Diagnostics\MessageParametersAttribute.cs" />
+    <Compile Include="Diagnostics\SingleLineFormatter.cs" />
+    <Compile Include="FileSystem\FilesArchivedEventArgs.cs" />
+    <Compile Include="FileSystem\FileType.cs" />
+    <Compile Include="FileSystem\IFileSystemManager.cs" />
+    <Compile Include="IQuietMode.cs" />
+    <Compile Include="Keyboard\IKeyboardManager.cs" />
+    <Compile Include="Keyboard\KeyEventArgs.cs" />
+    <Compile Include="Keyboard\KeyPressedWaitHandle.cs" />
+    <Compile Include="Keyboard\KeyPressingWaitDescriptor.cs" />
+    <Compile Include="Keyboard\KeyType.cs" />
+    <Compile Include="Keyboard\RepetableKeyPressWaitHandle.cs" />
+    <Compile Include="Keyboard\UnionKeyboard.cs" />
+    <Compile Include="Printing\FontType.cs" />
+    <Compile Include="Printing\IPrintingManager.cs" />
+    <Compile Include="Printing\LineAlign.cs" />
+    <Compile Include="Printing\PageSection.cs" />
+    <Compile Include="Printing\PresentationForReportAttibute.cs" />
+    <Compile Include="Printing\PrinterJob.cs" />
+    <Compile Include="Printing\PrintReportEventArgs.cs" />
+    <Compile Include="Printing\ReportType.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Recognizer\IRecognitionManager.cs" />
+    <Compile Include="Scanner\BufferSize.cs" />
+    <Compile Include="Scanner\DropResult.cs" />
+    <Compile Include="Scanner\IScanner.cs" />
+    <Compile Include="Scanner\IScannerConnectorEventHandler.cs" />
+    <Compile Include="Scanner\IScannerEventHandler.cs" />
+    <Compile Include="Scanner\IScannerManager.cs" />
+    <Compile Include="Scanner\IScannersInfo.cs" />
+    <Compile Include="Scanner\LogicalReverseReason.cs" />
+    <Compile Include="Scanner\PaperType.cs" />
+    <Compile Include="Scanner\ReverseCommandResult.cs" />
+    <Compile Include="Scanner\ScannedSide.cs" />
+    <Compile Include="Scanner\ScannerBroadcastNotice.cs" />
+    <Compile Include="Scanner\ScannerConnector.cs" />
+    <Compile Include="Scanner\ScannerDiagnosticsError.cs" />
+    <Compile Include="Scanner\ScannerError.cs" />
+    <Compile Include="Scanner\ScannerEventArgs.cs" />
+    <Compile Include="Scanner\ScannerInfo.cs" />
+    <Compile Include="Scanner\ScannerLampsRegime.cs" />
+    <Compile Include="Scanner\ScannerStatus.cs" />
+    <Compile Include="Scanner\ScannerVersion.cs" />
+    <Compile Include="Scanner\SheetEventArgs.cs" />
+    <Compile Include="Scanner\SheetProcessingError.cs" />
+    <Compile Include="Scanner\SheetProcessingSession.cs" />
+    <Compile Include="Scanner\SheetType.cs" />
+    <Compile Include="Sound\ISoundManager.cs" />
+    <Compile Include="Sound\NumberDeclension.cs" />
+    <Compile Include="Sound\PhraseComposer.cs" />
+    <Compile Include="Synchronization\IScannerInteractionChannel.cs" />
+    <Compile Include="Synchronization\ISynchronizationManager.cs" />
+    <Compile Include="Synchronization\ResetSoftReason.cs" />
+    <Compile Include="Synchronization\ScannerRole.cs" />
+    <Compile Include="Synchronization\StateItem.cs" />
+    <Compile Include="Synchronization\SynchronizationResult.cs" />
+    <Compile Include="Utils\DynamicAssemblyHelper.cs" />
+    <Compile Include="Utils\Images\ImageType.cs" />
+    <Compile Include="Utils\Images\Tiff\TiffImageHelper.cs" />
+    <Compile Include="Utils\Images\Tiff\TiffImageInfo.cs" />
+    <Compile Include="Utils\MemoryBlock.cs" />
+    <Compile Include="Utils\NetHelper.cs" />
+    <Compile Include="Utils\ProcessHelper.cs" />
+    <Compile Include="Utils\ProcessOutputProcessorState.cs" />
+    <Compile Include="Utils\SystemHelper.cs" />
+    <Compile Include="Utils\Win32.cs" />
+    <Compile Include="Utils\ZipCompressor.cs" />
+    <Compile Include="Voting\Blank.cs" />
+    <Compile Include="Voting\BlankMarking.cs" />
+    <Compile Include="Voting\BlankOrientation.cs" />
+    <Compile Include="Voting\BlankType.cs" />
+    <Compile Include="Voting\Candidate.cs" />
+    <Compile Include="Voting\CheckExpression.cs" />
+    <Compile Include="Voting\CheckResult.cs" />
+    <Compile Include="Voting\CommitteeMember.cs" />
+    <Compile Include="Voting\CommitteeMemberType.cs" />
+    <Compile Include="Voting\Election.cs" />
+    <Compile Include="Voting\ElectionDayСomming.cs" />
+    <Compile Include="Voting\ElectionMode.cs" />
+    <Compile Include="Voting\IElectionManager.cs" />
+    <Compile Include="Voting\IVotingResultManager.cs" />
+    <Compile Include="Voting\Line.cs" />
+    <Compile Include="Voting\ModeTime.cs" />
+    <Compile Include="Voting\ParentComittee.cs" />
+    <Compile Include="Voting\ProtocolTemplate.cs" />
+    <Compile Include="Voting\ProtocolText.cs" />
+    <Compile Include="Voting\ProtocolTextLine.cs" />
+    <Compile Include="Voting\SourceData.cs" />
+    <Compile Include="Voting\SourceDataFileDescriptor.cs" />
+    <Compile Include="Voting\StampCommittee.cs" />
+    <Compile Include="Voting\TargetCommittee.cs" />
+    <Compile Include="Voting\VoteKey.cs" />
+    <Compile Include="Voting\VoteTextLine.cs" />
+    <Compile Include="Voting\VotingMode.cs" />
+    <Compile Include="Voting\VotingModeChangedEventArgs.cs" />
+    <Compile Include="Voting\VotingResult.cs" />
+    <Compile Include="Voting\VotingResults.cs" />
+    <Compile Include="Workflow\IWorkflowManager.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="Data\Schemas\SourceData.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Croc.Common\Core\Croc.Core.csproj">
+      <Project>{da8d9f8f-6447-4e19-abf7-68fe37282936}</Project>
+      <Name>Croc.Core</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

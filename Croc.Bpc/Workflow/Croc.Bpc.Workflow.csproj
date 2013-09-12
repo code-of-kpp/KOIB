@@ -43,15 +43,19 @@
     <Compile Include="Activities\BpcCompositeActivity.cs" />
     <Compile Include="Activities\BpcNextActivityKeys.cs">
       <DependentUpon>BpcNextActivityKeys.xsd</DependentUpon>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Activities\BpcNextActivityKeys_RecognitionResult.cs">
       <DependentUpon>BpcNextActivityKeys_RecognitionResult.xsd</DependentUpon>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Activities\BpcNextActivityKeys_VotingTime.cs">
       <DependentUpon>BpcNextActivityKeys_VotingTime.xsd</DependentUpon>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Activities\Cancelation\BpcNextActivityKeys_Cancelation.cs">
       <DependentUpon>BpcNextActivityKeys_Cancelation.xsd</DependentUpon>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Activities\Cancelation\CancelationActivity.cs" />
     <Compile Include="Activities\Cancelation\CancelCandidatesActivity.cs" />
@@ -112,65 +116,162 @@
   <ItemGroup>
     <None Include="Activities\BpcNextActivityKeys.xsd">
       <SubType>Designer</SubType>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Activities\BpcNextActivityKeys_RecognitionResult.xsd">
       <SubType>Designer</SubType>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Activities\BpcNextActivityKeys_VotingTime.xsd">
       <SubType>Designer</SubType>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Activities\Cancelation\BpcNextActivityKeys_Cancelation.xsd">
       <SubType>Designer</SubType>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Activities\Cancelation\Cancelation.wf" />
-    <None Include="Activities\Cancelation\CancelCandidates.wf" />
-    <None Include="Activities\Cancelation\SayCanceledCandidates.wf" />
-    <None Include="Activities\Cancelation\SayCanceledCandidatesInElection.wf" />
-    <None Include="Activities\Common.wf" />
+    <None Include="Activities\Cancelation\Cancelation.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Cancelation\CancelCandidates.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Cancelation\SayCanceledCandidates.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Cancelation\SayCanceledCandidatesInElection.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Common.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Activities\Initialization\BpcNextActivityKeys_DiagError.xsd">
       <SubType>Designer</SubType>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Activities\Initialization\CheckConflict.wf" />
-    <None Include="Activities\Initialization\ConnectToScanner.wf" />
-    <None Include="Activities\Initialization\ControlVotingStart.wf" />
-    <None Include="Activities\Initialization\Initialization.wf" />
-    <None Include="Activities\Initialization\LoadConfig.wf" />
-    <None Include="Activities\Initialization\ReadSourceData.wf" />
-    <None Include="Activities\Initialization\RemoteScannerSearch.wf" />
-    <None Include="Activities\Main.wf" />
-    <None Include="Activities\Mock.wf" />
-    <None Include="Activities\OperatorMenu\OperatorMenu.wf" />
-    <None Include="Activities\OperatorMenu\ViewDate.wf" />
-    <None Include="Activities\OperatorMenu\ViewIpAddress.wf" />
-    <None Include="Activities\OperatorMenu\ViewVersion.wf" />
-    <None Include="Activities\OperatorMenu\VolumeSettings.wf" />
-    <None Include="Activities\Printing.wf" />
-    <None Include="Activities\Summarizing\EnterAdditionalInfo.wf" />
-    <None Include="Activities\Summarizing\PreliminarySummarizing.wf" />
-    <None Include="Activities\Summarizing\ReadCandidatesVoteCount.wf" />
-    <None Include="Activities\Summarizing\ReadVotingReport.wf" />
-    <None Include="Activities\Summarizing\SaveVotingResults.wf" />
-    <None Include="Activities\Summarizing\Summarizing.wf" />
-    <None Include="Activities\SystemMenu\BadBulletinSettings.wf" />
-    <None Include="Activities\SystemMenu\BlankPaperTypeSettings.wf" />
-    <None Include="Activities\SystemMenu\DateTimeSettings.wf" />
-    <None Include="Activities\SystemMenu\DssEnabledSettings.wf" />
-    <None Include="Activities\SystemMenu\DssLevelSettings.wf" />
-    <None Include="Activities\SystemMenu\ExitSoft.wf" />
-    <None Include="Activities\SystemMenu\MarkerSettings.wf" />
-    <None Include="Activities\SystemMenu\PaperSettings.wf" />
-    <None Include="Activities\SystemMenu\PrintPreliminaryProtocol.wf" />
-    <None Include="Activities\SystemMenu\PrintSD.wf" />
-    <None Include="Activities\SystemMenu\ResetConfig.wf" />
-    <None Include="Activities\SystemMenu\ResetSoft.wf" />
-    <None Include="Activities\SystemMenu\ResetUik.wf" />
-    <None Include="Activities\SystemMenu\StampSettings.wf" />
-    <None Include="Activities\SystemMenu\SystemMenu.wf" />
-    <None Include="Activities\Testing\ReadCandidatesTestVoteCount.wf" />
-    <None Include="Activities\Testing\ReadTestingReport.wf" />
-    <None Include="Activities\Testing\Testing.wf" />
-    <None Include="Activities\Voting\MainVoting.wf" />
-    <None Include="Activities\Voting\PortableVoting.wf" />
+    <None Include="Activities\Initialization\CheckConflict.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Initialization\ConnectToScanner.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Initialization\ControlVotingStart.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Initialization\Initialization.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Initialization\LoadConfig.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Initialization\ReadSourceData.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Initialization\RemoteScannerSearch.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Main.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Mock.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\OperatorMenu\OperatorMenu.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\OperatorMenu\ViewDate.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\OperatorMenu\ViewIpAddress.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\OperatorMenu\ViewVersion.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\OperatorMenu\VolumeSettings.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Printing.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Summarizing\EnterAdditionalInfo.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Summarizing\PreliminarySummarizing.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Summarizing\ReadCandidatesVoteCount.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Summarizing\ReadVotingReport.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Summarizing\SaveVotingResults.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Summarizing\Summarizing.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\BadBulletinSettings.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\BlankPaperTypeSettings.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\DateTimeSettings.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\DssEnabledSettings.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\DssLevelSettings.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\ExitSoft.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\MarkerSettings.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\PaperSettings.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\PrintPreliminaryProtocol.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\PrintSD.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\ResetConfig.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\ResetSoft.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\ResetUik.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\StampSettings.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\SystemMenu\SystemMenu.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Testing\ReadCandidatesTestVoteCount.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Testing\ReadTestingReport.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Testing\Testing.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Voting\MainVoting.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Activities\Voting\PortableVoting.wf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Croc.Common\Core\Croc.Core.csproj">

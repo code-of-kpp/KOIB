@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <xs:schema xmlns="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/RecognitionResult" xmlns:xs="http://www.w3.org/2001/XMLSchema"
-argetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/RecognitionResult" elementFormDefault="qualified" attributeFormDefault="unqualified"
-d="BpcNextActivityKeys_RecognitionResult"> 
+targetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/RecognitionResult" elementFormDefault="qualified" attributeFormDefault="unqualified"
+id="BpcNextActivityKeys_RecognitionResult"> 
     <xs:attribute name="ValidBulletin"> 
 
 

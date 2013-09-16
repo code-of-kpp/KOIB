@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://localhost/Schemas/SIB2003/ReportTemplate"
-argetNamespace="http://localhost/Schemas/SIB2003/ReportTemplate" elementFormDefault="qualified"> 
+targetNamespace="http://localhost/Schemas/SIB2003/ReportTemplate" elementFormDefault="qualified"> 
     <xs:element name="ReportTemplate"> 
 
 

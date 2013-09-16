@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <xs:schema xmlns="http://localhost/Schemas/SIB2003/SourceData" xmlns:xs="http://www.w3.org/2001/XMLSchema"
-argetNamespace="http://localhost/Schemas/SIB2003/SourceData" elementFormDefault="qualified"> 
+targetNamespace="http://localhost/Schemas/SIB2003/SourceData" elementFormDefault="qualified"> 
     <xs:element name="SourceData" nillable="true"> 
 
 

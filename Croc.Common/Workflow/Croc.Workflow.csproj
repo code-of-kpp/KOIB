@@ -86,9 +86,9 @@
     <Compile Include="Runtime\WorkflowTerminatedEventArgs.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Workflow.xsd">
+    <EmbeddedResource Include="Workflow.xsd">
       <SubType>Designer</SubType>
-    </None>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\Croc.Core.csproj">

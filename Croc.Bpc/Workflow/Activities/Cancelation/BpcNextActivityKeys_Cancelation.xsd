@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <xs:schema xmlns="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/Cancelation" xmlns:xs="http://www.w3.org/2001/XMLSchema"
-argetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/Cancelation" elementFormDefault="qualified" attributeFormDefault="unqualified"
-d="BpcNextActivityKeys_Cancelation"> 
+targetNamespace="http://schemas.croc.ru/Workflow/BpcNextActivityKeys/Cancelation" elementFormDefault="qualified" attributeFormDefault="unqualified"
+id="BpcNextActivityKeys_Cancelation"> 
     <xs:attribute name="CanceledLocally"> 
 
 

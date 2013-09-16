@@ -107,8 +107,10 @@
       <Parameter Name="Sounds">print_additional_copies_of_protocol</Parameter> 
     </ActivityParametersBinding> 
     <ActivityParametersBinding ActivityName="SayProtocolsGeneratedForNotAllElectionsRetry"> 
-      <Parameter Name="TextFormat">По выборам №: {p0-*:delim[, ]} не сформированы протоколы. Чтобы повторить ввод дополнительных сведений только по
-�ропущенным выборам, нажмите ДА, по всем выборам – нажмите НЕТ</Parameter> 
+      <Parameter Name="TextFormat">
+        По выборам №: {p0-*:delim[, ]} не сформированы протоколы. Чтобы повторить ввод дополнительных сведений только по
+        пропущенным выборам, нажмите ДА, по всем выборам – нажмите НЕТ
+      </Parameter> 
       <Parameter Name="PhraseFormat">{s0}{p0-*}{s1}</Parameter> 
       <Parameter Name="Sounds">[for_election_number,protocols_not_generated_retry]</Parameter> 
     </ActivityParametersBinding> 
